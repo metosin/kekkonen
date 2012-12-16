@@ -1,0 +1,12 @@
+/target
+/lib
+/classes
+/checkouts
+pom.xml
+*.jar
+*.class
+.lein-*
+.classpath
+.settings
+.project
+
