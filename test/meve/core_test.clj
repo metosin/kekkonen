@@ -16,4 +16,4 @@
   {:status 200
    :foo foo})
   
-(hello {})
+(fact (hello {}) => {:status 200 :foo "bar"})
