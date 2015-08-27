@@ -74,9 +74,9 @@
 ;; Collecting services
 ;;
 
-(fact "collecting setvices"
+(fact "collect-ns"
   (s/with-fn-validation
-    (let [services (k/collect-ns 'kekkonen.core-test)]
+    (let [services (k/collect-ns k/defnk->handler 'kekkonen.core-test)]
       (count services) => 5
 
       (last services) => (just {:fn fn?
