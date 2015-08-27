@@ -1,6 +1,7 @@
 (ns kekkonen.core
   (:require [schema.core :as s]
             [plumbing.core :as p]
+            [clojure.string :as str]
             [plumbing.fnk.pfnk :as pfnk])
   (:import [clojure.lang Var Keyword]))
 
@@ -62,28 +63,15 @@
     module (p/for-map [action actions]
              (:name action) (assoc action :module module))))
 
-;;
-;; helpers for modules, actions and paths
-;;
-
-(s/defn create-path [module :- s/Keyword, action :- s/Keyword]
-  (keyword (str (name module) "/" (name action))))
-
-(s/defn get-module [module-and-action :- s/Keyword]
-  (keyword (.getNamespace module-and-action)))
-
-(s/defn get-action [module-and-action :- s/Keyword]
-  (keyword (.getName module-and-action)))
-
-;;
-;;
-;;
+(s/defn action-path [path :- s/Keyword]
+  (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
 
 (s/defn some-action :- (s/maybe Handler)
-  ([kekkonen, module-and-action :- s/Keyword]
-    (some-action kekkonen (get-module module-and-action) (get-action module-and-action)))
-  ([kekkonen, module :- s/Keyword, action :- s/Keyword]
-    (some-> kekkonen module action)))
+  [kekkonen, path :- s/Keyword]
+  (get-in kekkonen (action-path path)))
 
-(s/defn invoke [kekkonen module action data])
+(s/defn invoke [kekkonen path data]
+  (if-let [action (some-action kekkonen path)]
+    ((:fn action) data)
+    #_ "throw an exception"))
 

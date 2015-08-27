@@ -24,11 +24,12 @@
     (k/collect {:collector k/defnk->handler
                 :modules {:items 'kekkonen.example}}))
 
+  ; TODO: create ottaa resource parametreina
   (def kekkonen (k/create
                   (k/collect {:modules {:items 'kekkonen.example}})))
 
-  (k/some-action kekkonen :items :increment!)
   (k/some-action kekkonen :items/increment!)
+  (k/invoke kekkonen :items/increment! {:resources {:counter counter}})
 
   (./aprint
     (k/create
