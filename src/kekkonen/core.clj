@@ -4,33 +4,16 @@
   (:import [clojure.lang Var]))
 
 ;;
-;; action types
-;;
-
-(s/defn command? [v :- Var]
-  (-> v meta :command true?))
-
-(s/defn query? [v :- Var]
-  (-> v meta :query true?))
-
-(defn command-or-query? [v]
-  ((some-fn command? query?) v))
-
-(defn get-type [v]
-  (cond
-    (command? v) :command
-    (query? v) :query
-    :else nil))
-
-;;
 ;; collecting actions
 ;;
+
+(s/defn user-meta [v :- Var]
+  (-> v meta (dissoc :schema :ns :name :file :column :line :doc)))
 
 (s/defschema ActionMeta
   "Action metadata"
   {:fn s/Any
    :name s/Keyword
-   :type (s/enum :command :query)
    :user {s/Keyword s/Any}
    :description (s/maybe s/Str)
    :input s/Any
@@ -50,8 +33,7 @@
     (if schema
       {:fn @v
        :name (keyword name)
-       :type (get-type v)
-       :user {}
+       :user (user-meta v)
        :description doc
        :input (pfnk/input-schema @v)
        :output (pfnk/output-schema @v)
@@ -61,11 +43,12 @@
                     :ns (ns-name ns)
                     :name name}})))
 
-(defn collect-ns
-  "Collects all public vars from a given namespace, which "
+(s/defn collect-ns :- [ActionMeta]
+  "Collects all public vars from a given namespace, which
+  can be transformed by the transformer fn (given a Var)."
   ([ns] (collect-ns ns defnk->action))
-  ([ns keeper]
+  ([ns transformer]
    (some->> ns
             ns-publics
-            (keep (comp keeper val))
+            (keep (comp transformer val))
             vec)))

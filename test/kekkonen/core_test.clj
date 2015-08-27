@@ -7,21 +7,33 @@
 ; simplest thing that works
 (defnk ping [] "pong")
 
-; a simple query
-(defnk ^:query get-items :- #{s/Str}
+; crud
+(defnk get-items :- #{s/Str}
   [[:components db]] @db)
 
-; a simple update
-(defnk ^:command add-item! :- #{s/Str}
-  "adds an item to database"
+(defnk add-item! :- #{s/Str}
+  "Adds an item to database"
   [[:data item :- String]
    [:components db]]
   (swap! db conj item))
 
-(defnk ^:command reset-items! :- #{s/Str}
-  "resets the database"
+(defnk reset-items! :- #{s/Str}
+  "Resets the database"
   [[:components db]]
   (swap! db empty))
+
+(s/defschema User
+  {:name s/Str
+   :address {:street s/Str
+             :zip s/Int
+             (s/optional-key :country) (s/enum :FI :CA)}})
+
+; complex example with external schema and user meta
+(defnk ^:query echo :- User
+  "Echoes the user"
+  {:roles #{:admin :user}}
+  [data :- User]
+  data)
 
 (fact "using services directrly"
 
@@ -57,3 +69,26 @@
           (add-item! {:components {:db db}
                       :data {:item "kikka"}})) => #{"kikka"}
         (get-items {:components {:db db}}) => #{"kikka"}))))
+
+;;
+;; Collecting services
+;;
+
+(fact "collecting setvices"
+  (s/with-fn-validation
+    (let [services (k/collect-ns 'kekkonen.core-test)]
+      (count services) => 5
+
+      (last services) => (just {:fn fn?
+                                :name :echo
+                                :user {:query true
+                                       :roles #{:admin :user}}
+                                :description "Echoes the user"
+                                :input {:data User
+                                        s/Keyword s/Any}
+                                :output User
+                                :source-map (just {:line 32
+                                                   :column 1
+                                                   :file string?
+                                                   :ns 'kekkonen.core-test
+                                                   :name 'echo})}))))
