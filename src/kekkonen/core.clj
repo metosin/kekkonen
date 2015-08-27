@@ -24,7 +24,7 @@
    s/Keyword s/Any})
 
 (s/defn defnk->handler :- (s/maybe Handler)
-  "Converts a defnk into an Action. Returns nil if the given
+  "Converts a defnk into an Handler. Returns nil if the given
   var does not contain the defnk :schema metadata"
   [v :- Var]
   (let [{:keys [line column file ns name doc schema]} (meta v)]
@@ -43,29 +43,33 @@
 
 (s/defn collect-ns :- [Handler]
   "Collects all public vars from a given namespace, which
-  can be transformed by the transformer fn (given a Var)."
-  [collector ns]
+  can be transformed by defnk->handler fn (given a Var)."
+  [ns]
   (some->> ns
            ns-publics
-           (keep (comp collector val))
+           (keep (comp defnk->handler val))
            vec))
 
-(s/defn collect :- {s/Keyword [Handler]}
-  "Collects actions from modules into a map of module->[Action]"
-  ([modules] (collect modules defnk->handler))
-  ([modules :- {s/Keyword s/Symbol}
-    collector :- s/Any]
-    (p/map-vals (partial collect-ns collector) modules)))
+(s/defn collect-ns-map :- {s/Keyword [Handler]}
+  "Collects handlers from modules into a map of module->[Action]"
+  [modules :- {s/Keyword s/Symbol}]
+  (p/map-vals collect-ns modules))
+
+(s/defschema Modules
+  "Modules form a tree."
+  {s/Keyword (s/either [Handler] (s/recursive #'Modules))})
 
 (p/defnk create
-  "Creates a routing table of modules and actions."
-  [modules :- {s/Keyword [Handler]}
+  "Creates a Kekkonen."
+  [modules :- Modules
    {inject :- {s/Keyword s/Any} {}}]
-  (merge
-    {:inject inject}
-    (p/for-map [[module actions] modules]
-      module (p/for-map [action actions]
-               (:name action) (assoc action :module module)))))
+  (let [traverse (fn f [x m]
+                   (p/for-map [[k v] x]
+                     k (if (vector? v)
+                         (p/for-map [h v] (:name h) (assoc h :module (conj m k)))
+                         (f v (conj m k)))))]
+    {:inject inject
+     :modules (traverse modules [])}))
 
 (s/defn ^:private action-kws [path :- s/Keyword]
   (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
@@ -73,7 +77,7 @@
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
   [kekkonen, action :- s/Keyword]
-  (get-in kekkonen (action-kws action)))
+  (get-in (:modules kekkonen) (action-kws action)))
 
 (s/defn invoke
   "Invokes a action handler with the given context."
@@ -86,4 +90,3 @@
       (if-not handler
         (throw (ex-info (str "invalid action " action) {}))
         ((:fn handler) context)))))
-

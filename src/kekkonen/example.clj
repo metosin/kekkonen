@@ -26,11 +26,11 @@
 
   (./aprint
     (s/with-fn-validation
-      (k/collect {:items 'kekkonen.example})))
+      (k/collect-ns-map {:items 'kekkonen.example})))
 
   (def kekkonen (k/create
                   {:inject {:resources {:counter counter}}
-                   :modules (k/collect {:items 'kekkonen.example})}))
+                   :modules (k/collect-ns-map {:items 'kekkonen.example})}))
 
   (./aprint kekkonen)
 
@@ -41,6 +41,6 @@
 
   (./aprint
     (k/create
-      {:modules (k/collect {:items 'kekkonen.example})}))
+      {:modules (k/collect-ns-map {:items 'kekkonen.example})}))
 
   (./aprint (k/collect-ns k/defnk->handler 'kekkonen.example)))

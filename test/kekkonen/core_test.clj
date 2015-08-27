@@ -76,10 +76,10 @@
 
 (fact "collect-ns"
   (s/with-fn-validation
-    (let [services (k/collect-ns k/defnk->handler 'kekkonen.core-test)]
-      (count services) => 5
+    (let [handlers (k/collect-ns 'kekkonen.core-test)]
+      (count handlers) => 5
 
-      (last services) => (just {:fn fn?
+      (last handlers) => (just {:fn fn?
                                 :name :echo
                                 :user {:query true
                                        :roles #{:admin :user}}
@@ -101,7 +101,7 @@
 
     (fact "can be created with modules"
       (let [kekkonen (k/create {:inject {:components {:db (atom #{})}}
-                                :modules (k/collect {:test 'kekkonen.core-test})})]
+                                :modules (k/collect-ns-map {:test 'kekkonen.core-test})})]
 
         (fact "non-existing action"
           (let [action :test/non-existing]
@@ -121,4 +121,12 @@
           (k/invoke kekkonen :test/get-items) => #{}
 
           (fact "context-level overrides FTW!"
-            (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))))
+            (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
+
+    (fact "deeply nested modules"
+      (let [kekkonen (k/create {:modules {:admin (k/collect-ns-map {:kikka 'kekkonen.core-test
+                                                                    :kukka 'kekkonen.core-test})
+                                          :public (k/collect-ns 'kekkonen.core-test)}})]
+        (k/invoke kekkonen :admin/kikka/ping) => "pong"
+        (k/invoke kekkonen :admin/kukka/ping) => "pong"
+        (k/invoke kekkonen :public/ping) => "pong"))))
