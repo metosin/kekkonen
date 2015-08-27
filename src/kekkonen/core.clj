@@ -5,7 +5,7 @@
             [plumbing.fnk.pfnk :as pfnk])
   (:import [clojure.lang Var Keyword]))
 
-(s/defn user-meta [v :- Var]
+(s/defn ^:private user-meta [v :- Var]
   (-> v meta (dissoc :schema :ns :name :file :column :line :doc)))
 
 (s/defschema Handler
@@ -50,28 +50,40 @@
            (keep (comp collector val))
            vec))
 
-(p/defnk collect :- [{s/Keyword [Handler]}]
+(s/defn collect :- {s/Keyword [Handler]}
   "Collects actions from modules into a map of module->[Action]"
-  [modules :- {s/Keyword s/Any}
-   {collector :- s/Any defnk->handler}]
-  (p/map-vals (partial collect-ns collector) modules))
+  ([modules] (collect modules defnk->handler))
+  ([modules :- {s/Keyword s/Symbol}
+    collector :- s/Any]
+    (p/map-vals (partial collect-ns collector) modules)))
 
-(s/defn create
+(p/defnk create
   "Creates a routing table of modules and actions."
-  [module->actions :- {s/Keyword [Handler]}]
-  (p/for-map [[module actions] module->actions]
-    module (p/for-map [action actions]
-             (:name action) (assoc action :module module))))
+  [modules :- {s/Keyword [Handler]}
+   {inject :- {s/Keyword s/Any} {}}]
+  (merge
+    {:inject inject}
+    (p/for-map [[module actions] modules]
+      module (p/for-map [action actions]
+               (:name action) (assoc action :module module)))))
 
-(s/defn action-path [path :- s/Keyword]
+(s/defn ^:private action-kws [path :- s/Keyword]
   (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
 
-(s/defn some-action :- (s/maybe Handler)
-  [kekkonen, path :- s/Keyword]
-  (get-in kekkonen (action-path path)))
+(s/defn some-handler :- (s/maybe Handler)
+  "Returns a handler or nil"
+  [kekkonen, action :- s/Keyword]
+  (get-in kekkonen (action-kws action)))
 
-(s/defn invoke [kekkonen path data]
-  (if-let [action (some-action kekkonen path)]
-    ((:fn action) data)
-    #_ "throw an exception"))
+(s/defn invoke
+  "Invokes a action handler with the given context."
+  ([kekkonen action]
+    (invoke kekkonen action {}))
+  ([kekkonen action request]
+    (let [handler (some-handler kekkonen action)
+          ; context-level overrides of inject!
+          context (merge (:inject kekkonen) request)]
+      (if-not handler
+        (throw (ex-info (str "invalid action " action) {}))
+        ((:fn handler) context)))))
 

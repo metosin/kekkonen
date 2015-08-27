@@ -14,6 +14,10 @@
   [[:data name :- s/Str]]
   (str "hello " name))
 
+;;
+;; Spike
+;;
+
 (comment
   (def counter (atom 0))
 
@@ -21,18 +25,22 @@
   (say-hello {:data {:name "Tommi"}})
 
   (./aprint
-    (k/collect {:collector k/defnk->handler
-                :modules {:items 'kekkonen.example}}))
+    (s/with-fn-validation
+      (k/collect {:items 'kekkonen.example})))
 
-  ; TODO: create ottaa resource parametreina
   (def kekkonen (k/create
-                  (k/collect {:modules {:items 'kekkonen.example}})))
+                  {:inject {:resources {:counter counter}}
+                   :modules (k/collect {:items 'kekkonen.example})}))
 
-  (k/some-action kekkonen :items/increment!)
-  (k/invoke kekkonen :items/increment! {:resources {:counter counter}})
+  (./aprint kekkonen)
+
+  (k/some-handler kekkonen :items/increment!)
+  (k/invoke kekkonen :items/increment! {})
+  (k/invoke kekkonen :items/increment!)
+  (k/invoke kekkonen :items/increment! {:resources {:counter (atom 0)}})
 
   (./aprint
     (k/create
-      (k/collect {:modules {:items 'kekkonen.example}})))
+      {:modules (k/collect {:items 'kekkonen.example})}))
 
-  (./aprint (k/collect-ns 'kekkonen.example)))
+  (./aprint (k/collect-ns k/defnk->handler 'kekkonen.example)))

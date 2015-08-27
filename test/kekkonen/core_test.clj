@@ -92,3 +92,33 @@
                                                    :file string?
                                                    :ns 'kekkonen.core-test
                                                    :name 'echo})}))))
+
+(fact "kekkonen"
+  (s/with-fn-validation
+
+    (fact "can't be created without modules"
+      (k/create {}) => (throws RuntimeException))
+
+    (fact "can be created with modules"
+      (let [kekkonen (k/create {:inject {:components {:db (atom #{})}}
+                                :modules (k/collect {:test 'kekkonen.core-test})})]
+
+        (fact "non-existing action"
+          (let [action :test/non-existing]
+            (k/some-handler kekkonen action) => nil
+            (k/invoke kekkonen action) => (throws RuntimeException)))
+
+        (fact "existing action"
+          (let [action :test/ping]
+            (k/some-handler kekkonen action) => truthy
+            (k/invoke kekkonen action) => "pong"))
+
+        (fact "crud via kekkonen"
+          (k/invoke kekkonen :test/get-items) => #{}
+          (k/invoke kekkonen :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
+          (k/invoke kekkonen :test/get-items) => #{"kikka"}
+          (k/invoke kekkonen :test/reset-items!) => #{}
+          (k/invoke kekkonen :test/get-items) => #{}
+
+          (fact "context-level overrides FTW!"
+            (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))))
