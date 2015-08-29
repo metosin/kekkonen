@@ -16,7 +16,7 @@
    :description (s/maybe s/Str)
    :input s/Any
    :output s/Any
-   :source-map {:line s/Int
+   (s/optional-key :source-map) {:line s/Int
                 :column s/Int
                 :file s/Str
                 :ns s/Symbol
