@@ -45,6 +45,8 @@
   "Collects all public vars from a given namespace, which
   can be transformed by defnk->handler fn (given a Var)."
   [ns]
+  ; is this a good idea?
+  (require ns)
   (some->> ns
            ns-publics
            (keep (comp defnk->handler val))
