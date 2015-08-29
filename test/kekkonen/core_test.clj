@@ -104,14 +104,13 @@
                                 :modules (k/collect-ns-map {:test 'kekkonen.core-test})})]
 
         (fact "non-existing action"
-          (let [action :test/non-existing]
-            (k/some-handler kekkonen action) => nil
-            (k/invoke kekkonen action) => (throws RuntimeException)))
+          (k/some-handler kekkonen :test/non-existing) => nil
+          (k/invoke kekkonen :test/non-existing) => (throws RuntimeException))
 
-        (fact "existing action"
-          (let [action :test/ping]
-            (k/some-handler kekkonen action) => truthy
-            (k/invoke kekkonen action) => "pong"))
+        (fact "existing action contains :type and :module"
+          (k/some-handler kekkonen :test/ping) => (contains {:type :function
+                                                             :module :test})
+          (k/invoke kekkonen :test/ping) => "pong")
 
         (fact "crud via kekkonen"
           (k/invoke kekkonen :test/get-items) => #{}

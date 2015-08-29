@@ -23,6 +23,10 @@
                 :name s/Symbol}
    s/Keyword s/Any})
 
+(s/defschema Modules
+  "Modules form a tree."
+  {s/Keyword (s/either [Handler] (s/recursive #'Modules))})
+
 (s/defn defnk->handler :- (s/maybe Handler)
   "Converts a defnk into an Handler. Returns nil if the given
   var does not contain the defnk :schema metadata"
@@ -57,18 +61,23 @@
   [modules :- {s/Keyword s/Symbol}]
   (p/map-vals collect-ns modules))
 
-(s/defschema Modules
-  "Modules form a tree."
-  {s/Keyword (s/either [Handler] (s/recursive #'Modules))})
+(s/defn ^:private default-type-resolver
+  [handler]
+  (assoc handler :type :function))
 
 (p/defnk create
   "Creates a Kekkonen."
   [modules :- Modules
+   {type-resolver :- s/Any default-type-resolver}
    {inject :- {s/Keyword s/Any} {}}]
-  (let [traverse (fn f [x m]
+  (let [traverse
+        (fn f [x m]
                    (p/for-map [[k v] x]
                      k (if (vector? v)
-                         (p/for-map [h v] (:name h) (assoc h :module (conj m k)))
+                (p/for-map [h v
+                            :let [resolved (type-resolver h)
+                                  module (->> k (conj m) (map name) (str/join "/") keyword)]]
+                  (:name h) (assoc resolved :module module))
                          (f v (conj m k)))))]
     {:inject inject
      :modules (traverse modules [])}))
