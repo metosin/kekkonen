@@ -35,7 +35,7 @@
   [data :- User]
   data)
 
-(fact "using services directrly"
+(fact "using services directly"
 
   (fact "simple query works"
     (ping {}) => "pong")
@@ -91,7 +91,11 @@
                                                    :column 1
                                                    :file string?
                                                    :ns 'kekkonen.core-test
-                                                   :name 'echo})}))))
+                                                   :name 'echo})})
+
+      (fact "collect-ns-map"
+        (k/collect-ns-map {:test1 'kekkonen.core-test
+                           :test2 'kekkonen.core-test}) => {:test1 handlers, :test2 handlers}))))
 
 (fact "kekkonen"
   (s/with-fn-validation
