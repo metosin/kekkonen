@@ -107,13 +107,15 @@
       (let [kekkonen (k/create {:inject {:components {:db (atom #{})}}
                                 :modules (k/collect-ns-map {:test 'kekkonen.core-test})})]
 
+        (fact "all handlers"
+          (count (k/all-handlers kekkonen)) => 5)
+
         (fact "non-existing action"
           (k/some-handler kekkonen :test/non-existing) => nil
           (k/invoke kekkonen :test/non-existing) => (throws RuntimeException))
 
         (fact "existing action contains :type and :module"
-          (k/some-handler kekkonen :test/ping) => (contains {:type :function
-                                                             :module :test})
+          (k/some-handler kekkonen :test/ping) => (contains {:type :function, :module :test})
           (k/invoke kekkonen :test/ping) => "pong")
 
         (fact "crud via kekkonen"
