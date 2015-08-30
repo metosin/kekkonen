@@ -2,7 +2,8 @@
   (:require [kekkonen.core :as k]
             [midje.sweet :refer :all]
             [plumbing.core :refer [defnk]]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [plumbing.core :as p]))
 
 ; simplest thing that works
 (defnk ping [] "pong")
@@ -74,28 +75,53 @@
 ;; Collecting services
 ;;
 
-(fact "collect-ns"
+(fact "collecting handlers"
   (s/with-fn-validation
-    (let [handlers (k/collect-ns 'kekkonen.core-test)]
-      (count handlers) => 5
 
-      (last handlers) => (just {:fn fn?
-                                :name :echo
-                                :user {:query true
-                                       :roles #{:admin :user}}
-                                :description "Echoes the user"
-                                :input {:data User
-                                        s/Keyword s/Any}
-                                :output User
-                                :source-map (just {:line 32
-                                                   :column 1
-                                                   :file string?
-                                                   :ns 'kekkonen.core-test
-                                                   :name 'echo})})
+    (fact "collect-fn"
+      (fact "with fnk"
+        (k/collect-fn
+          (k/handler
+            {:name :echo
+             :description "Echoes the user"
+             :query true
+             :roles #{:admin :user}}
+            (p/fnk f :- User [data :- User] data)))
 
-      (fact "collect-ns-map"
-        (k/collect-ns-map {:test1 'kekkonen.core-test
-                           :test2 'kekkonen.core-test}) => {:test1 handlers, :test2 handlers}))))
+        => (contains {:fn fn?
+                      :name :echo
+                      :user {:query true
+                             :roles #{:admin :user}}
+                      :description "Echoes the user"
+                      :input {:data User
+                              s/Keyword s/Any}
+                      :output User})))
+
+    (fact "collect-var"
+      (let [handler (k/collect-var #'echo)]
+
+        handler => (just {:fn fn?
+                          :name :echo
+                          :user {:query true
+                                 :roles #{:admin :user}}
+                          :description "Echoes the user"
+                          :input {:data User
+                                  s/Keyword s/Any}
+                          :output User
+                          :source-map (just {:line 33
+                                             :column 1
+                                             :file string?
+                                             :ns 'kekkonen.core-test
+                                             :name 'echo})})
+
+        (fact "collect-ns"
+          (let [handlers (k/collect-ns 'kekkonen.core-test)]
+            (count handlers) => 5
+            handlers => (contains handler)
+
+            (fact "collect-ns-map"
+              (k/collect-ns-map {:test1 'kekkonen.core-test
+                                 :test2 'kekkonen.core-test}) => {:test1 handlers, :test2 handlers})))))))
 
 (fact "kekkonen"
   (s/with-fn-validation

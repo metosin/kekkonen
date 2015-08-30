@@ -6,12 +6,15 @@
             [plumbing.fnk.pfnk :as pfnk])
   (:import [clojure.lang Var Keyword]))
 
-(s/defn ^:private user-meta [v :- Var]
-  (-> v meta (dissoc :schema :ns :name :file :column :line :doc)))
+(s/defschema Function
+  (s/=> {s/Keyword s/Any} s/Any))
+
+(s/defn ^:private user-meta [v :- (s/either Var Function)]
+  (-> v meta (dissoc :schema :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
 
 (s/defschema Handler
   "Action handler metadata"
-  {:fn s/Any
+  {:fn Function
    :name s/Keyword
    :type s/Keyword
    :module s/Keyword
@@ -25,6 +28,9 @@
                                  :ns s/Symbol
                                  :name s/Symbol}
    s/Keyword s/Any})
+
+(s/defn handler [meta :- {s/Keyword s/Any} f :- Function]
+  (vary-meta f merge meta))
 
 (defn handler? [x]
   (and (map? x) (:fn x)))
@@ -42,7 +48,20 @@
    :inject {s/Keyword s/Any}
    s/Keyword s/Any})
 
-(s/defn defnk->handler :- (s/maybe PartialHandler)
+(s/defn collect-fn :- (s/maybe PartialHandler)
+  "Converts a fnk into a (Partial)Handler. Returns nil if the given
+  function does not contain the :schema metadata"
+  [f :- (s/=> s/Any s/Any)]
+  (if-let [{:keys [name description schema]} (meta f)]
+    (if schema
+      {:fn f
+       :name (keyword name)
+       :user (user-meta f)
+       :description description
+       :input (pfnk/input-schema f)
+       :output (pfnk/output-schema f)})))
+
+(s/defn collect-var :- (s/maybe PartialHandler)
   "Converts a defnk into a (Partial)Handler. Returns nil if the given
   var does not contain the defnk :schema metadata"
   [v :- Var]
@@ -68,7 +87,7 @@
   (require ns)
   (some->> ns
            ns-publics
-           (keep (comp defnk->handler val))
+           (keep (comp collect-var val))
            vec))
 
 (s/defn collect-ns-map :- {s/Keyword [PartialHandler]}
@@ -84,15 +103,15 @@
   [modules :- Modules
    {type-resolver :- s/Any default-type-resolver}
    {inject :- {s/Keyword s/Any} {}}]
-  (let [traverse
-        (fn f [x m]
-          (p/for-map [[k v] x]
-            k (if (vector? v)
-                (p/for-map [h v
-                            :let [resolved (type-resolver h)
-                                  module (->> k (conj m) (map name) (str/join "/") keyword)]]
-                  (:name h) (assoc resolved :module module))
-                (f v (conj m k)))))]
+  (let [->handler (fn [h k m]
+                    (let [module (->> k (conj m) (map name) (str/join "/") keyword)]
+                      (assoc (type-resolver h) :module module)))
+        traverse (fn f [x m]
+                   (p/for-map [[k v] x]
+                     k (cond
+                         (handler? v) {(:name v) (->handler v k m)}
+                         (vector? v) (p/for-map [h v] (:name h) (->handler h k m))
+                         :else (f v (conj m k)))))]
     {:inject inject
      :modules (traverse modules [])}))
 
