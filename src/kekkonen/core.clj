@@ -4,13 +4,17 @@
             [clojure.string :as str]
             [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk])
-  (:import [clojure.lang Var Keyword]))
+  (:import [clojure.lang Var Keyword IPersistentMap]))
+
+;;
+;; Definitions
+;;
 
 (s/defschema Function
   (s/=> {s/Keyword s/Any} s/Any))
 
 (s/defn ^:private user-meta [v :- (s/either Var Function)]
-  (-> v meta (dissoc :schema :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
+  (-> v meta (dissoc :schema :handler :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
 
 (s/defschema Handler
   "Action handler metadata"
@@ -30,14 +34,10 @@
    s/Keyword s/Any})
 
 (s/defn handler [meta :- {s/Keyword s/Any} f :- Function]
-  (vary-meta f merge meta))
+  (vary-meta f merge {:handler true} meta))
 
 (defn handler? [x]
-  (and (map? x) (:fn x)))
-
-(s/defschema PartialHandler
-  "Incomplete handler, used in collecting"
-  (dissoc Handler :type :module))
+  (and (map? x) (:fn x) (:type x)))
 
 (s/defschema Modules
   "Modules form a tree."
@@ -48,55 +48,81 @@
    :inject {s/Keyword s/Any}
    s/Keyword s/Any})
 
-(s/defn collect-fn :- (s/maybe PartialHandler)
-  "Converts a fnk into a (Partial)Handler. Returns nil if the given
-  function does not contain the :schema metadata"
-  [f :- (s/=> s/Any s/Any)]
-  (if-let [{:keys [name description schema]} (meta f)]
-    (if schema
-      {:fn f
-       :name (keyword name)
-       :user (user-meta f)
-       :description description
-       :input (pfnk/input-schema f)
-       :output (pfnk/output-schema f)})))
+;;
+;; Collecting
+;;
 
-(s/defn collect-var :- (s/maybe PartialHandler)
-  "Converts a defnk into a (Partial)Handler. Returns nil if the given
-  var does not contain the defnk :schema metadata"
-  [v :- Var]
-  (let [{:keys [line column file ns name doc schema]} (meta v)]
-    (if schema
-      {:fn @v
-       :name (keyword name)
-       :user (user-meta v)
-       :description doc
-       :input (pfnk/input-schema @v)
-       :output (pfnk/output-schema @v)
-       :source-map {:line line
-                    :column column
-                    :file file
-                    :ns (ns-name ns)
-                    :name name}})))
+(defprotocol HandlerCollector
+  (-collect [this type-resolver]))
 
-(s/defn collect-ns :- [PartialHandler]
-  "Collects all public vars from a given namespace, which
-  can be transformed by defnk->handler fn (given a Var)."
-  [ns]
-  ; is this a good idea?
-  (require ns)
-  (some->> ns
-           ns-publics
-           (keep (comp collect-var val))
-           vec))
+(s/defn collect [collector type-resolver]
+  (-collect collector type-resolver))
 
-(s/defn collect-ns-map :- {s/Keyword [PartialHandler]}
-  "Collects handlers from modules into a map of module->[Action]"
-  [modules :- {s/Keyword s/Symbol}]
-  (p/map-vals collect-ns modules))
+(defrecord CollectVar [v]
+  HandlerCollector
+  (-collect [_ type-resolver]
+    (println "collecting a var " v)
+    (let [{:keys [line column file ns name doc schema] :as meta} (meta v)]
+      (if-let [handler (if schema
+                         {:fn @v
+                          :name (keyword name)
+                          :user (user-meta v)
+                          :description doc
+                          :input (pfnk/input-schema @v)
+                          :output (pfnk/output-schema @v)
+                          :source-map {:line line
+                                       :column column
+                                       :file file
+                                       :ns (ns-name ns)
+                                       :name name}})]
+        (type-resolver handler meta)))))
 
-(s/defn ^:private default-type-resolver [handler]
-  (assoc handler :type :function))
+(defn collect-var [v]
+  (->CollectVar v))
+
+(defrecord CollectFn [f]
+  HandlerCollector
+  (-collect [_ type-resolver]
+    (if-let [{:keys [name description schema] :as meta} (meta f)]
+      (if-let [handler (if (and name schema)
+                         {:fn f
+                          :name (keyword name)
+                          :user (user-meta f)
+                          :description description
+                          :input (pfnk/input-schema f)
+                          :output (pfnk/output-schema f)})]
+        (type-resolver handler meta)))))
+
+(defn collect-fn
+  [f] (->CollectFn f))
+
+(defrecord CollectNs [ns]
+  HandlerCollector
+  (-collect [_ type-resolver]
+    (println "collecting a ns " ns)
+    (require ns)
+    (p/for-map [handler (some->> ns
+                                 ns-publics
+                                 (map (comp collect-var val))
+                                 (keep #(-collect % type-resolver)))]
+      (:name handler) handler)))
+
+(defn collect-ns
+  [ns] (->CollectNs ns))
+
+(extend-type IPersistentMap
+  HandlerCollector
+  (collect [this type-resolver]
+    (p/for-map [[k v] this]
+      k (-collect v type-resolver))))
+
+;;
+;; Registry
+;;
+
+(defn default-type-resolver [handler meta]
+  (if (some-> meta :handler true?)
+    (assoc handler :type :handler)))
 
 (p/defnk create :- Kekkonen
   "Creates a Kekkonen."
@@ -108,12 +134,11 @@
                       (assoc (type-resolver h) :module module)))
         traverse (fn f [x m]
                    (p/for-map [[k v] x]
-                     k (cond
-                         (handler? v) {(:name v) (->handler v k m)}
-                         (vector? v) (p/for-map [h v] (:name h) (->handler h k m))
-                         :else (f v (conj m k)))))]
+                     k (if (handler? v)
+                         {(:name v) (->handler v k m)}
+                         (f v (conj m k)))))]
     {:inject inject
-     :modules (traverse modules [])}))
+     :modules (traverse (collect modules type-resolver) [])}))
 
 (s/defn ^:private action-kws [path :- s/Keyword]
   (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
@@ -146,3 +171,10 @@
       (if-not handler
         (throw (ex-info (str "invalid action " action) {}))
         ((:fn handler) context)))))
+
+(p/defnk ^:handler tst [])
+
+(-> 'kekkonen.core
+    collect-ns
+    (collect default-type-resolver))
+
