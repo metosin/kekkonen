@@ -29,7 +29,7 @@
       (k/collect-ns-map {:items 'kekkonen.example})))
 
   (def kekkonen (k/create
-                  {:inject {:resources {:counter counter}}
+                  {:context {:resources {:counter counter}}
                    :modules (k/collect-ns-map {:items 'kekkonen.example})}))
 
   (./aprint kekkonen)

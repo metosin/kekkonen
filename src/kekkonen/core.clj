@@ -45,7 +45,7 @@
 
 (s/defschema Kekkonen
   {:modules Modules
-   :inject {s/Keyword s/Any}
+   :context {s/Keyword s/Any}
    s/Keyword s/Any})
 
 ;;
@@ -148,7 +148,7 @@
   "Creates a Kekkonen."
   [modules :- Modules
    {type-resolver :- s/Any default-type-resolver}
-   {inject :- {s/Keyword s/Any} {}}]
+   {context :- {s/Keyword s/Any} {}}]
   (let [->handler (fn [h m]
                     (if (seq m)
                       (let [module (->> m (map name) (str/join "/") keyword)]
@@ -159,7 +159,7 @@
                      k (if (handler? v)
                          (->handler v m)
                          (f v (conj m k)))))]
-    {:inject inject
+    {:context context
      :modules (traverse (collect modules type-resolver) [])}))
 
 (s/defn ^:private action-kws [path :- s/Keyword]
@@ -188,8 +188,7 @@
     (invoke kekkonen action {}))
   ([kekkonen action request]
     (let [handler (some-handler kekkonen action)
-          ; context-level overrides of inject!
-          context (merge (:inject kekkonen) request)]
+          context (merge (:context kekkonen) request)]
       (if-not handler
         (throw (ex-info (str "invalid action " action) {}))
         ((:fn handler) context)))))

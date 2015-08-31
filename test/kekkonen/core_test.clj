@@ -36,7 +36,7 @@
   [data :- User]
   data)
 
-(defnk not-a-handler [])
+(defnk ^:query not-a-handler [])
 
 (fact "using services directly"
 
@@ -147,7 +147,7 @@
       (k/create {:modules 'kekkonen.core-test}) => (throws RuntimeException))
 
     (fact "can be created with modules"
-      (let [kekkonen (k/create {:inject {:components {:db (atom #{})}}
+      (let [kekkonen (k/create {:context {:components {:db (atom #{})}}
                                 :modules {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
