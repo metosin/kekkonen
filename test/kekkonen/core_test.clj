@@ -138,37 +138,40 @@
   (s/with-fn-validation
 
     (fact "can't be created without modules"
-        (k/create {}) => (throws RuntimeException))
+      (k/create {}) => (throws RuntimeException))
+
+    (fact "can't be created with root level handlers"
+      (k/create {:modules (k/collect-ns 'kekkonen.core-test)}) => (throws RuntimeException))
 
     (fact "can be created with modules"
       (let [kekkonen (k/create {:inject {:components {:db (atom #{})}}
                                 :modules {:test (k/collect-ns 'kekkonen.core-test)}})]
 
-          #_(fact "all handlers"
-              (count (k/all-handlers kekkonen)) => 5)
+        (fact "all handlers"
+          (count (k/all-handlers kekkonen)) => 5)
 
-          #_(fact "non-existing action"
-              (k/some-handler kekkonen :test/non-existing) => nil
-              (k/invoke kekkonen :test/non-existing) => (throws RuntimeException))
+        (fact "non-existing action"
+          (k/some-handler kekkonen :test/non-existing) => nil
+          (k/invoke kekkonen :test/non-existing) => (throws RuntimeException))
 
-          #_(fact "existing action contains :type and :module"
-              (k/some-handler kekkonen :test/ping) => (contains {:type :handler, :module :test})
-              (k/invoke kekkonen :test/ping) => "pong")
+        (fact "existing action contains :type and :module"
+          (k/some-handler kekkonen :test/ping) => (contains {:type :handler, :module :test})
+          (k/invoke kekkonen :test/ping) => "pong")
 
-          #_(fact "crud via kekkonen"
-              (k/invoke kekkonen :test/get-items) => #{}
-              (k/invoke kekkonen :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
-              (k/invoke kekkonen :test/get-items) => #{"kikka"}
-              (k/invoke kekkonen :test/reset-items!) => #{}
-              (k/invoke kekkonen :test/get-items) => #{}
+        (fact "crud via kekkonen"
+          (k/invoke kekkonen :test/get-items) => #{}
+          (k/invoke kekkonen :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
+          (k/invoke kekkonen :test/get-items) => #{"kikka"}
+          (k/invoke kekkonen :test/reset-items!) => #{}
+          (k/invoke kekkonen :test/get-items) => #{}
 
-              (fact "context-level overrides FTW!"
-                (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
+          (fact "context-level overrides FTW!"
+            (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
-    #_(fact "deeply nested modules"
-        (let [kekkonen (k/create {:modules {:admin (k/collect-ns-map {:kikka 'kekkonen.core-test
-                                                                      :kukka 'kekkonen.core-test})
-                                            :public (k/collect-ns 'kekkonen.core-test)}})]
-          (k/invoke kekkonen :admin/kikka/ping) => "pong"
-          (k/invoke kekkonen :admin/kukka/ping) => "pong"
-          (k/invoke kekkonen :public/ping) => "pong"))))
+    (fact "deeply nested modules"
+      (let [kekkonen (k/create {:modules {:admin {:kikka (k/collect-ns 'kekkonen.core-test)
+                                                  :kukka (k/collect-ns 'kekkonen.core-test)}
+                                          :public (k/collect-ns 'kekkonen.core-test)}})]
+        (k/invoke kekkonen :admin/kikka/ping) => "pong"
+        (k/invoke kekkonen :admin/kukka/ping) => "pong"
+        (k/invoke kekkonen :public/ping) => "pong"))))

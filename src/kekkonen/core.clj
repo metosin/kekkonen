@@ -61,21 +61,21 @@
 (defrecord CollectVar [v]
   HandlerCollector
   (-collect [_ type-resolver]
-    (println "collecting a var " v)
-    (let [{:keys [line column file ns name doc schema] :as meta} (meta v)]
-      (if-let [handler (if schema
-                         {:fn @v
-                          :name (keyword name)
-                          :user (user-meta v)
-                          :description doc
-                          :input (pfnk/input-schema @v)
-                          :output (pfnk/output-schema @v)
-                          :source-map {:line line
-                                       :column column
-                                       :file file
-                                       :ns (ns-name ns)
-                                       :name name}})]
-        (type-resolver handler meta)))))
+    (when-let [{:keys [line column file ns name doc schema type]} (type-resolver (meta v))]
+      #_(println "collecting var:" v)
+      (if schema
+        {:fn @v
+         :type type
+         :name (keyword name)
+         :user (user-meta v)
+         :description doc
+         :input (pfnk/input-schema @v)
+         :output (pfnk/output-schema @v)
+         :source-map {:line line
+                      :column column
+                      :file file
+                      :ns (ns-name ns)
+                      :name name}}))))
 
 (defn collect-var [v]
   (->CollectVar v))
@@ -83,15 +83,15 @@
 (defrecord CollectFn [f]
   HandlerCollector
   (-collect [_ type-resolver]
-    (if-let [{:keys [name description schema] :as meta} (meta f)]
-      (if-let [handler (if (and name schema)
-                         {:fn f
-                          :name (keyword name)
-                          :user (user-meta f)
-                          :description description
-                          :input (pfnk/input-schema f)
-                          :output (pfnk/output-schema f)})]
-        (type-resolver handler meta)))))
+    (if-let [{:keys [name description schema type]} (type-resolver (meta f))]
+      (if (and name schema)
+        {:fn f
+         :type type
+         :name (keyword name)
+         :user (user-meta f)
+         :description description
+         :input (pfnk/input-schema f)
+         :output (pfnk/output-schema f)}))))
 
 (defn collect-fn
   [f] (->CollectFn f))
@@ -99,7 +99,7 @@
 (defrecord CollectNs [ns]
   HandlerCollector
   (-collect [_ type-resolver]
-    (println "collecting a ns " ns)
+    #_(println " collecting ns:" ns)
     (require ns)
     (p/for-map [handler (some->> ns
                                  ns-publics
@@ -112,7 +112,7 @@
 
 (extend-type IPersistentMap
   HandlerCollector
-  (collect [this type-resolver]
+  (-collect [this type-resolver]
     (p/for-map [[k v] this]
       k (-collect v type-resolver))))
 
@@ -120,22 +120,27 @@
 ;; Registry
 ;;
 
-(defn default-type-resolver [handler meta]
-  (if (some-> meta :handler true?)
-    (assoc handler :type :handler)))
+(s/defn type-resolver [type :- s/Keyword]
+  (fn [meta]
+    (if (or (some-> meta type true?) (some-> meta :type (= type)))
+      (-> meta (assoc :type type) (dissoc type)))))
+
+(def default-type-resolver (type-resolver :handler))
 
 (p/defnk create :- Kekkonen
   "Creates a Kekkonen."
   [modules :- Modules
    {type-resolver :- s/Any default-type-resolver}
    {inject :- {s/Keyword s/Any} {}}]
-  (let [->handler (fn [h k m]
-                    (let [module (->> k (conj m) (map name) (str/join "/") keyword)]
-                      (assoc (type-resolver h) :module module)))
+  (let [->handler (fn [h m]
+                    (if (seq m)
+                      (let [module (->> m (map name) (str/join "/") keyword)]
+                        (assoc (type-resolver h) :module module))
+                      (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn f [x m]
                    (p/for-map [[k v] x]
                      k (if (handler? v)
-                         {(:name v) (->handler v k m)}
+                         (->handler v m)
                          (f v (conj m k)))))]
     {:inject inject
      :modules (traverse (collect modules type-resolver) [])}))
@@ -172,9 +177,19 @@
         (throw (ex-info (str "invalid action " action) {}))
         ((:fn handler) context)))))
 
-(p/defnk ^:handler tst [])
+(comment
+  (p/defnk ^:handler tst [])
 
-(-> 'kekkonen.core
-    collect-ns
-    (collect default-type-resolver))
+  (-> 'kekkonen.core
+      collect-ns
+      (collect default-type-resolver))
 
+  (./aprint
+    (collect {:abba (collect-ns 'kekkonen.core)} default-type-resolver))
+
+  (def k (create {:modules {:abba (collect-ns 'kekkonen.core)}}))
+
+  (./aprint k)
+
+  (./aprint
+    (all-handlers k)))
