@@ -4,7 +4,7 @@
             [clojure.string :as str]
             [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk])
-  (:import [clojure.lang Var Keyword IPersistentMap]))
+  (:import [clojure.lang Var Keyword IPersistentMap Symbol]))
 
 ;;
 ;; Definitions
@@ -49,14 +49,28 @@
    s/Keyword s/Any})
 
 ;;
+;; Type Resolution
+;;
+
+(s/defn type-resolver [type :- s/Keyword]
+  (fn [meta]
+    (if (or (some-> meta type true?) (some-> meta :type (= type)))
+      (-> meta (assoc :type type) (dissoc type)))))
+
+(def default-type-resolver (type-resolver :handler))
+
+;;
 ;; Collecting
 ;;
 
 (defprotocol HandlerCollector
   (-collect [this type-resolver]))
 
-(s/defn collect [collector type-resolver]
-  (-collect collector type-resolver))
+(s/defn collect
+  ([collector]
+    (collect collector default-type-resolver))
+  ([collector type-resolver]
+    (-collect collector type-resolver)))
 
 (defrecord CollectVar [v]
   HandlerCollector
@@ -116,16 +130,19 @@
     (p/for-map [[k v] this]
       k (-collect v type-resolver))))
 
+(extend-type Var
+  HandlerCollector
+  (-collect [this type-resolver]
+    (-collect (collect-var this) type-resolver)))
+
+(extend-type Symbol
+  HandlerCollector
+  (-collect [this type-resolver]
+    (-collect (collect-ns this) type-resolver)))
+
 ;;
 ;; Registry
 ;;
-
-(s/defn type-resolver [type :- s/Keyword]
-  (fn [meta]
-    (if (or (some-> meta type true?) (some-> meta :type (= type)))
-      (-> meta (assoc :type type) (dissoc type)))))
-
-(def default-type-resolver (type-resolver :handler))
 
 (p/defnk create :- Kekkonen
   "Creates a Kekkonen."

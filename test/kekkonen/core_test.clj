@@ -90,8 +90,7 @@
                              :description "Echoes the user"
                              :query true
                              :roles #{:admin :user}}
-                            (p/fnk f :- User [data :- User] data)))
-                        k/default-type-resolver)]
+                            (p/fnk f :- User [data :- User] data))))]
 
           handler => (contains {:fn fn?
                                 :type :handler
@@ -105,8 +104,7 @@
 
     (fact "collect-var"
       (let [handler (k/collect
-                      (k/collect-var #'echo)
-                      k/default-type-resolver)]
+                      (k/collect-var #'echo))]
 
         handler => (just {:fn fn?
                           :type :handler
@@ -122,17 +120,22 @@
                                              :ns 'kekkonen.core-test
                                              :name 'echo})})
 
+        (fact "collect-var via Var shortcut gives same results"
+          (k/collect #'echo) => handler)
+
         (fact "collect-ns"
           (let [handlers (k/collect
-                           (k/collect-ns 'kekkonen.core-test)
-                           k/default-type-resolver)]
+                           (k/collect-ns 'kekkonen.core-test))]
 
             (count handlers) => 5
             handlers => (just {:ping k/handler?
                                :get-items k/handler?
                                :add-item! k/handler?
                                :reset-items! k/handler?
-                               :echo handler})))))))
+                               :echo handler})
+
+            (fact "collect-ns Symbol shortcut gives same results"
+              (k/collect 'kekkonen.core-test) => handlers)))))))
 
 (fact "kekkonen"
   (s/with-fn-validation
@@ -141,11 +144,11 @@
       (k/create {}) => (throws RuntimeException))
 
     (fact "can't be created with root level handlers"
-      (k/create {:modules (k/collect-ns 'kekkonen.core-test)}) => (throws RuntimeException))
+      (k/create {:modules 'kekkonen.core-test}) => (throws RuntimeException))
 
     (fact "can be created with modules"
       (let [kekkonen (k/create {:inject {:components {:db (atom #{})}}
-                                :modules {:test (k/collect-ns 'kekkonen.core-test)}})]
+                                :modules {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
           (count (k/all-handlers kekkonen)) => 5)
@@ -169,9 +172,9 @@
             (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
     (fact "deeply nested modules"
-      (let [kekkonen (k/create {:modules {:admin {:kikka (k/collect-ns 'kekkonen.core-test)
-                                                  :kukka (k/collect-ns 'kekkonen.core-test)}
-                                          :public (k/collect-ns 'kekkonen.core-test)}})]
+      (let [kekkonen (k/create {:modules {:admin {:kikka 'kekkonen.core-test
+                                                  :kukka 'kekkonen.core-test}
+                                          :public 'kekkonen.core-test}})]
         (k/invoke kekkonen :admin/kikka/ping) => "pong"
         (k/invoke kekkonen :admin/kukka/ping) => "pong"
         (k/invoke kekkonen :public/ping) => "pong"))))
