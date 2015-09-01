@@ -30,7 +30,7 @@
 
   (def kekkonen (k/create
                   {:context {:resources {:counter counter}}
-                   :modules (k/collect-ns-map {:items 'kekkonen.example})}))
+                   :handlers (k/collect-ns-map {:items 'kekkonen.example})}))
 
   (./aprint kekkonen)
 
@@ -41,6 +41,6 @@
 
   (./aprint
     (k/create
-      {:modules (k/collect-ns-map {:items 'kekkonen.example})}))
+      {:handlers (k/collect-ns-map {:items 'kekkonen.example})}))
 
   (./aprint (k/collect-ns k/collect-var 'kekkonen.example)))

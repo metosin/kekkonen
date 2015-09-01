@@ -140,15 +140,15 @@
 (fact "kekkonen"
   (s/with-fn-validation
 
-    (fact "can't be created without modules"
+    (fact "can't be created without handlers"
       (k/create {}) => (throws RuntimeException))
 
     (fact "can't be created with root level handlers"
-      (k/create {:modules 'kekkonen.core-test}) => (throws RuntimeException))
+      (k/create {:handlers 'kekkonen.core-test}) => (throws RuntimeException))
 
-    (fact "can be created with modules"
+    (fact "can be created with handlers"
       (let [kekkonen (k/create {:context {:components {:db (atom #{})}}
-                                :modules {:test 'kekkonen.core-test}})]
+                                :handlers {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
           (count (k/all-handlers kekkonen)) => 5)
@@ -171,10 +171,20 @@
           (fact "context-level overrides FTW!"
             (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
-    (fact "deeply nested modules"
-      (let [kekkonen (k/create {:modules {:admin {:kikka 'kekkonen.core-test
-                                                  :kukka 'kekkonen.core-test}
-                                          :public 'kekkonen.core-test}})]
+    (fact "deeply nested handlers"
+      (let [kekkonen (k/create {:handlers {:admin {:kikka 'kekkonen.core-test
+                                                   :kukka 'kekkonen.core-test}
+                                           :public 'kekkonen.core-test}})]
         (k/invoke kekkonen :admin/kikka/ping) => "pong"
         (k/invoke kekkonen :admin/kukka/ping) => "pong"
         (k/invoke kekkonen :public/ping) => "pong"))))
+
+(k/create
+  {:context {:components {:db (atom #{})}}
+   :handlers {:test 'kekkonen.core-test}})
+
+(k/kekkonen
+  {:test 'kekkonen.core-test}
+  {:context {:components {:db (atom #{})}}})
+
+(k/kekkonen {:test 'kekkonen.core-test})

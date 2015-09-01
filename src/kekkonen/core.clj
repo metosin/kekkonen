@@ -34,7 +34,7 @@
    s/Keyword s/Any})
 
 (s/defschema Kekkonen
-  {:modules KeywordMap
+  {:handlers KeywordMap
    :context KeywordMap
    s/Keyword s/Any})
 
@@ -147,7 +147,7 @@
 
 (p/defnk create :- Kekkonen
   "Creates a Kekkonen."
-  [modules :- KeywordMap
+  [handlers :- KeywordMap
    {type-resolver :- s/Any default-type-resolver}
    {context :- {s/Keyword s/Any} {}}]
   (let [->handler (fn [h m]
@@ -161,15 +161,15 @@
                          (->handler v m)
                          (f v (conj m k)))))]
     {:context context
-     :modules (traverse (collect modules type-resolver) [])}))
+     :handlers (traverse (collect handlers type-resolver) [])}))
 
 (s/defn kekkonen :- Kekkonen
   "Creates a Kekkonen, the other way."
-  ([modules :- KeywordMap]
-    (kekkonen modules {}))
-  ([modules :- KeywordMap
+  ([handlers :- KeywordMap]
+    (kekkonen handlers {}))
+  ([handlers :- KeywordMap
     options :- KeywordMap]
-    (create (merge options {:modules modules}))))
+    (create (merge options {:handlers handlers}))))
 
 
 (s/defn ^:private action-kws [path :- s/Keyword]
@@ -178,7 +178,7 @@
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
   [kekkonen, action :- s/Keyword]
-  (get-in (:modules kekkonen) (action-kws action)))
+  (get-in (:handlers kekkonen) (action-kws action)))
 
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
@@ -189,7 +189,7 @@
         (if (handler? x)
           (do (swap! handlers conj x) nil)
           x))
-      (:modules kekkonen))
+      (:handlers kekkonen))
     @handlers))
 
 (s/defn invoke
@@ -212,11 +212,24 @@
   ; short
   (./aprint (collect 'kekkonen.core))
 
-  ; single map -based
-  (def k (create {:modules {:abba (collect-ns 'kekkonen.core)}}))
+  ; short versions
+  (k/create {:handlers {:test 'kekkonen.core}})
+  (k/kekkonen {:test 'kekkonen.core})
 
-  ; routes & options -based
-  (def k (kekkonen {:abba (collect-ns 'kekkonen.core)}))
+  ; long versions
+  (k/create
+    {:context {:components {:db (atom #{})}}
+     :handlers {:test 'kekkonen.core}})
+
+  (k/kekkonen
+    {:test 'kekkonen.core}
+    {:context {:components {:db (atom #{})}}})
+
+  ;;
+  ;; test it
+  ;;
+
+  (def k (kekkonen {:test 'kekkonen.core}))
 
   (./aprint k)
 
