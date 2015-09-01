@@ -16,9 +16,6 @@
 (s/defschema KeywordMap
   {s/Keyword s/Any})
 
-(s/defn ^:private user-meta [v :- (s/either Var Function)]
-  (-> v meta (dissoc :schema :handler :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
-
 (s/defschema Handler
   "Action handler metadata"
   {:fn Function
@@ -36,16 +33,20 @@
                                  :name s/Symbol}
    s/Keyword s/Any})
 
+(s/defschema Kekkonen
+  {:modules KeywordMap
+   :context KeywordMap
+   s/Keyword s/Any})
+
+;;
+;; Handlers
+;;
+
 (s/defn handler [meta :- KeywordMap f :- Function]
   (vary-meta f merge {:handler true} meta))
 
 (defn handler? [x]
   (and (map? x) (:fn x) (:type x)))
-
-(s/defschema Kekkonen
-  {:modules KeywordMap
-   :context KeywordMap
-   s/Keyword s/Any})
 
 ;;
 ;; Type Resolution
@@ -62,6 +63,9 @@
 ;; Collecting
 ;;
 
+(s/defn ^:private user-meta [v :- (s/either Var Function)]
+  (-> v meta (dissoc :schema :handler :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
+
 (defprotocol HandlerCollector
   (-collect [this type-resolver]))
 
@@ -75,7 +79,6 @@
   HandlerCollector
   (-collect [_ type-resolver]
     (when-let [{:keys [line column file ns name doc schema type]} (type-resolver (meta v))]
-      #_(println "collecting var:" v)
       (if schema
         {:fn @v
          :type type
@@ -112,7 +115,6 @@
 (defrecord CollectNs [ns]
   HandlerCollector
   (-collect [_ type-resolver]
-    #_(println " collecting ns:" ns)
     (require ns)
     (p/for-map [handler (some->> ns
                                  ns-publics
