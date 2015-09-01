@@ -146,7 +146,10 @@
     (fact "can't be created with root level handlers"
       (k/create {:handlers 'kekkonen.core-test}) => (throws RuntimeException))
 
-    (fact "can be created with handlers"
+    (fact "can be created with namespaced handlers"
+      (k/create {:handlers {:test 'kekkonen.core-test}}) => truthy)
+
+    (fact "with handlers and context"
       (let [kekkonen (k/create {:context {:components {:db (atom #{})}}
                                 :handlers {:test 'kekkonen.core-test}})]
 
