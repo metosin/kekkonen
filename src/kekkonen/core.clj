@@ -187,12 +187,10 @@
   "Invokes a action handler with the given context."
   ([kekkonen action]
     (invoke kekkonen action {}))
-  ([kekkonen action request]
-    (let [handler (some-handler kekkonen action)
-          context (merge (:context kekkonen) request)]
-      (if-not handler
-        (throw (ex-info (str "invalid action " action) {}))
-        ((:fn handler) context)))))
+  ([kekkonen action context]
+    (if-let [handler (some-handler kekkonen action)]
+      ((:fn handler) (merge (:context kekkonen) context))
+      (throw (ex-info (str "Invalid action " action) {})))))
 
 (comment
   (p/defnk ^:handler tst [])
