@@ -163,6 +163,15 @@
     {:context context
      :modules (traverse (collect modules type-resolver) [])}))
 
+(s/defn kekkonen :- Kekkonen
+  "Creates a Kekkonen, the other way."
+  ([modules :- KeywordMap]
+    (kekkonen modules {}))
+  ([modules :- KeywordMap
+    options :- KeywordMap]
+    (create (merge options {:modules modules}))))
+
+
 (s/defn ^:private action-kws [path :- s/Keyword]
   (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
 
@@ -197,14 +206,17 @@
 (comment
   (p/defnk ^:handler tst [])
 
-  (-> 'kekkonen.core
-      collect-ns
-      (collect default-type-resolver))
+  ; long
+  (./aprint (collect {:abba (collect-ns 'kekkonen.core)} default-type-resolver))
 
-  (./aprint
-    (collect {:abba (collect-ns 'kekkonen.core)} default-type-resolver))
+  ; short
+  (./aprint (collect 'kekkonen.core))
 
+  ; single map -based
   (def k (create {:modules {:abba (collect-ns 'kekkonen.core)}}))
+
+  ; routes & options -based
+  (def k (kekkonen {:abba (collect-ns 'kekkonen.core)}))
 
   (./aprint k)
 
