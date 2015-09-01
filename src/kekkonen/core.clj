@@ -13,6 +13,9 @@
 (s/defschema Function
   (s/=> {s/Keyword s/Any} s/Any))
 
+(s/defschema KeywordMap
+  {s/Keyword s/Any})
+
 (s/defn ^:private user-meta [v :- (s/either Var Function)]
   (-> v meta (dissoc :schema :handler :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
 
@@ -22,7 +25,7 @@
    :name s/Keyword
    :type s/Keyword
    :module s/Keyword
-   :user {s/Keyword s/Any}
+   :user KeywordMap
    :description (s/maybe s/Str)
    :input s/Any
    :output s/Any
@@ -33,19 +36,15 @@
                                  :name s/Symbol}
    s/Keyword s/Any})
 
-(s/defn handler [meta :- {s/Keyword s/Any} f :- Function]
+(s/defn handler [meta :- KeywordMap f :- Function]
   (vary-meta f merge {:handler true} meta))
 
 (defn handler? [x]
   (and (map? x) (:fn x) (:type x)))
 
-(s/defschema Modules
-  "Modules form a tree."
-  {s/Keyword s/Any #_(s/either [Handler] (s/recursive #'Modules))})
-
 (s/defschema Kekkonen
-  {:modules Modules
-   :context {s/Keyword s/Any}
+  {:modules KeywordMap
+   :context KeywordMap
    s/Keyword s/Any})
 
 ;;
@@ -146,7 +145,7 @@
 
 (p/defnk create :- Kekkonen
   "Creates a Kekkonen."
-  [modules :- Modules
+  [modules :- KeywordMap
    {type-resolver :- s/Any default-type-resolver}
    {context :- {s/Keyword s/Any} {}}]
   (let [->handler (fn [h m]
