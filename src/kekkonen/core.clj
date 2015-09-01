@@ -4,7 +4,7 @@
             [clojure.string :as str]
             [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk])
-  (:import [clojure.lang Var Keyword IPersistentMap Symbol]))
+  (:import [clojure.lang Var IPersistentMap Symbol]))
 
 ;;
 ;; Definitions
@@ -21,7 +21,7 @@
   {:fn Function
    :name s/Keyword
    :type s/Keyword
-   :module s/Keyword
+   :ns s/Keyword
    :user KeywordMap
    :description (s/maybe s/Str)
    :input s/Any
@@ -42,7 +42,7 @@
 ;; Handlers
 ;;
 
-(s/defn handler [meta :- KeywordMap f :- Function]
+(s/defn handler [meta :- KeywordMap, f :- Function]
   (vary-meta f merge {:handler true} meta))
 
 (defn handler? [x]
@@ -150,27 +150,18 @@
   [handlers :- KeywordMap
    {type-resolver :- s/Any default-type-resolver}
    {context :- {s/Keyword s/Any} {}}]
-  (let [->handler (fn [h m]
-                    (if (seq m)
-                      (let [module (->> m (map name) (str/join "/") keyword)]
-                        (assoc (type-resolver h) :module module))
-                      (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
-        traverse (fn f [x m]
-                   (p/for-map [[k v] x]
-                     k (if (handler? v)
-                         (->handler v m)
-                         (f v (conj m k)))))]
+  (letfn [(enrich [h m]
+            (if (seq m)
+              (let [ns (->> m (map name) (str/join "/") keyword)]
+                (assoc (type-resolver h) :ns ns))
+              (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
+          (traverse [x m]
+            (p/for-map [[k v] x]
+              k (if (handler? v)
+                  (enrich v m)
+                  (traverse v (conj m k)))))]
     {:context context
      :handlers (traverse (collect handlers type-resolver) [])}))
-
-(s/defn kekkonen :- Kekkonen
-  "Creates a Kekkonen, the other way."
-  ([handlers :- KeywordMap]
-    (kekkonen handlers {}))
-  ([handlers :- KeywordMap
-    options :- KeywordMap]
-    (create (merge options {:handlers handlers}))))
-
 
 (s/defn ^:private action-kws [path :- s/Keyword]
   (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
@@ -212,24 +203,15 @@
   ; short
   (./aprint (collect 'kekkonen.core))
 
-  ; short versions
-  (k/create {:handlers {:test 'kekkonen.core}})
-  (k/kekkonen {:test 'kekkonen.core})
+  ; short version
+  (create {:handlers {:test 'kekkonen.core}})
 
-  ; long versions
-  (k/create
+  ; long version
+  (create
     {:context {:components {:db (atom #{})}}
      :handlers {:test 'kekkonen.core}})
 
-  (k/kekkonen
-    {:test 'kekkonen.core}
-    {:context {:components {:db (atom #{})}}})
-
-  ;;
-  ;; test it
-  ;;
-
-  (def k (kekkonen {:test 'kekkonen.core}))
+  (def k (create {:handlers {:test 'kekkonen.core}}))
 
   (./aprint k)
 

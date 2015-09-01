@@ -157,8 +157,8 @@
           (k/some-handler kekkonen :test/non-existing) => nil
           (k/invoke kekkonen :test/non-existing) => (throws RuntimeException))
 
-        (fact "existing action contains :type and :module"
-          (k/some-handler kekkonen :test/ping) => (contains {:type :handler, :module :test})
+        (fact "existing action contains :type and :ns"
+          (k/some-handler kekkonen :test/ping) => (contains {:type :handler, :ns :test})
           (k/invoke kekkonen :test/ping) => "pong")
 
         (fact "crud via kekkonen"
@@ -178,13 +178,3 @@
         (k/invoke kekkonen :admin/kikka/ping) => "pong"
         (k/invoke kekkonen :admin/kukka/ping) => "pong"
         (k/invoke kekkonen :public/ping) => "pong"))))
-
-(k/create
-  {:context {:components {:db (atom #{})}}
-   :handlers {:test 'kekkonen.core-test}})
-
-(k/kekkonen
-  {:test 'kekkonen.core-test}
-  {:context {:components {:db (atom #{})}}})
-
-(k/kekkonen {:test 'kekkonen.core-test})
