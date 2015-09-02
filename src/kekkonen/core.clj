@@ -52,10 +52,13 @@
 ;; Type Resolution
 ;;
 
-(s/defn type-resolver [type :- s/Keyword]
+(s/defn type-resolver [& types :- [s/Keyword]]
   (fn [meta]
-    (if (or (some-> meta type true?) (some-> meta :type (= type)))
-      (-> meta (assoc :type type) (dissoc type)))))
+    (reduce
+      (fn [_ type]
+        (if (or (some-> meta type true?) (some-> meta :type (= type)))
+          (reduced (-> meta (assoc :type type) (dissoc type)))))
+      nil types)))
 
 (def default-type-resolver (type-resolver :handler))
 

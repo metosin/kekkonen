@@ -4,10 +4,8 @@
             [schema.core :as s]
             [plumbing.core :as p]))
 
-; simplest thing that works
 (p/defnk ^:handler ping [] "pong")
 
-; crud
 (p/defnk ^:handler get-items :- #{s/Str}
   [[:components db]] @db)
 
@@ -76,6 +74,14 @@
 ;; Collecting services
 ;;
 
+(fact "resolving types"
+  (fact "successfull resolution"
+    ((k/type-resolver :kikka) {:kikka true}) => {:type :kikka}
+    ((k/type-resolver :kikka :kukka) {:kukka true}) => {:type :kukka})
+  (fact "unsuccessfull resolution"
+    ((k/type-resolver :kikka) {}) => nil
+    ((k/type-resolver :kikka :kukka) {}) => nil))
+
 (fact "collecting handlers"
   (s/with-fn-validation
 
@@ -117,7 +123,7 @@
                                  s/Keyword s/Any}
                          :output User
                          :source-map (just
-                                       {:line 32
+                                       {:line 30
                                         :column 1
                                         :file string?
                                         :ns 'kekkonen.core-test
