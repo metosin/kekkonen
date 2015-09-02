@@ -1,24 +1,23 @@
 (ns kekkonen.core-test
   (:require [kekkonen.core :as k]
             [midje.sweet :refer :all]
-            [plumbing.core :refer [defnk]]
             [schema.core :as s]
             [plumbing.core :as p]))
 
 ; simplest thing that works
-(defnk ^:handler ping [] "pong")
+(p/defnk ^:handler ping [] "pong")
 
 ; crud
-(defnk ^:handler get-items :- #{s/Str}
+(p/defnk ^:handler get-items :- #{s/Str}
   [[:components db]] @db)
 
-(defnk ^:handler add-item! :- #{s/Str}
+(p/defnk ^:handler add-item! :- #{s/Str}
   "Adds an item to database"
   [[:data item :- String]
    [:components db]]
   (swap! db conj item))
 
-(defnk ^:handler reset-items! :- #{s/Str}
+(p/defnk ^:handler reset-items! :- #{s/Str}
   "Resets the database"
   [[:components db]]
   (swap! db empty))
@@ -30,13 +29,13 @@
              (s/optional-key :country) (s/enum :FI :CA)}})
 
 ; complex example with external schema and user meta
-(defnk ^:handler echo :- User
+(p/defnk ^:handler echo :- User
   "Echoes the user"
   {:roles #{:admin :user}}
   [data :- User]
   data)
 
-(defnk ^:query not-a-handler [])
+(p/defnk ^:query not-a-handler [])
 
 (fact "using services directly"
 
@@ -114,7 +113,7 @@
                           :input {:data User
                                   s/Keyword s/Any}
                           :output User
-                          :source-map (just {:line 33
+                          :source-map (just {:line 32
                                              :column 1
                                              :file string?
                                              :ns 'kekkonen.core-test
