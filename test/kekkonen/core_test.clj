@@ -178,10 +178,26 @@
           (fact "context-level overrides FTW!"
             (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
-    (fact "deeply nested handlers"
+    (fact "lots of handlers"
       (let [kekkonen (k/create {:handlers {:admin {:kikka 'kekkonen.core-test
                                                    :kukka 'kekkonen.core-test}
-                                           :public 'kekkonen.core-test}})]
-        (k/invoke kekkonen :admin/kikka/ping) => "pong"
-        (k/invoke kekkonen :admin/kukka/ping) => "pong"
-        (k/invoke kekkonen :public/ping) => "pong"))))
+                                           :public 'kekkonen.core-test
+                                           :kiss #'ping
+                                           :abba [#'ping #'echo]
+                                           :wasp ['kekkonen.core-test]}})]
+
+        (fact "deeply nested"
+          (k/invoke kekkonen :admin/kikka/ping) => "pong"
+          (k/invoke kekkonen :admin/kukka/ping) => "pong")
+
+        (fact "not nested"
+          (k/invoke kekkonen :kiss/ping) => "pong")
+
+        (fact "var"
+          (k/invoke kekkonen :abba/ping) => "pong")
+
+        (fact "vector of vars"
+          (k/invoke kekkonen :wasp/ping) => "pong")
+
+        (fact "vector of namespaces"
+          (k/invoke kekkonen :wasp/ping) => "pong")))))

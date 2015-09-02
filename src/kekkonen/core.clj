@@ -4,7 +4,7 @@
             [clojure.string :as str]
             [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk])
-  (:import [clojure.lang Var IPersistentMap Symbol]))
+  (:import [clojure.lang Var IPersistentMap Symbol PersistentVector]))
 
 ;;
 ;; Definitions
@@ -140,6 +140,13 @@
   HandlerCollector
   (-collect [this type-resolver]
     (-collect (collect-ns this) type-resolver)))
+
+(extend-type PersistentVector
+  HandlerCollector
+  (-collect [this type-resolver]
+    (->> this
+         (map #(-collect % type-resolver))
+         (apply merge))))
 
 ;;
 ;; Registry
