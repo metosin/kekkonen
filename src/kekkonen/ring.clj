@@ -1,13 +1,39 @@
 (ns kekkonen.ring
   (:require [schema.core :as s]
+            [schema.coerce :as sc]
+            [schema.utils :as su]
             [plumbing.core :as p]
+            [ring.swagger.coerce :as rsc]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]))
 
 (s/defn uri->action [path :- s/Str]
   (-> path (subs 1) keyword))
 
-(def default-options {:types {:handler {:methods #{:post}}}})
+(def default-options
+  {:types {:handler {:methods #{:post}}}
+   :coercion {:query-params rsc/query-schema-coercion-matcher
+              ;:path-params rsc/query-schema-coercion-matcher
+              :form-params rsc/query-schema-coercion-matcher
+              :header-params rsc/query-schema-coercion-matcher
+              :body-params rsc/json-schema-coercion-matcher}})
+
+(defn coerce [request handler {:keys [coercion]}]
+  (reduce
+    (fn [request [k matcher]]
+      (if-let [schema (get-in handler [:input :request k])]
+        (let [value (get request k {})
+              coercer (sc/coercer schema matcher)
+              coerced (coercer value)]
+          (if-not (su/error? coerced)
+            (assoc request k coerced)
+            (throw (ex-info "Coercion error" {:in k
+                                              :value value
+                                              :schema schema
+                                              :error coerced}))))
+        request))
+    request
+    coercion))
 
 (s/defn ring-handler
   "Creates a ring handler from Kekkonen"
@@ -19,6 +45,6 @@
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]
             (if-let [type-config (get (:types options) (:type handler))]
-              (if-let [method-matches? (:methods type-config)]
-                (if (method-matches? request-method)
+              (if (get (:methods type-config) request-method)
+                (let [request (coerce request handler options)]
                   (k/invoke kekkonen action {:request request}))))))))))
