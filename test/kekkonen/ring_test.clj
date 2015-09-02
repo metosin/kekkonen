@@ -95,26 +95,13 @@
                          :type-resolver r/http-type-resolver})
               {:types r/http-types})]
 
-    (fact "get"
-      (app {:uri "/api/get-it", :request-method :get}) => (ok))
-
-    (fact "head"
-      (app {:uri "/api/head-it", :request-method :head}) => (ok))
-
-    (fact "patch"
-      (app {:uri "/api/patch-it", :request-method :patch}) => (ok))
-
-    (fact "delete"
-      (app {:uri "/api/delete-it", :request-method :delete}) => (ok))
-
-    (fact "options"
-      (app {:uri "/api/options-it", :request-method :options}) => (ok))
-
-    (fact "post"
-      (app {:uri "/api/post-it", :request-method :post}) => (ok))
-
-    (fact "put"
-      (app {:uri "/api/put-it", :request-method :put}) => (ok))
+    (fact "get"     (app {:uri "/api/get-it", :request-method :get}) => (ok))
+    (fact "head"    (app {:uri "/api/head-it", :request-method :head}) => (ok))
+    (fact "patch"   (app {:uri "/api/patch-it", :request-method :patch}) => (ok))
+    (fact "delete"  (app {:uri "/api/delete-it", :request-method :delete}) => (ok))
+    (fact "options" (app {:uri "/api/options-it", :request-method :options}) => (ok))
+    (fact "post"    (app {:uri "/api/post-it", :request-method :post}) => (ok))
+    (fact "put"     (app {:uri "/api/put-it", :request-method :put}) => (ok))
 
     (fact "any"
       (app {:uri "/api/any-it", :request-method :get}) => (ok)
