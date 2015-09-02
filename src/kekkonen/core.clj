@@ -79,19 +79,19 @@
   HandlerCollector
   (-collect [_ type-resolver]
     (when-let [{:keys [line column file ns name doc schema type]} (type-resolver (meta v))]
-      (if schema
-        {:fn @v
-         :type type
-         :name (keyword name)
-         :user (user-meta v)
-         :description doc
-         :input (pfnk/input-schema @v)
-         :output (pfnk/output-schema @v)
-         :source-map {:line line
-                      :column column
-                      :file file
-                      :ns (ns-name ns)
-                      :name name}}))))
+      (if (and name schema)
+        {(keyword name) {:fn @v
+                         :type type
+                         :name (keyword name)
+                         :user (user-meta v)
+                         :description doc
+                         :input (pfnk/input-schema @v)
+                         :output (pfnk/output-schema @v)
+                         :source-map {:line line
+                                      :column column
+                                      :file file
+                                      :ns (ns-name ns)
+                                      :name name}}}))))
 
 (defn collect-var [v]
   (->CollectVar v))
@@ -109,21 +109,21 @@
          :input (pfnk/input-schema f)
          :output (pfnk/output-schema f)}))))
 
-(defn collect-fn
-  [f] (->CollectFn f))
+(defn collect-fn [f]
+  (->CollectFn f))
 
 (defrecord CollectNs [ns]
   HandlerCollector
   (-collect [_ type-resolver]
     (require ns)
-    (p/for-map [handler (some->> ns
-                                 ns-publics
-                                 (map (comp collect-var val))
-                                 (keep #(-collect % type-resolver)))]
-      (:name handler) handler)))
+    (some->> ns
+             ns-publics
+             (map (comp collect-var val))
+             (keep #(-collect % type-resolver))
+             (apply merge))))
 
-(defn collect-ns
-  [ns] (->CollectNs ns))
+(defn collect-ns [ns]
+  (->CollectNs ns))
 
 (extend-type IPersistentMap
   HandlerCollector

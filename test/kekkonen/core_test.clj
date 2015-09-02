@@ -105,19 +105,23 @@
       (let [handler (k/collect
                       (k/collect-var #'echo))]
 
-        handler => (just {:fn fn?
-                          :type :handler
-                          :name :echo
-                          :user {:roles #{:admin :user}}
-                          :description "Echoes the user"
-                          :input {:data User
-                                  s/Keyword s/Any}
-                          :output User
-                          :source-map (just {:line 32
-                                             :column 1
-                                             :file string?
-                                             :ns 'kekkonen.core-test
-                                             :name 'echo})})
+        handler => (just
+                     {:echo
+                      (just
+                        {:fn fn?
+                         :type :handler
+                         :name :echo
+                         :user {:roles #{:admin :user}}
+                         :description "Echoes the user"
+                         :input {:data User
+                                 s/Keyword s/Any}
+                         :output User
+                         :source-map (just
+                                       {:line 32
+                                        :column 1
+                                        :file string?
+                                        :ns 'kekkonen.core-test
+                                        :name 'echo})})})
 
         (fact "collect-var via Var shortcut gives same results"
           (k/collect #'echo) => handler)
@@ -127,11 +131,12 @@
                            (k/collect-ns 'kekkonen.core-test))]
 
             (count handlers) => 5
-            handlers => (just {:ping k/handler?
-                               :get-items k/handler?
-                               :add-item! k/handler?
-                               :reset-items! k/handler?
-                               :echo handler})
+            handlers => (just
+                          {:ping k/handler?
+                           :get-items k/handler?
+                           :add-item! k/handler?
+                           :reset-items! k/handler?
+                           :echo k/handler?})
 
             (fact "collect-ns Symbol shortcut gives same results"
               (k/collect 'kekkonen.core-test) => handlers)))))))
