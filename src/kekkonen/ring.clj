@@ -7,18 +7,43 @@
             [kekkonen.core :as k]
             [kekkonen.common :as kc]))
 
-(s/defn uri->action [path :- s/Str]
-  (-> path (subs 1) keyword))
+;;
+;; options
+;;
+
+(def +default-coercions+ {:query-params rsc/query-schema-coercion-matcher
+                          ;:path-params rsc/query-schema-coercion-matcher
+                          :form-params rsc/query-schema-coercion-matcher
+                          :header-params rsc/query-schema-coercion-matcher
+                          :body-params rsc/json-schema-coercion-matcher})
 
 (def default-options
   {:types {:handler {:methods #{:post}}}
-   :coercion {:query-params rsc/query-schema-coercion-matcher
-              ;:path-params rsc/query-schema-coercion-matcher
-              :form-params rsc/query-schema-coercion-matcher
-              :header-params rsc/query-schema-coercion-matcher
-              :body-params rsc/json-schema-coercion-matcher}})
+   :coercion +default-coercions+})
 
-(defn coerce [request handler {:keys [coercion]}]
+(def http-types {:get {:methods #{:get}}
+                 :head {:methods #{:head}}
+                 :patch {:methods #{:patch}}
+                 :delete {:methods #{:delete}}
+                 :options {:methods #{:options}}
+                 :post {:methods #{:post}}
+                 :put {:methods #{:put}}
+                 :any {:methods #{:get :head :patch :delete :options :post :put}}})
+
+(def http-type-resolver (k/type-resolver :get :head :patch :delete :options :post :put :any))
+
+;;
+;; beef
+;;
+
+(s/defn uri->action :- s/Keyword
+  "Converts an action keyword from a uri string."
+  [path :- s/Str]
+  (-> path (subs 1) keyword))
+
+(defn coerce
+  "Coerces a request against a handler input schema based on :coercion options."
+  [request handler {:keys [coercion]}]
   (reduce
     (fn [request [k matcher]]
       (if-let [schema (get-in handler [:input :request k])]
@@ -27,16 +52,13 @@
               coerced (coercer value)]
           (if-not (su/error? coerced)
             (assoc request k coerced)
-            (throw (ex-info "Coercion error" {:in k
-                                              :value value
-                                              :schema schema
-                                              :error coerced}))))
+            (throw (ex-info "Coercion error" {:in k, :value value, :schema schema, :error coerced}))))
         request))
     request
     coercion))
 
 (s/defn ring-handler
-  "Creates a ring handler from Kekkonen"
+  "Creates a ring handler from Kekkonen and options."
   ([kekkonen]
     (ring-handler kekkonen {}))
   ([kekkonen options]
