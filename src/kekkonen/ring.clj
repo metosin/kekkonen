@@ -2,7 +2,6 @@
   (:require [schema.core :as s]
             [schema.coerce :as sc]
             [schema.utils :as su]
-            [plumbing.core :as p]
             [ring.swagger.coerce :as rsc]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]))
@@ -12,7 +11,7 @@
 ;;
 
 (def +default-coercions+ {:query-params rsc/query-schema-coercion-matcher
-                          ;:path-params rsc/query-schema-coercion-matcher
+                          :path-params rsc/query-schema-coercion-matcher
                           :form-params rsc/query-schema-coercion-matcher
                           :header-params rsc/query-schema-coercion-matcher
                           :body-params rsc/json-schema-coercion-matcher})

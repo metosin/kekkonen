@@ -7,6 +7,7 @@
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.4.4"]
                  [prismatic/schema "0.4.4"]
+                 [metosin/ring-swagger "0.21.0"]
                  [metosin/ring-http-response "0.6.2"]]
   :profiles {:dev {:plugins [[lein-midje "3.1.3"]]
                    :dependencies [[org.clojure/clojure "1.7.0"]

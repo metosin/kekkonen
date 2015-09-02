@@ -79,7 +79,6 @@
             :request-method :post
             :body-params {:name "Pizza" :size "L"}}) => (ok {:name "Pizza" :size :L}))))
 
-
 (p/defnk ^:get get-it [] (ok))
 (p/defnk ^:head head-it [] (ok))
 (p/defnk ^:patch patch-it [] (ok))
@@ -91,8 +90,9 @@
 
 (facts "web-options"
   (let [app (r/ring-handler
-              (k/create {:handlers {:api 'kekkonen.ring-test}
-                         :type-resolver r/http-type-resolver})
+              (k/create
+                {:handlers {:api [#'get-it #'head-it #'patch-it #'delete-it #'options-it #'post-it #'put-it #'any-it]}
+                 :type-resolver r/http-type-resolver})
               {:types r/http-types})]
 
     (fact "get"     (app {:uri "/api/get-it", :request-method :get}) => (ok))

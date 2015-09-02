@@ -69,7 +69,7 @@
 (s/defn ^:private user-meta [v :- (s/either Var Function)]
   (-> v meta (dissoc :schema :handler :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
 
-(defprotocol HandlerCollector
+(defprotocol CollectHandlers
   (-collect [this type-resolver]))
 
 (s/defn collect
@@ -79,7 +79,7 @@
     (-collect collector type-resolver)))
 
 (defrecord CollectVar [v]
-  HandlerCollector
+  CollectHandlers
   (-collect [_ type-resolver]
     (when-let [{:keys [line column file ns name doc schema type]} (type-resolver (meta v))]
       (if (and name schema)
@@ -100,7 +100,7 @@
   (->CollectVar v))
 
 (defrecord CollectFn [f]
-  HandlerCollector
+  CollectHandlers
   (-collect [_ type-resolver]
     (if-let [{:keys [name description schema type]} (type-resolver (meta f))]
       (if (and name schema)
@@ -116,7 +116,7 @@
   (->CollectFn f))
 
 (defrecord CollectNs [ns]
-  HandlerCollector
+  CollectHandlers
   (-collect [_ type-resolver]
     (require ns)
     (some->> ns
@@ -129,23 +129,23 @@
   (->CollectNs ns))
 
 (extend-type IPersistentMap
-  HandlerCollector
+  CollectHandlers
   (-collect [this type-resolver]
     (p/for-map [[k v] this]
       k (-collect v type-resolver))))
 
 (extend-type Var
-  HandlerCollector
+  CollectHandlers
   (-collect [this type-resolver]
     (-collect (collect-var this) type-resolver)))
 
 (extend-type Symbol
-  HandlerCollector
+  CollectHandlers
   (-collect [this type-resolver]
     (-collect (collect-ns this) type-resolver)))
 
 (extend-type PersistentVector
-  HandlerCollector
+  CollectHandlers
   (-collect [this type-resolver]
     (->> this
          (map #(-collect % type-resolver))
@@ -201,27 +201,3 @@
     (if-let [handler (some-handler kekkonen action)]
       ((:fn handler) (merge (:context kekkonen) context))
       (throw (ex-info (str "Invalid action " action) {})))))
-
-(comment
-  (p/defnk ^:handler tst [])
-
-  ; long
-  (./aprint (collect {:abba (collect-ns 'kekkonen.core)} default-type-resolver))
-
-  ; short
-  (./aprint (collect 'kekkonen.core))
-
-  ; short version
-  (create {:handlers {:test 'kekkonen.core}})
-
-  ; long version
-  (create
-    {:context {:components {:db (atom #{})}}
-     :handlers {:test 'kekkonen.core}})
-
-  (def k (create {:handlers {:test 'kekkonen.core}}))
-
-  (./aprint k)
-
-  (./aprint
-    (all-handlers k)))
