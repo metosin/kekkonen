@@ -10,15 +10,13 @@
 ;; options
 ;;
 
-(def +default-coercions+ {:query-params rsc/query-schema-coercion-matcher
-                          :path-params rsc/query-schema-coercion-matcher
-                          :form-params rsc/query-schema-coercion-matcher
-                          :header-params rsc/query-schema-coercion-matcher
-                          :body-params rsc/json-schema-coercion-matcher})
-
 (def default-options
   {:types {:handler {:methods #{:post}}}
-   :coercion +default-coercions+})
+   :coercion {:query-params rsc/query-schema-coercion-matcher
+              :path-params rsc/query-schema-coercion-matcher
+              :form-params rsc/query-schema-coercion-matcher
+              :header-params rsc/query-schema-coercion-matcher
+              :body-params rsc/json-schema-coercion-matcher}})
 
 (def http-types {:get {:methods #{:get}}
                  :head {:methods #{:head}}
