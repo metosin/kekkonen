@@ -4,6 +4,10 @@
             [schema.core :as s]
             [plumbing.core :as p]))
 
+;;
+;; test handlers
+;;
+
 (p/defnk ^:handler ping [] "pong")
 
 (p/defnk ^:handler get-items :- #{s/Str}
@@ -20,13 +24,16 @@
   [[:components db]]
   (swap! db empty))
 
+(p/defnk ^:handler plus
+  [[:data x :- s/Int, y :- s/Int]]
+  (+ x y))
+
 (s/defschema User
   {:name s/Str
    :address {:street s/Str
              :zip s/Int
              (s/optional-key :country) (s/enum :FI :CA)}})
 
-; complex example with external schema and user meta
 (p/defnk ^:handler echo :- User
   "Echoes the user"
   {:roles #{:admin :user}}
@@ -34,6 +41,10 @@
   data)
 
 (p/defnk ^:query not-a-handler [])
+
+;;
+;; facts
+;;
 
 (fact "using services directly"
 
@@ -123,7 +134,7 @@
                                  s/Keyword s/Any}
                          :output User
                          :source-map (just
-                                       {:line 30
+                                       {:line 37
                                         :column 1
                                         :file string?
                                         :ns 'kekkonen.core-test
@@ -136,13 +147,14 @@
           (let [handlers (k/collect
                            (k/collect-ns 'kekkonen.core-test))]
 
-            (count handlers) => 5
+            (count handlers) => 6
             handlers => (just
                           {:ping k/handler?
                            :get-items k/handler?
                            :add-item! k/handler?
                            :reset-items! k/handler?
-                           :echo k/handler?})
+                           :echo k/handler?
+                           :plus k/handler?})
 
             (fact "collect-ns Symbol shortcut gives same results"
               (k/collect 'kekkonen.core-test) => handlers)))))))
@@ -164,7 +176,7 @@
                                 :handlers {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
-          (count (k/all-handlers kekkonen)) => 5)
+          (count (k/all-handlers kekkonen)) => 6)
 
         (fact "non-existing action"
           (k/some-handler kekkonen :test/non-existing) => nil
@@ -185,12 +197,14 @@
             (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
     (fact "lots of handlers"
-      (let [kekkonen (k/create {:handlers {:admin {:kikka 'kekkonen.core-test
-                                                   :kukka 'kekkonen.core-test}
-                                           :public 'kekkonen.core-test
-                                           :kiss #'ping
-                                           :abba [#'ping #'echo]
-                                           :wasp ['kekkonen.core-test]}})]
+      (let [kekkonen (k/create {:handlers
+                                {:admin
+                                 {:kikka 'kekkonen.core-test
+                                  :kukka 'kekkonen.core-test}
+                                 :public 'kekkonen.core-test
+                                 :kiss #'ping
+                                 :abba [#'ping #'echo]
+                                 :wasp ['kekkonen.core-test]}})]
 
         (fact "deeply nested"
           (k/invoke kekkonen :admin/kikka/ping) => "pong"
@@ -206,4 +220,16 @@
           (k/invoke kekkonen :wasp/ping) => "pong")
 
         (fact "vector of namespaces"
-          (k/invoke kekkonen :wasp/ping) => "pong")))))
+          (k/invoke kekkonen :wasp/ping) => "pong")))
+
+    (fact "sub-context"
+      (let [kekkonen (k/create {:handlers {:api #'plus}})]
+
+        (k/invoke kekkonen :api/plus {}) => (throws RuntimeException)
+        (k/invoke kekkonen :api/plus {:data {:x 1}}) => (throws RuntimeException)
+        (k/invoke kekkonen :api/plus {:data {:x 1, :y 2}}) => 3
+
+        (let [kekkonen (k/with-context kekkonen {:data {:x 1}})]
+          (k/invoke kekkonen :api/plus {}) => (throws RuntimeException)
+          (k/invoke kekkonen :api/plus {:data {:x 1}}) => (throws RuntimeException)
+          (k/invoke kekkonen :api/plus {:data {:y 2}}) => 3)))))

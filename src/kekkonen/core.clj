@@ -3,7 +3,8 @@
             [plumbing.core :as p]
             [clojure.string :as str]
             [clojure.walk :as w]
-            [plumbing.fnk.pfnk :as pfnk])
+            [plumbing.fnk.pfnk :as pfnk]
+            [kekkonen.common :as kc])
   (:import [clojure.lang Var IPersistentMap Symbol PersistentVector]))
 
 ;;
@@ -199,5 +200,9 @@
     (invoke kekkonen action {}))
   ([kekkonen action context]
     (if-let [handler (some-handler kekkonen action)]
-      ((:fn handler) (merge (:context kekkonen) context))
+      (let [context (kc/deep-merge (:context kekkonen) context)]
+        ((:fn handler) context))
       (throw (ex-info (str "Invalid action " action) {})))))
+
+(defn with-context [kekkonen context]
+  (update-in kekkonen [:context] kc/deep-merge context))
