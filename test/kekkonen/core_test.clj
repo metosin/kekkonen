@@ -224,3 +224,23 @@
           (k/invoke kekkonen :api/plus {}) => (throws RuntimeException)
           (k/invoke kekkonen :api/plus {:data {:x 1}}) => (throws RuntimeException)
           (k/invoke kekkonen :api/plus {:data {:y 2}}) => 3)))))
+
+
+(p/defnk ^:test meta-handler {::roles #{:admin}} [x] x)
+
+(fact "user-meta"
+  (let [k (k/create {:handlers {:api #'meta-handler}
+                     :type-resolver (k/type-resolver :test)
+                     :user {::roles (fn [context allowed-roles]
+                                      (let [role (::role context)]
+                                        (if (allowed-roles role)
+                                          context
+                                          (throw (ex-info "invalid role" {:role role
+                                                                          :required allowed-roles})))))}})]
+
+    (k/all-handlers k) => (just [anything])
+
+    (k/invoke k :api/meta-handler {:x 1}) => (throws RuntimeException)
+    (k/invoke k :api/meta-handler {:x 1 ::role :user}) => (throws RuntimeException)
+    (k/invoke k :api/meta-handler {:x 1 ::role :admin}) => 1))
+

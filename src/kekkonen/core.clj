@@ -149,7 +149,8 @@
   "Creates a Kekkonen."
   [handlers :- KeywordMap
    {type-resolver :- s/Any default-type-resolver}
-   {context :- {s/Keyword s/Any} {}}]
+   {context :- {s/Keyword s/Any} {}}
+   {user :- {s/Keyword Function} {}}]
   (letfn [(enrich [h m]
             (if (seq m)
               (let [ns (->> m (map name) (str/join "/") keyword)]
@@ -161,7 +162,8 @@
                   (enrich v m)
                   (traverse v (conj m k)))))]
     {:context context
-     :handlers (traverse (collect handlers type-resolver) [])}))
+     :handlers (traverse (collect handlers type-resolver) [])
+     :user user}))
 
 (s/defn ^:private action-kws [path :- s/Keyword]
   (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
@@ -189,8 +191,17 @@
     (invoke kekkonen action {}))
   ([kekkonen action context]
     (if-let [handler (some-handler kekkonen action)]
-      (let [context (kc/deep-merge (:context kekkonen) context)]
-        ((:fn handler) context))
+      (let [context (kc/deep-merge (:context kekkonen) context)
+            f (:fn handler)
+            user (:user handler)
+            context (reduce
+                      (fn [context [k v]]
+                        (if-let [mapper (get-in kekkonen [:user k])]
+                          (mapper context v)
+                          context))
+                      context
+                      user)]
+        (f context))
       (throw (ex-info (str "Invalid action " action) {})))))
 
 (defn with-context [kekkonen context]
