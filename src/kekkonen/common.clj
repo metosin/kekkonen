@@ -21,3 +21,7 @@
 
       :else
       (last values))))
+
+(defn strip-nil-values
+  "removes map-keys with nil values"
+  [m] (into {} (filter (comp not nil? second) m)))
