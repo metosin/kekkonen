@@ -96,17 +96,16 @@
 (fact "collecting handlers"
   (s/with-fn-validation
 
-    (fact "collect-fn"
+    (fact "functions"
 
       (fact "with fnk"
         (let [handler (k/collect
-                        (k/collect-fn
-                          (k/handler
-                            {:name :echo
-                             :description "Echoes the user"
-                             :query true
-                             :roles #{:admin :user}}
-                            (p/fnk f :- User [data :- User] data))))]
+                        (k/handler
+                          {:name :echo
+                           :description "Echoes the user"
+                           :query true
+                           :roles #{:admin :user}}
+                          (p/fnk f :- User [data :- User] data)))]
 
           handler => (contains {:fn fn?
                                 :type :handler
@@ -118,9 +117,8 @@
                                         s/Keyword s/Any}
                                 :output User}))))
 
-    (fact "collect-var"
-      (let [handler (k/collect
-                      (k/collect-var #'echo))]
+    (fact "vars"
+      (let [handler (k/collect #'echo)]
 
         handler => (just
                      {:echo
@@ -140,12 +138,8 @@
                                         :ns 'kekkonen.core-test
                                         :name 'echo})})})
 
-        (fact "collect-var via Var shortcut gives same results"
-          (k/collect #'echo) => handler)
-
-        (fact "collect-ns"
-          (let [handlers (k/collect
-                           (k/collect-ns 'kekkonen.core-test))]
+        (fact "namespaces"
+          (let [handlers (k/collect 'kekkonen.core-test)]
 
             (count handlers) => 6
             handlers => (just
@@ -154,10 +148,7 @@
                            :add-item! k/handler?
                            :reset-items! k/handler?
                            :echo k/handler?
-                           :plus k/handler?})
-
-            (fact "collect-ns Symbol shortcut gives same results"
-              (k/collect 'kekkonen.core-test) => handlers)))))))
+                           :plus k/handler?})))))))
 
 (fact "kekkonen"
   (s/with-fn-validation

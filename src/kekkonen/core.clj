@@ -5,7 +5,7 @@
             [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk]
             [kekkonen.common :as kc])
-  (:import [clojure.lang Var IPersistentMap Symbol PersistentVector]))
+  (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction]))
 
 ;;
 ;; Definitions
@@ -79,55 +79,39 @@
   ([collector type-resolver]
     (-collect collector type-resolver)))
 
-(defrecord CollectVar [v]
-  CollectHandlers
-  (-collect [_ type-resolver]
-    (when-let [{:keys [line column file ns name doc schema type]} (type-resolver (meta v))]
-      (if (and name schema)
-        {(keyword name) {:fn @v
-                         :type type
-                         :name (keyword name)
-                         :user (user-meta v)
-                         :description doc
-                         :input (pfnk/input-schema @v)
-                         :output (pfnk/output-schema @v)
-                         :source-map {:line line
-                                      :column column
-                                      :file file
-                                      :ns (ns-name ns)
-                                      :name name}}}))))
+(defn- -collect-var [v type-resolver]
+  (when-let [{:keys [line column file ns name doc schema type]} (type-resolver (meta v))]
+    (if (and name schema)
+      {(keyword name) {:fn @v
+                       :type type
+                       :name (keyword name)
+                       :user (user-meta v)
+                       :description doc
+                       :input (pfnk/input-schema @v)
+                       :output (pfnk/output-schema @v)
+                       :source-map {:line line
+                                    :column column
+                                    :file file
+                                    :ns (ns-name ns)
+                                    :name name}}})))
 
-(defn collect-var [v]
-  (->CollectVar v))
+(defn- -collect-fn [f type-resolver]
+  (if-let [{:keys [name description schema type]} (type-resolver (meta f))]
+    (if (and name schema)
+      {:fn f
+       :type type
+       :name (keyword name)
+       :user (user-meta f)
+       :description description
+       :input (pfnk/input-schema f)
+       :output (pfnk/output-schema f)})))
 
-(defrecord CollectFn [f]
-  CollectHandlers
-  (-collect [_ type-resolver]
-    (if-let [{:keys [name description schema type]} (type-resolver (meta f))]
-      (if (and name schema)
-        {:fn f
-         :type type
-         :name (keyword name)
-         :user (user-meta f)
-         :description description
-         :input (pfnk/input-schema f)
-         :output (pfnk/output-schema f)}))))
-
-(defn collect-fn [f]
-  (->CollectFn f))
-
-(defrecord CollectNs [ns]
-  CollectHandlers
-  (-collect [_ type-resolver]
-    (require ns)
-    (some->> ns
-             ns-publics
-             (map (comp collect-var val))
-             (keep #(-collect % type-resolver))
-             (apply merge))))
-
-(defn collect-ns [ns]
-  (->CollectNs ns))
+(defn- -collect-ns [ns type-resolver]
+  (require ns)
+  (some->> ns
+           ns-publics
+           (map (comp #(-collect-var % type-resolver) val))
+           (apply merge)))
 
 (extend-type IPersistentMap
   CollectHandlers
@@ -138,12 +122,12 @@
 (extend-type Var
   CollectHandlers
   (-collect [this type-resolver]
-    (-collect (collect-var this) type-resolver)))
+    (-collect-var this type-resolver)))
 
 (extend-type Symbol
   CollectHandlers
   (-collect [this type-resolver]
-    (-collect (collect-ns this) type-resolver)))
+    (-collect-ns this type-resolver)))
 
 (extend-type PersistentVector
   CollectHandlers
@@ -151,6 +135,11 @@
     (->> this
          (map #(-collect % type-resolver))
          (apply merge))))
+
+(extend-type AFunction
+  CollectHandlers
+  (-collect [this type-resolver]
+    (-collect-fn this type-resolver)))
 
 ;;
 ;; Registry
