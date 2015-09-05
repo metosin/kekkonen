@@ -4,7 +4,8 @@
             [schema.utils :as su]
             [ring.swagger.coerce :as rsc]
             [kekkonen.core :as k]
-            [kekkonen.common :as kc]))
+            [kekkonen.common :as kc]
+            [clojure.string :as str]))
 
 ;;
 ;; options
@@ -38,18 +39,27 @@
   [path :- s/Str]
   (-> path (subs 1) keyword))
 
-(defn coerce
+(s/defn handler-uri :- s/Str
+  "Creates a uri for the handler"
+  [{:keys [ns name]} :- k/Handler]
+  (str/replace (str ns name) #":" "/"))
+
+(defn coerce! [schema matcher value type]
+  (let [coercer (sc/coercer schema matcher)
+        coerced (coercer value)]
+    (if-not (su/error? coerced)
+      coerced
+      (throw (ex-info "Coercion error" {:in type, :value value, :schema schema, :error coerced})))))
+
+(defn coerce-request!
   "Coerces a request against a handler input schema based on :coercion options."
   [request handler {:keys [coercion]}]
   (reduce
     (fn [request [k matcher]]
       (if-let [schema (get-in handler [:input :request k])]
         (let [value (get request k {})
-              coercer (sc/coercer schema matcher)
-              coerced (coercer value)]
-          (if-not (su/error? coerced)
-            (assoc request k coerced)
-            (throw (ex-info "Coercion error" {:in k, :value value, :schema schema, :error coerced}))))
+              coerced (coerce! schema matcher value k)]
+          (assoc request k coerced))
         request))
     request
     coercion))
@@ -65,5 +75,16 @@
           (if-let [handler (k/some-handler kekkonen action)]
             (if-let [type-config (get (:types options) (:type handler))]
               (if (get (:methods type-config) request-method)
-                (let [request (coerce request handler options)]
-                  (k/invoke kekkonen action {:request request}))))))))))
+                (let [request (coerce-request! request handler options)
+                      responses (-> handler :user :responses)
+                      response (k/invoke kekkonen action {:request request})]
+                  (if responses
+                    (let [status (or (:status response) 200)
+                          schema (get-in responses [status :schema])
+                          matcher (get-in options [:coercion :body-params])
+                          value  (:body response)]
+                      (if schema
+                        (let [coerced (coerce! schema matcher value :response)]
+                          (assoc response :body coerced))
+                        response))
+                    response))))))))))

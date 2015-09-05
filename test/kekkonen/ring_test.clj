@@ -6,6 +6,10 @@
             [ring.util.http-response :refer [ok]]
             [plumbing.core :as p]))
 
+(facts "uris, actions, handlers"
+  (r/uri->action "/api/user/add-user!") => :api/user/add-user!
+  (r/handler-uri {:ns :api/user, :name :add-user!}) => "/api/user/add-user!")
+
 (p/defnk ^:handler ping [] "pong")
 
 (p/defnk ^:handler snoop [request] (ok request))
@@ -43,9 +47,14 @@
   [[:request body-params :- Body]]
   (ok body-params))
 
+(p/defnk ^:handler responsez
+  {:responses {200 {:schema {:value s/Str}}}}
+  [[:request body-params :- {:value (s/either s/Str s/Int)}]]
+  (ok body-params))
+
 (facts "coercion"
   (let [app (r/ring-handler
-              (k/create {:handlers {:api [#'plus #'divide #'power #'echo]}}))]
+              (k/create {:handlers {:api [#'plus #'divide #'power #'echo #'responsez]}}))]
 
     (fact "query-params"
 
@@ -77,7 +86,15 @@
     (fact "body-params"
       (app {:uri "/api/echo"
             :request-method :post
-            :body-params {:name "Pizza" :size "L"}}) => (ok {:name "Pizza" :size :L}))))
+            :body-params {:name "Pizza" :size "L"}}) => (ok {:name "Pizza" :size :L}))
+
+    (fact "response coercion"
+      (app {:uri "/api/responsez"
+            :request-method :post
+            :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
+      (app {:uri "/api/responsez"
+            :request-method :post
+            :body-params {:value 1}}) => (throws RuntimeException))))
 
 (p/defnk ^:get get-it [] (ok))
 (p/defnk ^:head head-it [] (ok))
