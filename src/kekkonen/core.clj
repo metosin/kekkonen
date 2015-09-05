@@ -19,7 +19,7 @@
 
 (s/defschema Handler
   "Action handler metadata"
-  {:fn Function
+  {:function Function
    :name s/Keyword
    :type s/Keyword
    :ns s/Keyword
@@ -47,7 +47,7 @@
   (vary-meta f merge {:handler true} meta))
 
 (defn handler? [x]
-  (and (map? x) (:fn x) (:type x)))
+  (and (map? x) (:function x) (:type x)))
 
 ;;
 ;; Type Resolution
@@ -82,7 +82,7 @@
 (defn- -collect-var [v type-resolver]
   (when-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta v))]
     (if (and name schema)
-      {(keyword name) {:fn @v
+      {(keyword name) {:function @v
                        :type type
                        :name (keyword name)
                        :user (user-meta meta)
@@ -95,16 +95,16 @@
                                     :ns (ns-name ns)
                                     :name name}}})))
 
-(defn- -collect-fn [f type-resolver]
-  (if-let [{:keys [name description schema type] :as meta} (type-resolver (meta f))]
+(defn- -collect-fn [function type-resolver]
+  (if-let [{:keys [name description schema type] :as meta} (type-resolver (meta function))]
     (if (and name schema)
-      {:fn f
+      {:function function
        :type type
        :name (keyword name)
        :user (user-meta meta)
        :description description
-       :input (pfnk/input-schema f)
-       :output (pfnk/output-schema f)})))
+       :input (pfnk/input-schema function)
+       :output (pfnk/output-schema function)})))
 
 (defn- -collect-ns [ns type-resolver]
   (require ns)
@@ -192,7 +192,7 @@
   ([kekkonen action context]
     (if-let [handler (some-handler kekkonen action)]
       (let [context (kc/deep-merge (:context kekkonen) context)
-            f (:fn handler)
+            function (:function handler)
             user (:user handler)
             context (reduce
                       (fn [context [k v]]
@@ -201,7 +201,7 @@
                           context))
                       context
                       user)]
-        (f context))
+        (function context))
       (throw (ex-info (str "Invalid action " action) {})))))
 
 (defn with-context [kekkonen context]

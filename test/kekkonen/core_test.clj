@@ -107,7 +107,7 @@
                            :roles #{:admin :user}}
                           (p/fnk f :- User [data :- User] data)))]
 
-          handler => (contains {:fn fn?
+          handler => (contains {:function fn?
                                 :type :handler
                                 :name :echo
                                 :user {:query true
@@ -123,7 +123,7 @@
         handler => (just
                      {:echo
                       (just
-                        {:fn fn?
+                        {:function fn?
                          :type :handler
                          :name :echo
                          :user {:roles #{:admin :user}}
