@@ -67,8 +67,8 @@
 ;; Collecting
 ;;
 
-(s/defn ^:private user-meta [v :- (s/either Var Function)]
-  (-> v meta (dissoc :schema :handler :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
+(s/defn ^:private user-meta [meta :- KeywordMap]
+  (-> meta (dissoc :type :schema :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
 
 (defprotocol CollectHandlers
   (-collect [this type-resolver]))
@@ -80,12 +80,12 @@
     (-collect collector type-resolver)))
 
 (defn- -collect-var [v type-resolver]
-  (when-let [{:keys [line column file ns name doc schema type]} (type-resolver (meta v))]
+  (when-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta v))]
     (if (and name schema)
       {(keyword name) {:fn @v
                        :type type
                        :name (keyword name)
-                       :user (user-meta v)
+                       :user (user-meta meta)
                        :description doc
                        :input (pfnk/input-schema @v)
                        :output (pfnk/output-schema @v)
@@ -96,12 +96,12 @@
                                     :name name}}})))
 
 (defn- -collect-fn [f type-resolver]
-  (if-let [{:keys [name description schema type]} (type-resolver (meta f))]
+  (if-let [{:keys [name description schema type] :as meta} (type-resolver (meta f))]
     (if (and name schema)
       {:fn f
        :type type
        :name (keyword name)
-       :user (user-meta f)
+       :user (user-meta meta)
        :description description
        :input (pfnk/input-schema f)
        :output (pfnk/output-schema f)})))
@@ -113,11 +113,10 @@
            (map (comp #(-collect-var % type-resolver) val))
            (apply merge)))
 
-(extend-type IPersistentMap
+(extend-type AFunction
   CollectHandlers
   (-collect [this type-resolver]
-    (p/for-map [[k v] this]
-      k (-collect v type-resolver))))
+    (-collect-fn this type-resolver)))
 
 (extend-type Var
   CollectHandlers
@@ -136,10 +135,11 @@
          (map #(-collect % type-resolver))
          (apply merge))))
 
-(extend-type AFunction
+(extend-type IPersistentMap
   CollectHandlers
   (-collect [this type-resolver]
-    (-collect-fn this type-resolver)))
+    (p/for-map [[k v] this]
+      k (-collect v type-resolver))))
 
 ;;
 ;; Registry
@@ -153,7 +153,7 @@
   (letfn [(enrich [h m]
             (if (seq m)
               (let [ns (->> m (map name) (str/join "/") keyword)]
-                (assoc (type-resolver h) :ns ns))
+                (assoc h :ns ns))
               (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
           (traverse [x m]
             (p/for-map [[k v] x]
