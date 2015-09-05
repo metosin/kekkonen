@@ -1,6 +1,6 @@
 # kekkonen
 
-Kekkonen, a lightweight CQRS frontend for Clojure. http://kekkonen.io/
+A lightweight remote api library for Clojure(Script). http://kekkonen.io/
 
 ## License
 
