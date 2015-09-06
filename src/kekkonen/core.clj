@@ -87,7 +87,7 @@
     (-collect collector type-resolver)))
 
 (defn- -collect-var [v type-resolver]
-  (when-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta v))]
+  (if-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta v))]
     (if (and name schema)
       {(keyword name) {:function @v
                        :type type
@@ -100,7 +100,8 @@
                                     :column column
                                     :file file
                                     :ns (ns-name ns)
-                                    :name name}}})))
+                                    :name name}}})
+    (throw (ex-info (format "Var %s can't be type-resolved" v) {:target v}))))
 
 (defn- -collect-fn [function type-resolver]
   (if-let [{:keys [name description schema type input output] :as meta} (type-resolver (meta function))]
@@ -111,13 +112,16 @@
                        :user (user-meta meta)
                        :description (or description "")
                        :input (or (and schema (pfnk/input-schema function)) input s/Any)
-                       :output (or (and schema (pfnk/output-schema function)) output s/Any)}})))
+                       :output (or (and schema (pfnk/output-schema function)) output s/Any)}})
+    (throw (ex-info (format "Function %s can't be type-resolved" function) {:target function}))))
 
 (defn- -collect-ns [ns type-resolver]
   (require ns)
   (some->> ns
            ns-publics
-           (map (comp #(-collect-var % type-resolver) val))
+           (map val)
+           (filter #(type-resolver (meta %)))
+           (map #(-collect-var % type-resolver))
            (apply merge)))
 
 (extend-type AFunction

@@ -97,80 +97,87 @@
 (fact "collecting handlers"
   (s/with-fn-validation
 
-    (fact "functions"
+    (fact "anonymous functions"
 
-      (fact "with a function"
-        (let [handler (k/collect
-                        (k/handler
-                          {:name :echo
-                           :input {:name s/Str}}
-                          identity))]
+      (fact "fn"
+        (k/collect
+          (k/handler
+            {:name :echo
+             :input {:name s/Str}}
+            identity)) => (just
+                            {:echo
+                             (just
+                               {:function fn?
+                                :description ""
+                                :user {}
+                                :type :handler
+                                :name :echo
+                                :input {:name s/Str}
+                                :output s/Any})}))
 
-          handler => (just
-                       {:echo
-                        (just
-                          {:function fn?
-                           :description ""
-                           :user {}
-                           :type :handler
-                           :name :echo
-                           :input {:name s/Str}
-                           :output s/Any})})))
+      (fact "fnk"
+        (k/collect
+          (k/handler
+            {:name :echo
+             :description "Echoes the user"
+             :query true
+             :roles #{:admin :user}}
+            (p/fnk f :- User [data :- User] data))) => (just
+                                                         {:echo
+                                                          (just
+                                                            {:function fn?
+                                                             :type :handler
+                                                             :name :echo
+                                                             :user {:query true
+                                                                    :roles #{:admin :user}}
+                                                             :description "Echoes the user"
+                                                             :input {:data User
+                                                                     s/Keyword s/Any}
+                                                             :output User})}))
 
-      (fact "with fnk"
-        (let [handler (k/collect
-                        (k/handler
-                          {:name :echo
-                           :description "Echoes the user"
-                           :query true
-                           :roles #{:admin :user}}
-                          (p/fnk f :- User [data :- User] data)))]
+      (fact "with unresolved type"
+        (let [handler (k/handler
+                        {:name :echo
+                         :input {:name s/Str}}
+                        identity)]
+          (k/collect
+            handler
+            {:type-resolver (k/type-resolver :ILLEGAL)}) => (throws? {:target handler}))))
 
-          handler => (just
-                       {:echo
-                        (just
-                          {:function fn?
-                           :type :handler
-                           :name :echo
-                           :user {:query true
-                                  :roles #{:admin :user}}
-                           :description "Echoes the user"
-                           :input {:data User
-                                   s/Keyword s/Any}
-                           :output User})}))))
+    (fact "Var"
+      (fact "with resolved type"
+        (k/collect #'echo) => (just
+                                {:echo
+                                 (just
+                                   {:function fn?
+                                    :type :handler
+                                    :name :echo
+                                    :user {:roles #{:admin :user}}
+                                    :description "Echoes the user"
+                                    :input {:data User
+                                            s/Keyword s/Any}
+                                    :output User
+                                    :source-map (just
+                                                  {:line 38
+                                                   :column 1
+                                                   :file string?
+                                                   :ns 'kekkonen.core-test
+                                                   :name 'echo})})}))
 
-    (fact "vars"
-      (let [handler (k/collect #'echo)]
+      (fact "with unresolved type"
+        (k/collect #'echo {:type-resolver (k/type-resolver :ILLEGAL)}) => (throws? {:target #'echo})))
 
-        handler => (just
-                     {:echo
-                      (just
-                        {:function fn?
-                         :type :handler
-                         :name :echo
-                         :user {:roles #{:admin :user}}
-                         :description "Echoes the user"
-                         :input {:data User
-                                 s/Keyword s/Any}
-                         :output User
-                         :source-map (just
-                                       {:line 38
-                                        :column 1
-                                        :file string?
-                                        :ns 'kekkonen.core-test
-                                        :name 'echo})})})
+    (fact "Namespaces"
+      (let [handlers (k/collect 'kekkonen.core-test)]
 
-        (fact "namespaces"
-          (let [handlers (k/collect 'kekkonen.core-test)]
-
-            (count handlers) => 6
-            handlers => (just
-                          {:ping k/handler?
-                           :get-items k/handler?
-                           :add-item! k/handler?
-                           :reset-items! k/handler?
-                           :echo k/handler?
-                           :plus k/handler?})))))))
+        (count handlers) => 6
+        handlers => (just
+                      {:ping k/handler?
+                       :get-items k/handler?
+                       :add-item! k/handler?
+                       :reset-items! k/handler?
+                       :echo k/handler?
+                       :plus k/handler?})))))
 
 (fact "kekkonen"
   (s/with-fn-validation
