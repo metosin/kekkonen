@@ -79,7 +79,7 @@
                           matcher (get-in options [:coercion :body-params])
                           value (:body response)]
                       (if schema
-                        (let [coerced (coerce! schema matcher value nil ::response)]
+                        (let [coerced (coerce! schema matcher value :response ::response)]
                           (assoc response :body coerced))
                         response))
                     response))))))))))

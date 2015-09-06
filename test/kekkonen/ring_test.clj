@@ -112,7 +112,7 @@
 
       => (throws?
            {:type :kekkonen.ring/response
-            :in nil
+            :in :response
             :value {:value 1}
             :schema {:value s/Str}}))))
 
