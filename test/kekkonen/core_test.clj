@@ -1,5 +1,6 @@
 (ns kekkonen.core-test
   (:require [kekkonen.core :as k]
+            [kekkonen.midje :refer :all]
             [midje.sweet :refer :all]
             [schema.core :as s]
             [plumbing.core :as p]))
@@ -55,7 +56,7 @@
     (let [db (atom #{})]
 
       (fact "call fails with missing dependencies"
-        (get-items {}) => (throws Exception))
+        (get-items {}) => throws?)
 
       (fact "call with dependencies set succeeds"
         (get-items {:components {:db db}}) => #{})
@@ -73,7 +74,7 @@
       (fact "call with wrong types succeeds without validation set"
         (s/with-fn-validation
           (add-item! {:components {:db db}
-                      :data {:item 123}})) => (throws Exception))
+                      :data {:item 123}})) => throws?)
 
       (fact "call with right types succeeds with validation set"
         (s/with-fn-validation
@@ -154,10 +155,10 @@
   (s/with-fn-validation
 
     (fact "can't be created without handlers"
-      (k/create {}) => (throws RuntimeException))
+      (k/create {}) => throws?)
 
     (fact "can't be created with root level handlers"
-      (k/create {:handlers 'kekkonen.core-test}) => (throws RuntimeException))
+      (k/create {:handlers 'kekkonen.core-test}) => throws?)
 
     (fact "can be created with namespaced handlers"
       (k/create {:handlers {:test 'kekkonen.core-test}}) => truthy)
@@ -171,7 +172,7 @@
 
         (fact "non-existing action"
           (k/some-handler kekkonen :test/non-existing) => nil
-          (k/invoke kekkonen :test/non-existing) => (throws RuntimeException))
+          (k/invoke kekkonen :test/non-existing) => throws?)
 
         (fact "existing action contains :type and :ns"
           (k/some-handler kekkonen :test/ping) => (contains {:type :handler, :ns :test})
@@ -216,15 +217,14 @@
     (fact "sub-context"
       (let [kekkonen (k/create {:handlers {:api #'plus}})]
 
-        (k/invoke kekkonen :api/plus {}) => (throws RuntimeException)
-        (k/invoke kekkonen :api/plus {:data {:x 1}}) => (throws RuntimeException)
+        (k/invoke kekkonen :api/plus {}) => throws?
+        (k/invoke kekkonen :api/plus {:data {:x 1}}) => throws?
         (k/invoke kekkonen :api/plus {:data {:x 1, :y 2}}) => 3
 
         (let [kekkonen (k/with-context kekkonen {:data {:x 1}})]
-          (k/invoke kekkonen :api/plus {}) => (throws RuntimeException)
-          (k/invoke kekkonen :api/plus {:data {:x 1}}) => (throws RuntimeException)
+          (k/invoke kekkonen :api/plus {}) => throws?
+          (k/invoke kekkonen :api/plus {:data {:x 1}}) => throws?
           (k/invoke kekkonen :api/plus {:data {:y 2}}) => 3)))))
-
 
 (p/defnk ^:test meta-handler {::roles #{:admin}} [x] x)
 

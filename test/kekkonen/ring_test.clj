@@ -1,6 +1,7 @@
 (ns kekkonen.ring-test
   (:require [kekkonen.core :as k]
             [kekkonen.ring :as r]
+            [kekkonen.midje :refer :all]
             [midje.sweet :refer :all]
             [schema.core :as s]
             [ring.util.http-response :refer [ok]]
@@ -61,14 +62,23 @@
       (fact "missing parameters"
         (app {:uri "/api/plus"
               :request-method :post
-              :query-params {:x "1"}})) => (throws RuntimeException)
+              :query-params {:x "1"}})
+
+        => (throws? {:in :query-params
+                     :value {:x "1"}
+                     :schema {:x s/Int, :y s/Int s/Keyword s/Any}}))
 
       (fact "wrong parameter types"
         (app {:uri "/api/plus"
               :request-method :post
-              :query-params {:x "invalid" :y "2"}}) => (throws RuntimeException))
+              :query-params {:x "invalid" :y "2"}})
 
-      (fact "all good"
+        => (throws? {:in :query-params
+                     :value {:x "invalid" :y "2"}
+                     :schema {:x s/Int, :y s/Int s/Keyword s/Any}}))
+
+
+        (fact "all good"
         (app {:uri "/api/plus"
               :request-method :post
               :query-params {:x "1" :y "2"}}) => (ok 3)))
@@ -94,7 +104,11 @@
             :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
       (app {:uri "/api/responsez"
             :request-method :post
-            :body-params {:value 1}}) => (throws RuntimeException))))
+            :body-params {:value 1}})
+
+      => (throws? {:in :response
+                   :value {:value 1}
+                   :schema {:value s/Str}}))))
 
 (p/defnk ^:get get-it [] (ok))
 (p/defnk ^:head head-it [] (ok))
