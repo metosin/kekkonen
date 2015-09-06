@@ -9,7 +9,7 @@
 
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
-                      (s/optional-key :mappers) [k/Function]}}
+                      (s/optional-key :transformers) [k/Function]}}
    :coercion {s/Keyword k/Function}})
 
 (s/def default-options :- Options
@@ -59,18 +59,18 @@
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]
-            (if-let [{:keys [methods mappers]} (get (:types options) (:type handler))]
+            (if-let [{:keys [methods transformers]} (get (:types options) (:type handler))]
               (if (get methods request-method)
                 (let [request (coerce-request! request handler options)
                       context {:request request}
-                      context (reduce (fn [context mapper] (mapper context)) context mappers)
+                      context (reduce (fn [context mapper] (mapper context)) context transformers)
                       responses (-> handler :user :responses)
                       response (k/invoke kekkonen action context)]
                   (if responses
                     (let [status (or (:status response) 200)
                           schema (get-in responses [status :schema])
                           matcher (get-in options [:coercion :body-params])
-                          value  (:body response)]
+                          value (:body response)]
                       (if schema
                         (let [coerced (coerce! schema matcher value :response)]
                           (assoc response :body coerced))

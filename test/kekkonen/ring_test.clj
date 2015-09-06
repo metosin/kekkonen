@@ -146,7 +146,7 @@
 (facts "mapping"
   (let [app (r/ring-handler
               (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-              {:types {:handler {:mappers [(k/context-copy [:request :body-params] [:data])]}}})]
+              {:types {:handler {:transformers [(k/context-copy [:request :body-params] [:data])]}}})]
 
     (app {:uri "/api/test"
           :request-method :post

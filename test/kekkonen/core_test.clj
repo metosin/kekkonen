@@ -278,11 +278,11 @@
     (remove-ab {:a {:b 1}}) => {}
     ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
 
-(fact "mapping"
+(fact "transforming"
   (s/with-fn-validation
     (let [k (k/create {:handlers {:api (k/handler {:name :test} identity)}
-                       :mappers [(k/context-copy [:x] [:y])
-                                 (k/context-dissoc [:x])]})]
+                       :transformers [(k/context-copy [:x] [:y])
+                                      (k/context-dissoc [:x])]})]
 
-      (fact "mappers are executed"
+      (fact "transformers are executed"
         (k/invoke k :api/test {:x 1}) => {:y 1}))))

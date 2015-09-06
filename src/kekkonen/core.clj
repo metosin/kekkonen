@@ -150,7 +150,7 @@
   [handlers :- KeywordMap
    {type-resolver :- s/Any default-type-resolver}
    {context :- {s/Keyword s/Any} {}}
-   {mappers :- [Function] []}
+   {transformers :- [Function] []}
    {user :- {s/Keyword Function} {}}]
   (letfn [(enrich [h m]
             (if (seq m)
@@ -164,7 +164,7 @@
                   (traverse v (conj m k)))))]
     {:context context
      :handlers (traverse (collect handlers type-resolver) [])
-     :mappers mappers
+     :transformers transformers
      :user user}))
 
 (s/defn ^:private action-kws [path :- s/Keyword]
@@ -191,10 +191,10 @@
   "Invokes a action handler with the given context."
   ([kekkonen action]
     (invoke kekkonen action {}))
-  ([{:keys [mappers] :as kekkonen} action context]
+  ([{:keys [transformers] :as kekkonen} action context]
     (if-let [{:keys [function user]} (some-handler kekkonen action)]
       (let [context (kc/deep-merge (:context kekkonen) context)
-            context (reduce (fn [context mapper] (mapper context)) context mappers)
+            context (reduce (fn [context mapper] (mapper context)) context transformers)
             context (reduce
                       (fn [context [k v]]
                         (if-let [mapper (get-in kekkonen [:user k])]
