@@ -7,7 +7,12 @@
             [kekkonen.common :as kc]
             [clojure.string :as str]))
 
-(def default-options
+(s/defschema Options
+  {:types {s/Keyword {:methods #{s/Keyword}
+                      (s/optional-key :mappers) [k/Function]}}
+   :coercion {s/Keyword k/Function}})
+
+(s/def default-options :- Options
   {:types {:handler {:methods #{:post}}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
               :path-params rsc/query-schema-coercion-matcher
