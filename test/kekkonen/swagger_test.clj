@@ -42,7 +42,7 @@
                                                       :y s/Int
                                                       :z s/Bool}}}
                             :summary "summary"
-                            :tags [:api/admin]}}}})
+                            :tags [:api.admin]}}}})
 
     (fact "swagger-json can be generated"
       (s/with-fn-validation

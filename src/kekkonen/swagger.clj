@@ -26,16 +26,18 @@
                      (if description {:description description})))}))
 
 (s/defn swagger-object
-  "Creates a Swagger-spec object out of ring-swagger object."
-  [swagger :- rs2/Swagger]
-  (rs2/swagger-json swagger))
+  "Creates a Swagger-spec object out of ring-swagger object and ring-swagger options."
+  ([swagger :- rs2/Swagger]
+    (swagger-object swagger {}))
+  ([swagger :- rs2/Swagger, options :- k/KeywordMap]
+    (rs2/swagger-json swagger options)))
 
 (s/defn swagger :- rs2/Swagger
-  "Creates a ring-swagger object out of Kekkonen."
+  "Creates a ring-swagger object out of Kekkonen and extra info"
   ([kekkonen]
-   (swagger kekkonen {}))
-  ([kekkonen options]
-   (let [handlers (k/all-handlers kekkonen)]
-     (merge
-       options
-       {:paths (apply merge (map transform-handler handlers))}))))
+    (swagger kekkonen {}))
+  ([kekkonen info]
+    (let [handlers (k/all-handlers kekkonen)]
+      (merge
+        info
+        {:paths (apply merge (map transform-handler handlers))}))))
