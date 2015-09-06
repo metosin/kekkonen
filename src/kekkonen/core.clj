@@ -97,14 +97,14 @@
 
 (defn- -collect-fn [function type-resolver]
   (if-let [{:keys [name description schema type] :as meta} (type-resolver (meta function))]
-    (if (and name schema)
-      {:function function
-       :type type
-       :name (keyword name)
-       :user (user-meta meta)
-       :description description
-       :input (pfnk/input-schema function)
-       :output (pfnk/output-schema function)})))
+    (if name
+      {(keyword name) {:function function
+                       :type type
+                       :name (keyword name)
+                       :user (user-meta meta)
+                       :description (or description "")
+                       :input (if schema (pfnk/input-schema function) s/Any)
+                       :output (if schema (pfnk/output-schema function) s/Any)}})))
 
 (defn- -collect-ns [ns type-resolver]
   (require ns)
@@ -206,3 +206,14 @@
 
 (defn with-context [kekkonen context]
   (update-in kekkonen [:context] kc/deep-merge context))
+
+(defn context-copy
+  "Returns a function that assocs in a value from to-kws path into from-kws in a context"
+  [from-kws to-kws]
+  (fn [context]
+    (assoc-in context to-kws (get-in context from-kws {}))))
+
+(defn context-dissoc [from-kws]
+  "Returns a function that dissocs in a value from from-kws in a context"
+  (fn [context]
+    (kc/dissoc-in context from-kws)))

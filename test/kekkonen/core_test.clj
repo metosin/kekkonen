@@ -99,6 +99,23 @@
 
     (fact "functions"
 
+      (fact "with a function"
+        (let [handler (k/collect
+                        (k/handler
+                          {:name :echo}
+                          identity))]
+
+          handler => (just
+                       {:echo
+                        (just
+                          {:function fn?
+                           :description ""
+                           :user {}
+                           :type :handler
+                           :name :echo
+                           :input s/Any
+                           :output s/Any})})))
+
       (fact "with fnk"
         (let [handler (k/collect
                         (k/handler
@@ -108,15 +125,18 @@
                            :roles #{:admin :user}}
                           (p/fnk f :- User [data :- User] data)))]
 
-          handler => (contains {:function fn?
-                                :type :handler
-                                :name :echo
-                                :user {:query true
-                                       :roles #{:admin :user}}
-                                :description "Echoes the user"
-                                :input {:data User
-                                        s/Keyword s/Any}
-                                :output User}))))
+          handler => (just
+                       {:echo
+                        (just
+                          {:function fn?
+                           :type :handler
+                           :name :echo
+                           :user {:query true
+                                  :roles #{:admin :user}}
+                           :description "Echoes the user"
+                           :input {:data User
+                                   s/Keyword s/Any}
+                           :output User})}))))
 
     (fact "vars"
       (let [handler (k/collect #'echo)]
@@ -133,7 +153,7 @@
                                  s/Keyword s/Any}
                          :output User
                          :source-map (just
-                                       {:line 37
+                                       {:line 38
                                         :column 1
                                         :file string?
                                         :ns 'kekkonen.core-test
@@ -196,7 +216,10 @@
                                  :public 'kekkonen.core-test
                                  :kiss #'ping
                                  :abba [#'ping #'echo]
-                                 :wasp ['kekkonen.core-test]}})]
+                                 :wasp ['kekkonen.core-test]
+                                 :bon (k/handler
+                                        {:name :jovi}
+                                        (constantly :runaway))}})]
 
         (fact "deeply nested"
           (k/invoke kekkonen :admin/kikka/ping) => "pong"
@@ -212,7 +235,10 @@
           (k/invoke kekkonen :wasp/ping) => "pong")
 
         (fact "vector of namespaces"
-          (k/invoke kekkonen :wasp/ping) => "pong")))
+          (k/invoke kekkonen :wasp/ping) => "pong")
+
+        (fact "handler"
+          (k/invoke kekkonen :bon/jovi) => :runaway)))
 
     (fact "sub-context"
       (let [kekkonen (k/create {:handlers {:api #'plus}})]
@@ -240,7 +266,14 @@
 
     (k/all-handlers k) => (just [anything])
 
-    (k/invoke k :api/meta-handler {:x 1}) => (throws RuntimeException)
-    (k/invoke k :api/meta-handler {:x 1 ::role :user}) => (throws RuntimeException)
+    (k/invoke k :api/meta-handler {:x 1}) => (throws? {:role nil, :required #{:admin}})
+    (k/invoke k :api/meta-handler {:x 1 ::role :user}) => (throws? {:role :user, :required #{:admin}})
     (k/invoke k :api/meta-handler {:x 1 ::role :admin}) => 1))
 
+(fact "context transformations"
+  (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
+        remove-ab (k/context-dissoc [:a :b])]
+
+    (copy-ab-to-cd {:a {:b 1}}) => {:a {:b 1} :c {:d 1}}
+    (remove-ab {:a {:b 1}}) => {}
+    ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
