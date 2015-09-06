@@ -54,11 +54,13 @@
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]
-            (if-let [type-config (get (:types options) (:type handler))]
-              (if (get (:methods type-config) request-method)
+            (if-let [{:keys [methods mappers]} (get (:types options) (:type handler))]
+              (if (get methods request-method)
                 (let [request (coerce-request! request handler options)
+                      context {:request request}
+                      context (reduce (fn [context mapper] (mapper context)) context mappers)
                       responses (-> handler :user :responses)
-                      response (k/invoke kekkonen action {:request request})]
+                      response (k/invoke kekkonen action context)]
                   (if responses
                     (let [status (or (:status response) 200)
                           schema (get-in responses [status :schema])

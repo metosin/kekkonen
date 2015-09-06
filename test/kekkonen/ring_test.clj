@@ -142,3 +142,12 @@
       (app {:uri "/api/any-it", :request-method :options}) => (ok)
       (app {:uri "/api/any-it", :request-method :post}) => (ok)
       (app {:uri "/api/any-it", :request-method :put}) => (ok))))
+
+(facts "mapping"
+  (let [app (r/ring-handler
+              (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+              {:types {:handler {:mappers [(k/context-copy [:request :body-params] [:data])]}}})]
+
+    (app {:uri "/api/test"
+          :request-method :post
+          :body-params {:kikka "kukka"}}) => (contains {:data {:kikka "kukka"}})))
