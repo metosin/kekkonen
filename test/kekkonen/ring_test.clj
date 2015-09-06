@@ -9,7 +9,7 @@
 
 (facts "uris, actions, handlers"
   (r/uri->action "/api/user/add-user!") => :api/user/add-user!
-  (r/handler-uri {:ns :api/user, :name :add-user!}) => "/api/user/add-user!")
+  (r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!")
 
 (p/defnk ^:handler ping [] "pong")
 
@@ -64,21 +64,24 @@
               :request-method :post
               :query-params {:x "1"}})
 
-        => (throws? {:in :query-params
-                     :value {:x "1"}
-                     :schema {:x s/Int, :y s/Int s/Keyword s/Any}}))
+        => (throws?
+             {:type :kekkonen.ring/request
+              :in :query-params
+              :value {:x "1"}
+              :schema {:x s/Int, :y s/Int s/Keyword s/Any}}))
 
       (fact "wrong parameter types"
         (app {:uri "/api/plus"
               :request-method :post
               :query-params {:x "invalid" :y "2"}})
 
-        => (throws? {:in :query-params
-                     :value {:x "invalid" :y "2"}
-                     :schema {:x s/Int, :y s/Int s/Keyword s/Any}}))
+        => (throws?
+             {:type :kekkonen.ring/request
+              :in :query-params
+              :value {:x "invalid" :y "2"}
+              :schema {:x s/Int, :y s/Int s/Keyword s/Any}}))
 
-
-        (fact "all good"
+      (fact "all good"
         (app {:uri "/api/plus"
               :request-method :post
               :query-params {:x "1" :y "2"}}) => (ok 3)))
@@ -102,13 +105,16 @@
       (app {:uri "/api/responsez"
             :request-method :post
             :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
+
       (app {:uri "/api/responsez"
             :request-method :post
             :body-params {:value 1}})
 
-      => (throws? {:in :response
-                   :value {:value 1}
-                   :schema {:value s/Str}}))))
+      => (throws?
+           {:type :kekkonen.ring/response
+            :in nil
+            :value {:value 1}
+            :schema {:value s/Str}}))))
 
 (p/defnk ^:get get-it [] (ok))
 (p/defnk ^:head head-it [] (ok))

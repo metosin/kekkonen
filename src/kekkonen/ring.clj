@@ -28,14 +28,21 @@
 (s/defn handler-uri :- s/Str
   "Creates a uri for the handler"
   [{:keys [ns name]} :- k/Handler]
-  (str/replace (str ns name) #":" "/"))
+  (str/replace (str ns name) #"[:|\.]" "/"))
 
-(defn coerce! [schema matcher value type]
+(defn coerce! [schema matcher value in type]
   (let [coercer (sc/coercer schema matcher)
         coerced (coercer value)]
     (if-not (su/error? coerced)
       coerced
-      (throw (ex-info "Coercion error" {:in type, :value value, :schema schema, :error coerced})))))
+      (throw
+        (ex-info
+          "Coercion error"
+          {:type type
+           :in in
+           :value value
+           :schema schema
+           :error coerced})))))
 
 (defn coerce-request!
   "Coerces a request against a handler input schema based on :coercion options."
@@ -44,7 +51,7 @@
     (fn [request [k matcher]]
       (if-let [schema (get-in handler [:input :request k])]
         (let [value (get request k {})
-              coerced (coerce! schema matcher value k)]
+              coerced (coerce! schema matcher value k ::request)]
           (assoc request k coerced))
         request))
     request
@@ -72,7 +79,7 @@
                           matcher (get-in options [:coercion :body-params])
                           value (:body response)]
                       (if schema
-                        (let [coerced (coerce! schema matcher value :response)]
+                        (let [coerced (coerce! schema matcher value nil ::response)]
                           (assoc response :body coerced))
                         response))
                     response))))))))))
