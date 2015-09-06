@@ -102,7 +102,8 @@
       (fact "with a function"
         (let [handler (k/collect
                         (k/handler
-                          {:name :echo}
+                          {:name :echo
+                           :input {:name s/Str}}
                           identity))]
 
           handler => (just
@@ -113,7 +114,7 @@
                            :user {}
                            :type :handler
                            :name :echo
-                           :input s/Any
+                           :input {:name s/Str}
                            :output s/Any})})))
 
       (fact "with fnk"
@@ -252,11 +253,11 @@
           (k/invoke kekkonen :api/plus {:data {:x 1}}) => throws?
           (k/invoke kekkonen :api/plus {:data {:y 2}}) => 3)))))
 
-(p/defnk ^:test meta-handler {::roles #{:admin}} [x] x)
-
 (fact "user-meta"
-  (let [k (k/create {:handlers {:api #'meta-handler}
-                     :type-resolver (k/type-resolver :test)
+  (let [k (k/create {:handlers {:api (k/handler
+                                       {:name :test
+                                        ::roles #{:admin}}
+                                       (p/fn-> :x))}
                      :user {::roles (fn [context allowed-roles]
                                       (let [role (::role context)]
                                         (if (allowed-roles role)
@@ -266,9 +267,9 @@
 
     (k/all-handlers k) => (just [anything])
 
-    (k/invoke k :api/meta-handler {:x 1}) => (throws? {:role nil, :required #{:admin}})
-    (k/invoke k :api/meta-handler {:x 1 ::role :user}) => (throws? {:role :user, :required #{:admin}})
-    (k/invoke k :api/meta-handler {:x 1 ::role :admin}) => 1))
+    (k/invoke k :api/test {:x 1}) => (throws? {:role nil, :required #{:admin}})
+    (k/invoke k :api/test {:x 1 ::role :user}) => (throws? {:role :user, :required #{:admin}})
+    (k/invoke k :api/test {:x 1 ::role :admin}) => 1))
 
 (fact "context transformations"
   (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])

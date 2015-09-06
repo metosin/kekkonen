@@ -68,7 +68,14 @@
 ;;
 
 (s/defn ^:private user-meta [meta :- KeywordMap]
-  (-> meta (dissoc :type :schema :ns :name :file :column :line :doc :description :plumbing.fnk.impl/positional-info)))
+  (dissoc
+    meta
+    ; reserved kekkonen handler stuff
+    :type :input :output :description
+    ; clojure var meta
+    :line :column :file :name :ns :doc
+    ; plumbing details
+    :schema :plumbing.fnk.impl/positional-info))
 
 (defprotocol CollectHandlers
   (-collect [this type-resolver]))
@@ -96,15 +103,15 @@
                                     :name name}}})))
 
 (defn- -collect-fn [function type-resolver]
-  (if-let [{:keys [name description schema type] :as meta} (type-resolver (meta function))]
+  (if-let [{:keys [name description schema type input output] :as meta} (type-resolver (meta function))]
     (if name
       {(keyword name) {:function function
                        :type type
                        :name (keyword name)
                        :user (user-meta meta)
                        :description (or description "")
-                       :input (if schema (pfnk/input-schema function) s/Any)
-                       :output (if schema (pfnk/output-schema function) s/Any)}})))
+                       :input (or (and schema (pfnk/input-schema function)) input s/Any)
+                       :output (or (and schema (pfnk/output-schema function)) output s/Any)}})))
 
 (defn- -collect-ns [ns type-resolver]
   (require ns)
