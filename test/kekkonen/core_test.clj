@@ -230,8 +230,12 @@
                                         (constantly :runaway))}})]
 
         (fact "deeply nested"
-          (k/invoke kekkonen :admin/kikka/ping) => "pong"
-          (k/invoke kekkonen :admin/kukka/ping) => "pong")
+          (fact "namespaces can be joined with ."
+            (k/invoke kekkonen :admin.kikka/ping) => "pong")
+          (fact "namespaces can be joined with /"
+            (k/invoke kekkonen :admin/kukka/ping) => "pong")
+          (fact "ns is set to handler with ."
+            (k/some-handler kekkonen :admin.kukka/ping) => (contains {:ns :admin.kukka})))
 
         (fact "not nested"
           (k/invoke kekkonen :kiss/ping) => "pong")

@@ -165,7 +165,7 @@
    {user :- {s/Keyword Function} {}}]
   (letfn [(enrich [h m]
             (if (seq m)
-              (let [ns (->> m (map name) (str/join "/") keyword)]
+              (let [ns (->> m (map name) (str/join ".") keyword)]
                 (assoc h :ns ns))
               (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
           (traverse [x m]
@@ -179,7 +179,7 @@
      :user user}))
 
 (s/defn ^:private action-kws [path :- s/Keyword]
-  (-> path str (subs 1) (str/split #"/") (->> (mapv keyword))))
+  (-> path str (subs 1) (str/split #"[/|\.]") (->> (mapv keyword))))
 
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
