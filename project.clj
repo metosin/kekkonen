@@ -11,6 +11,8 @@
                  [metosin/ring-middleware-format "0.6.0"]
                  [metosin/ring-http-response "0.6.5"]]
   :profiles {:dev {:plugins [[lein-midje "3.1.3"]]
+                   :sources [dev-src]
                    :dependencies [[org.clojure/clojure "1.7.0"]
+                                  [ring/ring-jetty-adapter "1.4.0"]
                                   [midje "1.7.0"]]}}
   :aliases {"test-ancient" ["midje"]})
