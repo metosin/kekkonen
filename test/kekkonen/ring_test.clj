@@ -124,3 +124,12 @@
     (app {:uri "/api/test"
           :request-method :post
           :body-params {:kikka "kukka"}}) => (contains {:data {:kikka "kukka"}})))
+
+(facts "routing"
+  (let [app (r/routes [(r/match "/swagger.json" #{:get} (constantly :swagger))
+                       (r/match "/api-docs" (constantly :api-docs))])]
+
+    (app {:uri "/swagger.json" :request-method :get}) => :swagger
+    (app {:uri "/swagger.json" :request-method :post}) => nil
+    (app {:uri "/api-docs" :request-method :head}) => :api-docs
+    (app {:uri "/favicon.ico" :request-method :get}) => nil))

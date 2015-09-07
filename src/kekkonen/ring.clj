@@ -83,3 +83,17 @@
                           (assoc response :body coerced))
                         response))
                     response))))))))))
+
+(s/defn routes :- k/Function
+  "Creates a ring handler of multiples handlers, matches in orcer."
+  [ring-handlers :- [k/Function]]
+  (apply some-fn ring-handlers))
+
+(s/defn match
+  ([match-uri ring-handler]
+    (match match-uri identity ring-handler))
+  ([match-uri match-request-method ring-handler]
+    (fn [{:keys [uri request-method] :as request}]
+      (if (and (= match-uri uri)
+               (match-request-method request-method))
+        (ring-handler request)))))
