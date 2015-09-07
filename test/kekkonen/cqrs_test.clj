@@ -28,16 +28,16 @@
   (let [kekkonen (k/create
                    {:context {:components {:db (atom #{})}}
                     :handlers {:api {:items [#'get-items #'add-item! #'reset-items!]}}
-                    :type-resolver cqrs/cqrs-type-resolver})
+                    :type-resolver cqrs/+cqrs-type-resolver+})
         app (r/ring-handler
               kekkonen
-              {:types cqrs/cqrs-types})]
+              {:types cqrs/+cqrs-types+})]
 
     (fact "get-items"
       (k/invoke kekkonen :api/items/get-items) => (success #{})
       (app {:uri "/api/items/get-items", :request-method :get}) => (success #{}))
 
-    (fact "add-item"
+    (fact "add-item!"
       (k/invoke kekkonen :api/items/add-item! {:data {:item "kikka"}}) => (success #{"kikka"})
       (app {:uri "/api/items/add-item!"
             :request-method :post
