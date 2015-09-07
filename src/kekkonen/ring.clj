@@ -12,7 +12,7 @@
                       (s/optional-key :transformers) [k/Function]}}
    :coercion {s/Keyword k/Function}})
 
-(s/def default-options :- Options
+(s/def +default-options+ :- Options
   {:types {:handler {:methods #{:post}}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
               :path-params rsc/query-schema-coercion-matcher
@@ -61,8 +61,8 @@
   "Creates a ring handler from Kekkonen and options."
   ([kekkonen]
     (ring-handler kekkonen {}))
-  ([kekkonen options]
-    (let [options (kc/deep-merge default-options options)]
+  ([kekkonen, options :- k/KeywordMap]
+    (let [options (kc/deep-merge +default-options+ options)]
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]
@@ -83,18 +83,3 @@
                           (assoc response :body coerced))
                         response))
                     response))))))))))
-
-;;
-;; http-types
-;;
-
-(def http-types {:get {:methods #{:get}}
-                 :head {:methods #{:head}}
-                 :patch {:methods #{:patch}}
-                 :delete {:methods #{:delete}}
-                 :options {:methods #{:options}}
-                 :post {:methods #{:post}}
-                 :put {:methods #{:put}}
-                 :any {:methods #{:get :head :patch :delete :options :post :put}}})
-
-(def http-type-resolver (k/type-resolver :get :head :patch :delete :options :post :put :any))
