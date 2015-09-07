@@ -10,7 +10,8 @@
             [slingshot.slingshot :as slingshot]
             [kekkonen.common :as kc]
             [clojure.walk :as walk]
-            [schema.utils :as su])
+            [schema.utils :as su]
+            [schema.core :as s])
   (:import [com.fasterxml.jackson.core JsonParseException]
            [org.yaml.snakeyaml.parser ParserException]
            [schema.utils ValidationError NamedError]))

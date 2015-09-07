@@ -11,7 +11,7 @@
   [handler]
   (let [{:keys [description input ns type] {:keys [summary responses]} :user} handler
         {:keys [body-params query-params path-params header-params]} (:request input)
-        methods (some-> r/default-options :types type :methods sort)
+        methods (some-> r/+default-options+ :types type :methods sort)
         path (r/handler-uri handler)]
     {path (p/for-map [method methods]
             method (merge
