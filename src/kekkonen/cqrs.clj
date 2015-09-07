@@ -2,7 +2,6 @@
   (:require [kekkonen.core :as k]
             [kekkonen.api :as ka]
             [kekkonen.common :as kc]
-            [schema.core :as s]
             [ring.util.http-response :as hr]))
 
 (def +cqrs-types+ {:query {:methods #{:get}
@@ -12,7 +11,7 @@
 
 (def +cqrs-type-resolver+ (k/type-resolver :command :query))
 
-(s/defn cqrs-api [options]
+(defn cqrs-api [options]
   (ka/api
     (kc/deep-merge
       {:core {:type-resolver +cqrs-type-resolver+}
