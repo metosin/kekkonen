@@ -2,15 +2,14 @@
   (:require [kekkonen.ring :as r]
             [kekkonen.core :as k]
             [kekkonen.middleware :as mw]
-            [schema.core :as s]
-            [kekkonen.common :as kc]))
+            [schema.core :as s]))
 
-(s/defschema ApiOptions
+(s/defschema Options
   {:core k/KeywordMap
    (s/optional-key :ring) k/KeywordMap
    (s/optional-key :mw) k/KeywordMap})
 
-(s/defn api [options :- ApiOptions]
+(s/defn api [options :- Options]
   (s/with-fn-validation
     (mw/api-middleware
       (r/ring-handler
