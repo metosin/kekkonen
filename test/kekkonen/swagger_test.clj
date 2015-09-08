@@ -21,13 +21,15 @@
 
 
 (fact "swagger-docs"
-  (let [kekkonen (k/create {:handlers {:api {:admin #'echo}}})
+  (let [kekkonen (k/transform-handlers
+                   (k/create {:handlers {:api {:admin #'echo}}})
+                   (partial r/attach-ring-meta r/+default-options+))
+
         swagger (ks/ring-swagger
                   kekkonen
                   {:info {:version "1.0.0"
                           :title "Kekkonen"
-                          :description "Kekkonen Swagger API"}}
-                  r/+default-options+)]
+                          :description "Kekkonen Swagger API"}})]
 
     (fact "swagger-object is created"
 

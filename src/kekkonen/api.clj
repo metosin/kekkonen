@@ -29,7 +29,7 @@
           kekkonen (k/create (:core options))
           info (merge (:info options) (mw/api-info (:mw options)))
           swagger-object (ks/swagger-object
-                           (ks/ring-swagger kekkonen info (:ring options))
+                           (ks/ring-swagger kekkonen info)
                            (:swagger options))
           ring-handler (r/ring-handler
                          kekkonen

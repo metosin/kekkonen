@@ -12,13 +12,12 @@
 
 (defn transform-handler
   "Transforms a handler into ring-swagger path->method->operation map."
-  [options handler]
-  (let [{:keys [description input ns type] {:keys [summary responses]} :user} handler
-        type-options (get-in options [:types type])
+  [handler]
+  (let [{:keys [description input ns type ring] {:keys [summary responses]} :user} handler
         ;; deep-merge back the mappings to get right request requirements
-        input (reduce kc/deep-merge-to-from input (:parameters type-options))
+        input (reduce kc/deep-merge-to-from input (:parameters ring))
         {:keys [body-params query-params path-params header-params]} (:request input)
-        methods (-> type-options :methods sort)
+        methods (-> ring :methods sort)
         path (r/handler-uri handler)]
     {path (p/for-map [method methods]
             method (merge
@@ -34,11 +33,11 @@
 
 (s/defn ring-swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Kekkonen and extra info"
-  [kekkonen info options]
+  [kekkonen info]
   (let [handlers (k/all-handlers kekkonen)]
     (merge
       info
-      {:paths (apply merge (map (partial transform-handler options) handlers))})))
+      {:paths (apply merge (map transform-handler handlers))})))
 
 (s/defn swagger-object
   "Creates a Swagger-spec object out of ring-swagger object and ring-swagger options."
