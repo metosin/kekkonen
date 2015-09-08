@@ -4,7 +4,8 @@
             [midje.sweet :refer :all]
             [schema.core :as s]
             [ring.util.http-response :refer [ok]]
-            [plumbing.core :as p]))
+            [plumbing.core :as p]
+            [kekkonen.ring :as r]))
 
 (p/defnk ^:handler echo
   {:summary "summary"
@@ -25,7 +26,8 @@
                   kekkonen
                   {:info {:version "1.0.0"
                           :title "Kekkonen"
-                          :description "Kekkonen Swagger API"}})]
+                          :description "Kekkonen Swagger API"}}
+                  r/+default-options+)]
 
     (fact "swagger-object is created"
 
@@ -46,4 +48,4 @@
 
     (fact "swagger-json can be generated"
       (s/with-fn-validation
-        (ks/swagger-object swagger) => truthy))))
+        (ks/swagger-object swagger {}) => truthy))))

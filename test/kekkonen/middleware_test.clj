@@ -22,7 +22,7 @@
   (let [app (mw/wrap-exceptions
               (r/ring-handler
                 (k/create {:handlers {:api [#'plus #'responsez]}}))
-              (:exceptions mw/default-options))]
+              (:exceptions mw/+default-options+))]
 
     (fact "request coercion errors"
       (let [response (app {:uri "/api/plus"

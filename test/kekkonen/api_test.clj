@@ -25,12 +25,28 @@
         (parse response) => {:swagger "2.0"
                              :info {:title "Swagger API"
                                     :version "0.0.1"}
-                             :consumes []
-                             :produces []
+                             :consumes ["application/json"
+                                        "application/x-yaml"
+                                        "application/edn"
+                                        "application/transit+json"
+                                        "application/transit+msgpack"]
+                             :produces ["application/json"
+                                        "application/x-yaml"
+                                        "application/edn"
+                                        "application/transit+json"
+                                        "application/transit+msgpack"]
                              :definitions {}
                              :paths {:/api/ping
                                      {:post
                                       {:responses
                                        {:default
                                         {:description ""}}
-                                       :tags ["api"]}}}}))))
+                                       :tags ["api"]}}}}))
+
+    (fact "swagger-ui"
+      (let [response (app {:uri "/" :request-method :get})]
+        response => (contains
+                      {:status 302
+                       :body ""
+                       :headers (contains
+                                  {"Location" "/index.html"})})))))

@@ -7,12 +7,16 @@
             [plumbing.core :as p]
             [kekkonen.ring :as r]))
 
+(def +default-swagger-ui-options+
+  {:path "/"})
+
 (defn transform-handler
   "Transforms a handler into ring-swagger path->method->operation map."
-  [handler]
+  [options handler]
   (let [{:keys [description input ns type] {:keys [summary responses]} :user} handler
+        type-options (get-in options [:types type])
         {:keys [body-params query-params path-params header-params]} (:request input)
-        methods (some-> r/+default-options+ :types type :methods sort)
+        methods (-> type-options :methods sort)
         path (r/handler-uri handler)]
     {path (p/for-map [method methods]
             method (merge
@@ -28,20 +32,18 @@
 
 (s/defn swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Kekkonen and extra info"
-  ([kekkonen]
-    (swagger kekkonen {}))
-  ([kekkonen info]
+  [kekkonen info options]
     (let [handlers (k/all-handlers kekkonen)]
       (merge
         info
-        {:paths (apply merge (map transform-handler handlers))}))))
+      {:paths (apply merge (map (partial transform-handler options) handlers))})))
 
 (s/defn swagger-object
   "Creates a Swagger-spec object out of ring-swagger object and ring-swagger options."
-  ([swagger :- rs2/Swagger]
-    (swagger-object swagger {}))
-  ([swagger :- rs2/Swagger, options :- k/KeywordMap]
-    (rs2/swagger-json swagger options)))
+  [swagger :- rs2/Swagger, options :- k/KeywordMap]
+  (rs2/swagger-json swagger options))
 
-(s/defn swagger-ui [options]
+(s/defn swagger-ui
+  "Ring handler for the Swagger UI"
+  [options]
   (apply ui/swagger-ui (into [(:path options)] (apply concat (dissoc options :path)))))

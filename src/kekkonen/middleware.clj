@@ -109,7 +109,7 @@
 ;; Api Middleware
 ;;
 
-(def default-options
+(def +default-options+
   {:format {:formats [:json-kw :yaml-kw :edn :transit-json :transit-msgpack]
             :params-opts {}
             :response-opts {}}
@@ -140,7 +140,7 @@
   ([handler]
    (api-middleware handler {}))
   ([handler options]
-   (let [options (kc/deep-merge default-options options)
+   (let [options (kc/deep-merge +default-options+ options)
          {:keys [exceptions format]} options
          {:keys [formats params-opts response-opts]} format]
      (-> handler
