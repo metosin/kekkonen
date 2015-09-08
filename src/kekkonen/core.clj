@@ -201,16 +201,19 @@
   (get-in (:handlers kekkonen) (action-kws action)))
 
 (s/defn transform-handlers
+  "Applies f to all handlers. If the call returns nil,
+  the handler is removed."
   [kekkonen f]
   (merge
     kekkonen
     {:handlers
-     (w/prewalk
-       (fn [x]
-         (if (handler? x)
-           (f x)
-           x))
-       (:handlers kekkonen))}))
+     (kc/strip-nil-values
+       (w/prewalk
+         (fn [x]
+           (if (handler? x)
+             (f x)
+             x))
+         (:handlers kekkonen)))}))
 
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."

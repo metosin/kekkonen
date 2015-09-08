@@ -16,3 +16,6 @@
     {:data {:x String} :request {:body-params {:y String}}}
     [[:request :body-params] [:data]])
   => {:data {:x String} :request {:body-params {:x String, :y String}}})
+
+(fact "strip-nil-values"
+  (kc/strip-nil-values {:a {:b {:c {:e nil}}, :b2 true}}) => {:a {:b2 true}})

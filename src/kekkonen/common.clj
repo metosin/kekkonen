@@ -1,4 +1,5 @@
-(ns kekkonen.common)
+(ns kekkonen.common
+  (:require [clojure.walk :as walk]))
 
 (defn- deep-merge* [& maps]
   (let [f (fn [old new]
@@ -29,8 +30,14 @@
     (dissoc m k)))
 
 (defn strip-nil-values
-  "removes map-keys with nil values"
-  [m] (into {} (filter (comp not nil? second) m)))
+  "Recursively strip away nils and empty maps"
+  [m]
+  (walk/postwalk
+    (fn [x]
+      (if (and (not (record? x)) (map? x))
+        (into (empty x) (remove (comp #(or (nil? %) (and (map? %) (empty? %))) val) x))
+        x))
+    m))
 
 (defn deep-merge-from-to [data [from to]]
   (update-in data to deep-merge (get-in data from)))
