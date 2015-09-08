@@ -296,3 +296,18 @@
 
       (fact "transformers are executed"
         (k/invoke k :api/test {:x 1}) => {:y 1}))))
+
+(fact "transforming handlers"
+  (k/transform-handlers
+    (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+    (fn [handler]
+      (assoc handler :kikka :kukka)))
+
+  => (contains
+       {:handlers
+        (just
+          {:api
+           (just
+             {:test
+              (contains
+                {:kikka :kukka})})})}))

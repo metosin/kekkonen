@@ -192,24 +192,34 @@
      :transformers (:transformers options)
      :user (:user options)}))
 
-(s/defn ^:private action-kws [path :- s/Keyword]
-  (-> path str (subs 1) (str/split #"[/|\.]") (->> (mapv keyword))))
+(s/defn ^:private action-kws [action :- s/Keyword]
+  (-> action str (subs 1) (str/split #"[/|\.]") (->> (mapv keyword))))
 
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
   [kekkonen, action :- s/Keyword]
   (get-in (:handlers kekkonen) (action-kws action)))
 
+(s/defn transform-handlers
+  [kekkonen f]
+  (merge
+    kekkonen
+    {:handlers
+     (w/prewalk
+       (fn [x]
+         (if (handler? x)
+           (f x)
+           x))
+       (:handlers kekkonen))}))
+
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
   [kekkonen]
   (let [handlers (atom [])]
-    (w/prewalk
-      (fn [x]
-        (if (handler? x)
-          (do (swap! handlers conj x) nil)
-          x))
-      (:handlers kekkonen))
+    (transform-handlers
+      kekkonen
+      (fn [handler]
+        (swap! handlers conj handler) nil))
     @handlers))
 
 (s/defn invoke
