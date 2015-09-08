@@ -239,7 +239,8 @@
                           (mapper context v)
                           context))
                       context
-                      user)]
+                      user)
+            context (assoc context ::kekkonen kekkonen)]
         (function context))
       (throw (ex-info (str "Invalid action " action) {})))))
 

@@ -290,12 +290,12 @@
 
 (fact "transforming"
   (s/with-fn-validation
-    (let [k (k/create {:handlers {:api (k/handler {:name :test} identity)}
+    (let [k (k/create {:handlers {:api (k/handler {:name :test} #(:y %))}
                        :transformers [(k/context-copy [:x] [:y])
                                       (k/context-dissoc [:x])]})]
 
       (fact "transformers are executed"
-        (k/invoke k :api/test {:x 1}) => {:y 1}))))
+        (k/invoke k :api/test {:x 1}) => 1))))
 
 (fact "transforming handlers"
   (fact "enriching handlers"
@@ -317,4 +317,15 @@
     (k/transform-handlers
       (k/create {:handlers {:api (k/handler {:name :test} identity)}})
       (constantly nil)) => (contains {:handlers {}})))
+
+(fact "accessing kekkonen from handlers at invoke-time"
+  (let [k (k/create {:handlers
+                     {:api
+                      (k/handler
+                        {:name :test}
+                        (fn [context]
+                          (:kekkonen.core/kekkonen context)))}})]
+
+    (s/validate k/Kekkonen (k/invoke k :api/test)) => truthy))
+
 
