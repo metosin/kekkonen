@@ -75,7 +75,7 @@
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]
-            (if-let [{:keys [methods parameters transformers]} (get (:types options) (:type handler))]
+            (if-let [{:keys [methods parameters transformers]} (:ring handler)]
               (if (get methods request-method)
                 (let [request (coerce-request! request handler options)
                       context {:request request}
