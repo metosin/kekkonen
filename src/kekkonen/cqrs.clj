@@ -5,8 +5,10 @@
             [ring.util.http-response :as hr]))
 
 (def +cqrs-types+ {:query {:methods #{:get}
+                           :parameters [[[:request :query-params] [:data]]]
                            :transformers [(k/context-copy [:request :query-params] [:data])]}
                    :command {:methods #{:post}
+                             :parameters [[[:request :body-params] [:data]]]
                              :transformers [(k/context-copy [:request :body-params] [:data])]}})
 
 (def +cqrs-type-resolver+ (k/type-resolver :command :query))

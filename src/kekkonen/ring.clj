@@ -9,11 +9,14 @@
 
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
+                      (s/optional-key :parameters) [[(s/one [s/Keyword] 'from) 
+                                                     (s/one [s/Keyword] 'to)]]
                       (s/optional-key :transformers) [k/Function]}}
    :coercion {s/Keyword k/Function}})
 
 (s/def +default-options+ :- Options
   {:types {:handler {:methods #{:post}
+                     :parameters [[[:request :body-params] [:data]]]
                      :transformers [(k/context-copy [:request :body-params] [:data])]}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
               :path-params rsc/query-schema-coercion-matcher

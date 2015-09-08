@@ -15,6 +15,8 @@
   [options handler]
   (let [{:keys [description input ns type] {:keys [summary responses]} :user} handler
         type-options (get-in options [:types type])
+        ;; deep-merge back the mappings to get right request requirements
+        input (reduce kc/deep-merge-to-from input (:parameters type-options))
         {:keys [body-params query-params path-params header-params]} (:request input)
         methods (-> type-options :methods sort)
         path (r/handler-uri handler)]
@@ -33,9 +35,9 @@
 (s/defn swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Kekkonen and extra info"
   [kekkonen info options]
-    (let [handlers (k/all-handlers kekkonen)]
-      (merge
-        info
+  (let [handlers (k/all-handlers kekkonen)]
+    (merge
+      info
       {:paths (apply merge (map (partial transform-handler options) handlers))})))
 
 (s/defn swagger-object
