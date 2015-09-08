@@ -1,6 +1,7 @@
 (ns kekkonen.swagger
   (:require [schema.core :as s]
             [ring.swagger.swagger2 :as rs2]
+            [ring.swagger.ui :as ui]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
             [plumbing.core :as p]
@@ -25,13 +26,6 @@
                                      :header header-params})}
                      (if description {:description description})))}))
 
-(s/defn swagger-object
-  "Creates a Swagger-spec object out of ring-swagger object and ring-swagger options."
-  ([swagger :- rs2/Swagger]
-    (swagger-object swagger {}))
-  ([swagger :- rs2/Swagger, options :- k/KeywordMap]
-    (rs2/swagger-json swagger options)))
-
 (s/defn swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Kekkonen and extra info"
   ([kekkonen]
@@ -41,3 +35,13 @@
       (merge
         info
         {:paths (apply merge (map transform-handler handlers))}))))
+
+(s/defn swagger-object
+  "Creates a Swagger-spec object out of ring-swagger object and ring-swagger options."
+  ([swagger :- rs2/Swagger]
+    (swagger-object swagger {}))
+  ([swagger :- rs2/Swagger, options :- k/KeywordMap]
+    (rs2/swagger-json swagger options)))
+
+(s/defn swagger-ui [options]
+  (apply ui/swagger-ui (into [(:path options)] (apply concat (dissoc options :path)))))
