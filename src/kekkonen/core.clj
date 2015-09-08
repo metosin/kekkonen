@@ -37,6 +37,8 @@
 (s/defschema Kekkonen
   {:handlers KeywordMap
    :context KeywordMap
+   :transformers [Function]
+   :user KeywordMap
    s/Keyword s/Any})
 
 ;;
@@ -156,27 +158,39 @@
 ;; Registry
 ;;
 
-(p/defnk create :- Kekkonen
+(s/defschema Options
+  {:handlers KeywordMap
+   (s/optional-key :context) KeywordMap
+   (s/optional-key :type-resolver) Function
+   (s/optional-key :transformers) [Function]
+   (s/optional-key :user) KeywordMap
+   s/Keyword s/Any})
+
+(s/def +default-options+ :- Options
+  {:handlers {}
+   :context {}
+   :transformers []
+   :type-resolver default-type-resolver
+   :user {}})
+
+(s/defn create :- Kekkonen
   "Creates a Kekkonen."
-  [handlers :- KeywordMap
-   {type-resolver :- s/Any default-type-resolver}
-   {context :- {s/Keyword s/Any} {}}
-   {transformers :- [Function] []}
-   {user :- {s/Keyword Function} {}}]
-  (letfn [(enrich [h m]
-            (if (seq m)
-              (let [ns (->> m (map name) (str/join ".") keyword)]
-                (assoc h :ns ns))
-              (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
-          (traverse [x m]
-            (p/for-map [[k v] x]
-              k (if (handler? v)
-                  (enrich v m)
-                  (traverse v (conj m k)))))]
-    {:context context
-     :handlers (traverse (collect handlers type-resolver) [])
-     :transformers transformers
-     :user user}))
+  [options :- Options]
+  (let [options (kc/deep-merge +default-options+ options)
+        enrich (fn [h m]
+                 (if (seq m)
+                   (let [ns (->> m (map name) (str/join ".") keyword)]
+                     (assoc h :ns ns))
+                   (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
+        traverse (fn traverse [x m]
+                   (p/for-map [[k v] x]
+                     k (if (handler? v)
+                         (enrich v m)
+                         (traverse v (conj m k)))))]
+    {:context (:context options)
+     :handlers (traverse (collect (:handlers options) (:type-resolver options)) [])
+     :transformers (:transformers options)
+     :user (:user options)}))
 
 (s/defn ^:private action-kws [path :- s/Keyword]
   (-> path str (subs 1) (str/split #"[/|\.]") (->> (mapv keyword))))
@@ -219,11 +233,11 @@
 (defn with-context [kekkonen context]
   (update-in kekkonen [:context] kc/deep-merge context))
 
-(defn context-copy
+(s/defn context-copy
   "Returns a function that assocs in a value from to-kws path into from-kws in a context"
-  [from-kws to-kws]
+  [from :- [s/Any], to :- [s/Any]]
   (fn [context]
-    (assoc-in context to-kws (get-in context from-kws {}))))
+    (assoc-in context to (get-in context from {}))))
 
 (defn context-dissoc [from-kws]
   "Returns a function that dissocs in a value from from-kws in a context"
