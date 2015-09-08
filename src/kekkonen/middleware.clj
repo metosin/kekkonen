@@ -77,7 +77,7 @@
 ;; ring-middleware-format stuff
 ;;
 
-(def ^:private mime-types
+(def ^:private +mime-types+
   {:json "application/json"
    :json-kw "application/json"
    :edn "application/edn"
@@ -86,7 +86,7 @@
    :transit-json "application/transit+json"
    :transit-msgpack "application/transit+msgpack"})
 
-(defn- ->mime-types [formats] (keep mime-types formats))
+(defn- mime-types [formats] (keep +mime-types+ formats))
 
 (defn- handle-req-error [^Throwable e _ _]
   ;; Ring-middleware-format catches all exceptions in req handling,
@@ -95,6 +95,15 @@
   (if (or (instance? JsonParseException e) (instance? ParserException e))
     (slingshot/throw+ {:type :kekkonen.core/parsing} e)
     (slingshot/throw+ e)))
+
+;;
+;; api info
+;;
+
+(s/defn api-info [options]
+  (let [mime-types (mime-types (some-> options :format :formats))]
+    {:produces mime-types
+     :consumes mime-types}))
 
 ;;
 ;; Api Middleware
@@ -129,15 +138,13 @@
        - **:response-opts**           for *ring.middleware.format-params/wrap-restful-response*,
                                       e.g. `{:transit-json {:handlers writers}}`"
   ([handler]
-    (api-middleware handler {}))
+   (api-middleware handler {}))
   ([handler options]
    (let [options (kc/deep-merge default-options options)
          {:keys [exceptions format]} options
          {:keys [formats params-opts response-opts]} format]
      (-> handler
          ring.middleware.http-response/wrap-http-response
-         (rsm/wrap-swagger-data {:produces (->mime-types formats),
-                                 :consumes (->mime-types formats)})
          (wrap-restful-params
            (merge {:formats formats
                    :handle-error handle-req-error}

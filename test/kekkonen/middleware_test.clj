@@ -46,3 +46,11 @@
                              :type :kekkonen.ring/response
                              :value {:value 1}}))))
 
+(facts "api-info"
+  (let [options {:format {:formats [:json-kw :transit-json :edn]}}]
+    (mw/api-info options) => {:consumes ["application/json"
+                                         "application/transit+json"
+                                         "application/edn"]
+                              :produces ["application/json"
+                                         "application/transit+json"
+                                         "application/edn"]}))
