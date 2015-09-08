@@ -13,7 +13,8 @@
    :coercion {s/Keyword k/Function}})
 
 (s/def +default-options+ :- Options
-  {:types {:handler {:methods #{:post}}}
+  {:types {:handler {:methods #{:post}
+                     :transformers [(k/context-copy [:request :body-params] [:data])]}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
               :path-params rsc/query-schema-coercion-matcher
               :form-params rsc/query-schema-coercion-matcher

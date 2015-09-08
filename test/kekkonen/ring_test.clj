@@ -48,14 +48,14 @@
   [[:request body-params :- Body]]
   (ok body-params))
 
-(p/defnk ^:handler responsez
+(p/defnk ^:handler response
   {:responses {200 {:schema {:value s/Str}}}}
   [[:request body-params :- {:value (s/either s/Str s/Int)}]]
   (ok body-params))
 
 (facts "coercion"
   (let [app (r/ring-handler
-              (k/create {:handlers {:api [#'plus #'divide #'power #'echo #'responsez]}}))]
+              (k/create {:handlers {:api [#'plus #'divide #'power #'echo #'response]}}))]
 
     (fact "query-params"
 
@@ -102,11 +102,11 @@
             :body-params {:name "Pizza" :size "L"}}) => (ok {:name "Pizza" :size :L}))
 
     (fact "response coercion"
-      (app {:uri "/api/responsez"
+      (app {:uri "/api/response"
             :request-method :post
             :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
 
-      (app {:uri "/api/responsez"
+      (app {:uri "/api/response"
             :request-method :post
             :body-params {:value 1}})
 
@@ -117,13 +117,23 @@
             :schema {:value s/Str}}))))
 
 (facts "mapping"
-  (let [app (r/ring-handler
-              (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-              {:types {:handler {:transformers [(k/context-copy [:request :body-params] [:data])]}}})]
+  (facts "default body-params -> data"
+    (let [app (r/ring-handler
+                (k/create {:handlers {:api (k/handler {:name :test} identity)}}))]
 
-    (app {:uri "/api/test"
-          :request-method :post
-          :body-params {:kikka "kukka"}}) => (contains {:data {:kikka "kukka"}})))
+      (app {:uri "/api/test"
+            :request-method :post
+            :body-params {:kikka "kukka"}}) => (contains {:data {:kikka "kukka"}})))
+
+  (fact "custom query-params -> query"
+    (let [app (r/ring-handler
+                (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+                {:types {:handler {:transformers [(k/context-copy [:request :query-params]
+                                                                  [:query])]}}})]
+
+      (app {:uri "/api/test"
+            :request-method :post
+            :query-params {:kikka "kukka"}}) => (contains {:query {:kikka "kukka"}}))))
 
 (facts "routing"
   (let [app (r/routes [(r/match "/swagger.json" #{:get} (constantly :swagger))
