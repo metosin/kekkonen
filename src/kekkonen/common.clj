@@ -31,3 +31,9 @@
 (defn strip-nil-values
   "removes map-keys with nil values"
   [m] (into {} (filter (comp not nil? second) m)))
+
+(defn deep-merge-from-to [data [from to]]
+  (update-in data to deep-merge (get-in data from)))
+
+(defn deep-merge-to-from [data [to from]]
+  (deep-merge-from-to data [from to]))
