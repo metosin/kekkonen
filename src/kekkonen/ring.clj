@@ -60,12 +60,18 @@
     request
     coercion))
 
+(s/defn attach-ring-meta
+  [options :- Options, handler :- k/Handler]
+  (let [type-config (get (:types options) (:type handler))]
+    (assoc handler :ring type-config)))
+
 (s/defn ring-handler
   "Creates a ring handler from Kekkonen and options."
   ([kekkonen]
     (ring-handler kekkonen {}))
   ([kekkonen, options :- k/KeywordMap]
-    (let [options (kc/deep-merge +default-options+ options)]
+    (let [options (kc/deep-merge +default-options+ options)
+          kekkonen (k/transform-handlers kekkonen (partial attach-ring-meta options))]
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]

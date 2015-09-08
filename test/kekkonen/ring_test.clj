@@ -152,3 +152,15 @@
     (app {:uri "/swagger.json" :request-method :post}) => nil
     (app {:uri "/api-docs" :request-method :head}) => :api-docs
     (app {:uri "/favicon.ico" :request-method :get}) => nil))
+
+(fact "enriched handlers"
+  (let [app (r/ring-handler
+              (k/create {:handlers
+                         {:api
+                          (k/handler
+                            {:name :test}
+                            (partial k/get-handler))}}))]
+    (app {:uri "/api/test" :request-method :post}) => (contains
+                                                        {:ring
+                                                         (contains
+                                                           {:methods #{:post}})})))
