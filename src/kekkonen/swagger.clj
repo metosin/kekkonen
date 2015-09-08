@@ -32,7 +32,7 @@
                                      :header header-params})}
                      (if description {:description description})))}))
 
-(s/defn swagger :- rs2/Swagger
+(s/defn ring-swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Kekkonen and extra info"
   [kekkonen info options]
   (let [handlers (k/all-handlers kekkonen)]
@@ -42,8 +42,8 @@
 
 (s/defn swagger-object
   "Creates a Swagger-spec object out of ring-swagger object and ring-swagger options."
-  [swagger :- rs2/Swagger, options :- k/KeywordMap]
-  (rs2/swagger-json swagger options))
+  [ring-swagger :- rs2/Swagger, options :- k/KeywordMap]
+  (rs2/swagger-json ring-swagger options))
 
 (s/defn swagger-ui
   "Ring handler for the Swagger UI"

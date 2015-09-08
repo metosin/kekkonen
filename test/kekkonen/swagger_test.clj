@@ -22,7 +22,7 @@
 
 (fact "swagger-docs"
   (let [kekkonen (k/create {:handlers {:api {:admin #'echo}}})
-        swagger (ks/swagger
+        swagger (ks/ring-swagger
                   kekkonen
                   {:info {:version "1.0.0"
                           :title "Kekkonen"
