@@ -230,7 +230,7 @@
   ([kekkonen action]
     (invoke kekkonen action {}))
   ([{:keys [transformers] :as kekkonen} action context]
-    (if-let [{:keys [function user]} (some-handler kekkonen action)]
+    (if-let [{:keys [function user] :as handler} (some-handler kekkonen action)]
       (let [context (kc/deep-merge (:context kekkonen) context)
             context (reduce (fn [context mapper] (mapper context)) context transformers)
             context (reduce
@@ -240,9 +240,16 @@
                           context))
                       context
                       user)
-            context (assoc context ::kekkonen kekkonen)]
+            context (merge context {::kekkonen kekkonen
+                                    ::handler handler})]
         (function context))
       (throw (ex-info (str "Invalid action " action) {})))))
+
+(s/defn get-kekkonen [context]
+  (get context ::kekkonen))
+
+(s/defn get-handler [context]
+  (get context ::handler))
 
 (defn with-context [kekkonen context]
   (update-in kekkonen [:context] kc/deep-merge context))

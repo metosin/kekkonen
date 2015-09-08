@@ -318,14 +318,21 @@
       (k/create {:handlers {:api (k/handler {:name :test} identity)}})
       (constantly nil)) => (contains {:handlers {}})))
 
-(fact "accessing kekkonen from handlers at invoke-time"
+(fact "invoke-time extra data"
   (let [k (k/create {:handlers
                      {:api
-                      (k/handler
-                        {:name :test}
-                        (fn [context]
-                          (:kekkonen.core/kekkonen context)))}})]
+                      [(k/handler
+                         {:name :kekkonen}
+                         (partial k/get-kekkonen))
+                       (k/handler
+                         {:name :handler
+                          :description "magic"}
+                         (partial k/get-handler))]}})]
 
-    (s/validate k/Kekkonen (k/invoke k :api/test)) => truthy))
+    (fact "::kekkonen"
+      (s/validate k/Kekkonen (k/invoke k :api/kekkonen)) => truthy)
+
+    (fact "::handler"
+      (k/invoke k :api/handler) => (contains {:description "magic"}))))
 
 
