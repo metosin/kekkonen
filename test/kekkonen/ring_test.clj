@@ -125,11 +125,20 @@
             :request-method :post
             :body-params {:kikka "kukka"}}) => (contains {:data {:kikka "kukka"}})))
 
-  (fact "custom query-params -> query"
+  (fact "custom query-params -> query via transformer"
     (let [app (r/ring-handler
                 (k/create {:handlers {:api (k/handler {:name :test} identity)}})
                 {:types {:handler {:transformers [(k/context-copy [:request :query-params]
                                                                   [:query])]}}})]
+
+      (app {:uri "/api/test"
+            :request-method :post
+            :query-params {:kikka "kukka"}}) => (contains {:query {:kikka "kukka"}})))
+
+  (fact "custom query-params -> query via parameters"
+    (let [app (r/ring-handler
+                (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+                {:types {:handler {:parameters [[[:request :query-params] [:query]]]}}})]
 
       (app {:uri "/api/test"
             :request-method :post

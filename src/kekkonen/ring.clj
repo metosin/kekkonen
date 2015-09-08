@@ -9,15 +9,14 @@
 
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
-                      (s/optional-key :parameters) [[(s/one [s/Keyword] 'from) 
+                      (s/optional-key :parameters) [[(s/one [s/Keyword] 'from)
                                                      (s/one [s/Keyword] 'to)]]
                       (s/optional-key :transformers) [k/Function]}}
    :coercion {s/Keyword k/Function}})
 
 (s/def +default-options+ :- Options
   {:types {:handler {:methods #{:post}
-                     :parameters [[[:request :body-params] [:data]]]
-                     :transformers [(k/context-copy [:request :body-params] [:data])]}}
+                     :parameters [[[:request :body-params] [:data]]]}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
               :path-params rsc/query-schema-coercion-matcher
               :form-params rsc/query-schema-coercion-matcher
@@ -70,11 +69,12 @@
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]
-            (if-let [{:keys [methods transformers]} (get (:types options) (:type handler))]
+            (if-let [{:keys [methods parameters transformers]} (get (:types options) (:type handler))]
               (if (get methods request-method)
                 (let [request (coerce-request! request handler options)
                       context {:request request}
-                      context (reduce (fn [context mapper] (mapper context)) context transformers)
+                      context (reduce kc/deep-merge-from-to context parameters)
+                      context (reduce (fn [ctx mapper] (mapper ctx)) context transformers)
                       responses (-> handler :user :responses)
                       response (k/invoke kekkonen action context)]
                   (if responses

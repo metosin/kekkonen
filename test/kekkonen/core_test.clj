@@ -41,8 +41,6 @@
   [data :- User]
   data)
 
-(p/defnk ^:query not-a-handler [])
-
 ;;
 ;; facts
 ;;
