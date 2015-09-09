@@ -345,12 +345,21 @@
                        (k/handler
                          {:name :handler
                           :description "magic"}
-                         (partial k/get-handler))]}})]
+                         (partial k/get-handler))
+                       (k/handler
+                         {:name :names}
+                         (fn [context]
+                           (->> context
+                                k/get-kekkonen
+                                k/all-handlers
+                                (map :name))))]}})]
 
     (fact "::kekkonen"
       (s/validate k/Kekkonen (k/invoke k :api/kekkonen)) => truthy)
 
     (fact "::handler"
-      (k/invoke k :api/handler) => (contains {:description "magic"}))))
+      (k/invoke k :api/handler) => (contains {:description "magic"}))
 
+    (fact "going meta boing boing"
+      (k/invoke k :api/names) => [:kekkonen :handler :names])))
 
