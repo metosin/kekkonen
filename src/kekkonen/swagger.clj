@@ -1,6 +1,7 @@
 (ns kekkonen.swagger
   (:require [schema.core :as s]
             [ring.swagger.swagger2 :as rs2]
+            [ring.util.http-response :refer [ok]]
             [ring.swagger.ui :as ui]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
@@ -48,3 +49,14 @@
   "Ring handler for the Swagger UI"
   [options]
   (apply ui/swagger-ui (into [(:path options)] (apply concat (dissoc options :path)))))
+
+(defn swagger-handler [info options]
+  (k/handler
+    {:type :kekkonen.ring/handler
+     :name "swagger.json"
+     :no-doc true}
+    (fn [context]
+      (let [kekkonen (k/get-kekkonen context)]
+        (ok (swagger-object
+              (ring-swagger kekkonen info)
+              options))))))

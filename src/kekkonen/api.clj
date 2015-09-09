@@ -26,17 +26,13 @@
 (s/defn api [options :- Options]
   (s/with-fn-validation
     (let [options (kc/deep-merge +default-options+ options)
-          kekkonen (k/create (:core options))
           info (merge (:info options) (mw/api-info (:mw options)))
-          swagger-object (ks/swagger-object
-                           (ks/ring-swagger kekkonen info)
-                           (:swagger options))
-          ring-handler (r/ring-handler
-                         kekkonen
-                         (:ring options))]
+          kekkonen (-> (k/create (:core options))
+                       (k/inject-handler (ks/swagger-handler info options)))]
       (mw/api-middleware
         (r/routes
-          [ring-handler
-           (r/match "/swagger.json" (constantly (ok swagger-object)))
+          [(r/ring-handler
+             kekkonen
+             (:ring options))
            (ks/swagger-ui (:swagger-ui options))])
         (:mw options)))))
