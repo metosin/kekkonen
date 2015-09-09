@@ -44,3 +44,11 @@
 
 (defn deep-merge-to-from [data [to from]]
   (deep-merge-from-to data [from to]))
+
+(defn move-from-to [data [from to]]
+  (-> data
+      (assoc-in to (get-in data from))
+      (dissoc-in from)))
+
+(defn move-to-from [data [to from]]
+  (move-from-to data [from to]))
