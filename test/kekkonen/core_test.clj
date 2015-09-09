@@ -98,6 +98,8 @@
     (fact "anonymous functions"
 
       (fact "fn"
+
+        (fact "with default type"
         (k/collect
           (k/handler
             {:name :echo
@@ -112,6 +114,17 @@
                                 :name :echo
                                 :input {:name s/Str}
                                 :output s/Any})}))
+
+        (fact "type can be overridden"
+          (k/collect
+            (k/handler
+              {:name :echo
+               :type :kikka}
+              identity)
+            k/any-type-resolver) => (just
+                                      {:echo
+                                       (contains
+                                         {:type :kikka})})))
 
       (fact "fnk"
         (k/collect

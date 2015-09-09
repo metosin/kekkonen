@@ -46,7 +46,7 @@
 ;;
 
 (s/defn handler [meta :- KeywordMap, f :- Function]
-  (vary-meta f merge {:handler true} meta))
+  (vary-meta f merge {:type :handler} meta))
 
 (defn handler? [x]
   (and (map? x) (:function x) (:type x)))
@@ -62,6 +62,9 @@
         (if (or (some-> meta type true?) (some-> meta :type (= type)))
           (reduced (-> meta (assoc :type type) (dissoc type)))))
       nil types)))
+
+(s/defn any-type-resolver [meta]
+  (if (:type meta) meta))
 
 (def default-type-resolver (type-resolver :handler))
 
@@ -244,6 +247,10 @@
                                     ::handler handler})]
         (function context))
       (throw (ex-info (str "Invalid action " action) {})))))
+
+;;
+;; Working with contexts
+;;
 
 (s/defn get-kekkonen [context]
   (get context ::kekkonen))
