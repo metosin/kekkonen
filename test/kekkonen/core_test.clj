@@ -45,6 +45,11 @@
 ;; facts
 ;;
 
+(fact "action-kws"
+  (k/action-kws :api.user/add-user!) => [:api :user :add-user!]
+  (k/action-kws :api.user/user.api) => [:api :user :user.api]
+  (k/action-kws :swagger.json) => [:swagger.json])
+
 (fact "using services directly"
 
   (fact "simple query works"

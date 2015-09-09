@@ -176,11 +176,9 @@
    :type-resolver default-type-resolver
    :user {}})
 
-(s/defn create :- Kekkonen
-  "Creates a Kekkonen."
-  [options :- Options]
-  (let [options (kc/deep-merge +default-options+ options)
-        enrich (fn [h m]
+(defn- collect-and-enrich
+  [handlers type-resolver]
+  (let [enrich (fn [h m]
                  (if (seq m)
                    (let [ns (->> m (map name) (str/join ".") keyword)]
                      (assoc h :ns ns))
@@ -190,13 +188,23 @@
                      k (if (handler? v)
                          (enrich v m)
                          (traverse v (conj m k)))))]
+    (traverse (collect handlers type-resolver) [])))
+
+(s/defn create :- Kekkonen
+  "Creates a Kekkonen."
+  [options :- Options]
+  (let [options (kc/deep-merge +default-options+ options)
+        handlers (collect-and-enrich (:handlers options) (:type-resolver options))]
     {:context (:context options)
-     :handlers (traverse (collect (:handlers options) (:type-resolver options)) [])
+     :handlers handlers
      :transformers (:transformers options)
      :user (:user options)}))
 
-(s/defn ^:private action-kws [action :- s/Keyword]
-  (-> action str (subs 1) (str/split #"[/|\.]") (->> (mapv keyword))))
+(s/defn action-kws [action :- s/Keyword]
+  (let [tokens (str/split (subs (str action) 1) #"/")
+        nss (vec (apply concat (map #(str/split % #"\.") (butlast tokens))))
+        name (last tokens)]
+    (map keyword (conj nss name))))
 
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
