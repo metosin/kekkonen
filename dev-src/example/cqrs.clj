@@ -10,10 +10,14 @@
 
 (s/defschema Item
   "A database item"
-  {:name s/Str
+  {:id s/Int
+   :name s/Str
    :size (s/enum :S :M :L)
    (s/optional-key :description) s/Str
    :origin {:country (s/enum :FI :PO)}})
+
+(s/defschema AddNewItem
+  (dissoc Item :id))
 
 ;;
 ;; Commands & Queries
@@ -29,10 +33,11 @@
   "Adds an item to database"
   {:responses {success-status {:schema Item}}}
   [[:components db ids]
-   data :- Item]
-  (let [id (swap! ids (comp keyword inc))]
+   data :- AddNewItem]
+  (let [id (swap! ids inc)
+        item (assoc data :id id)]
     (success
-      (get (swap! db assoc id data) id))))
+      (get (swap! db assoc id item) id))))
 
 (p/defnk ^:command reset-items!
   "Resets the database"
@@ -42,6 +47,10 @@
 (p/defnk ^:query ping [] (success {:ping "pong"}))
 (p/defnk ^:query pong [] (success {:pong "ping"}))
 
+(p/defnk ^:query plus
+  [[:data x :- s/Int, y :- s/Int]]
+  (success {:resutl (+ x y)}))
+
 ;;
 ;; Application
 ;;
@@ -50,6 +59,7 @@
   (cqrs-api
     {:info {:info {:title "Kekkonen"}}
      :core {:handlers {:api {:item [#'get-items #'add-item! #'reset-items!]
+                             :calculator [#'plus]
                              :system [#'ping #'pong]}}
             :context {:components {:db (atom {})
                                    :ids (atom 0)}}}}))
