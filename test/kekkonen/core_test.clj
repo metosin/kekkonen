@@ -105,20 +105,20 @@
       (fact "fn"
 
         (fact "with default type"
-        (k/collect
-          (k/handler
-            {:name :echo
-             :input {:name s/Str}}
-            identity)) => (just
-                            {:echo
-                             (just
-                               {:function fn?
-                                :description ""
-                                :user {}
-                                :type :handler
-                                :name :echo
-                                :input {:name s/Str}
-                                :output s/Any})}))
+          (k/collect
+            (k/handler
+              {:name :echo
+               :input {:name s/Str}}
+              identity)) => (just
+                              {:echo
+                               (just
+                                 {:function fn?
+                                  :description ""
+                                  :user {}
+                                  :type :handler
+                                  :name :echo
+                                  :input {:name s/Str}
+                                  :output s/Any})}))
 
         (fact "type can be overridden"
           (k/collect
@@ -363,3 +363,13 @@
     (fact "going meta boing boing"
       (k/invoke k :api/names) => [:kekkonen :handler :names])))
 
+; TODO: will override paths as we do merge
+(fact "handlers can be injected into existing kekkonen"
+  (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+              (k/inject-handler (k/handler {:name :ping} identity)))]
+    k => (contains
+           {:handlers
+            (just
+              {:api (just
+                      {:test anything})
+               :ping anything})})))

@@ -181,13 +181,13 @@
   (let [enrich (fn [h m]
                   (if (or (seq m) allow-empty-namespaces?)
                     (let [ns (if (seq m) (->> m (map name) (str/join ".") keyword))]
-                     (assoc h :ns ns))
-                   (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
+                      (assoc h :ns ns))
+                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
-                   (p/for-map [[k v] x]
-                     k (if (handler? v)
-                         (enrich v m)
-                         (traverse v (conj m k)))))]
+                    (p/for-map [[k v] x]
+                      k (if (handler? v)
+                          (enrich v m)
+                          (traverse v (conj m k)))))]
     (traverse (collect handlers type-resolver) [])))
 
 (s/defn create :- Kekkonen
@@ -225,6 +225,12 @@
              (f x)
              x))
          (:handlers kekkonen)))}))
+
+(defn inject-handler
+  "Injects handlers into an existing Kekkonen"
+  [kekkonen handler]
+  (let [handler (collect-and-enrich handler any-type-resolver true)]
+    (update-in kekkonen (into [:handlers] (:ns handler)) merge handler)))
 
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
