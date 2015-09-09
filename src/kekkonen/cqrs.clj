@@ -29,6 +29,9 @@
 (def failure hr/bad-request)
 (def error hr/internal-server-error)
 
+(def failure! hr/bad-request!)
+(def error! hr/internal-server-error!)
+
 (def success-status hs/ok)
 (def failure-status hs/bad-request)
 (def error-status hs/internal-server-error)
