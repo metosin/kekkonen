@@ -66,12 +66,9 @@
 (defn ring-input-schema [handler]
   (let [input (:input handler)
         parameters (get-in handler [:ring :type-config :parameters])]
-    (if-not parameters
-      input
-      (reduce (fn [input [to from]]
-                (-> input
-                    (assoc-in to (get-in input from))
-                    (kc/dissoc-in from))) input parameters))))
+    (if parameters
+      (reduce kc/move-to-from  input parameters)
+      input)))
 
 (s/defn attach-ring-meta
   [options :- Options, handler :- k/Handler]
