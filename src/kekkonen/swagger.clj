@@ -14,11 +14,12 @@
 (defn transform-handler
   "Transforms a handler into ring-swagger path->method->operation map."
   [handler]
-  (let [{:keys [description input ns ring] {:keys [summary responses no-doc]} :user} handler
+  (let [{:keys [description ns ring] {:keys [summary responses no-doc]} :user} handler
+        {:keys [parameters input type-config]} ring
         ;; deep-merge back the mappings to get right request requirements
-        input (reduce kc/deep-merge-to-from input (:parameters ring))
+        input (reduce kc/deep-merge-to-from input parameters)
         {:keys [body-params query-params path-params header-params]} (:request input)
-        methods (-> ring :type-config :methods sort)
+        methods (-> type-config :methods sort)
         path (r/handler-uri handler)]
     (if-not no-doc
       {path (p/for-map [method methods]

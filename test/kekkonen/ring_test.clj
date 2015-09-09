@@ -13,9 +13,12 @@
 
 (fact "ring-input-schema"
   (r/ring-input-schema
-    {:input {:data {:x s/Str}}
-     :ring {:type-config {:parameters [[[:request :query-params] [:data]]]}}})
-  => {:request {:query-params {:x s/Str}}})
+    {:data {:d s/Str}
+     :request {:query-params {:q s/Str}
+               :body-params {:b s/Str}}}
+    [[[:request :query-params] [:data]]])
+  => {:request {:query-params {:d s/Str}
+                :body-params {:b s/Str}}})
 
 (p/defnk ^:handler ping [] "pong")
 

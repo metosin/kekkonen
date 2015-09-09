@@ -51,11 +51,11 @@
            :error coerced})))))
 
 (defn coerce-request!
-  "Coerces a request against a handler input schema based on :coercion options."
+  "Coerces a request against a handler ring input schema based on :coercion options."
   [request handler {:keys [coercion]}]
   (reduce
     (fn [request [k matcher]]
-      (if-let [schema (get-in handler [:input :request k])]
+      (if-let [schema (get-in handler [:ring :input :request k])]
         (let [value (get request k {})
               coerced (coerce! schema matcher value k ::request)]
           (assoc request k coerced))
@@ -63,18 +63,17 @@
     request
     coercion))
 
-(defn ring-input-schema [handler]
-  (let [input (:input handler)
-        parameters (get-in handler [:ring :type-config :parameters])]
-    (if parameters
-      (reduce kc/move-to-from  input parameters)
-      input)))
+(defn ring-input-schema [input parameters]
+  (if parameters
+    (reduce kc/move-to-from input parameters)
+    input))
 
 (s/defn attach-ring-meta
   [options :- Options, handler :- k/Handler]
-  (let [type-config (get (:types options) (:type handler))]
+  (let [type-config (get (:types options) (:type handler))
+        input-schema (ring-input-schema (:input handler) (:parameters type-config))]
     (assoc handler :ring {:type-config type-config
-                          :input (ring-input-schema handler)})))
+                          :input input-schema})))
 
 (s/defn ring-handler
   "Creates a ring handler from Kekkonen and options."
