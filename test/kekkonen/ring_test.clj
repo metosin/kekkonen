@@ -176,3 +176,20 @@
                                                            {:type-config
                                                             (contains
                                                               {:methods #{:post}})})})))
+
+(fact "middlewares"
+  (let [app (r/ring-handler
+              (k/create {:handlers
+                         {:api
+                          (k/handler
+                            {:name :test}
+                            (fn [context]
+                              {:user (-> context :request ::user)}))}})
+              {:middleware [(fn [handler]
+                              (fn [request]
+                                (let [user (some-> request :header-params (get "user"))]
+                                  (handler (assoc request ::user user)))))]})]
+
+    (app {:uri "/api/test" :request-method :post}) => {:user nil}
+    (app {:uri "/api/test" :request-method :post
+          :header-params {"user" "tommi"}}) => {:user "tommi"}))
