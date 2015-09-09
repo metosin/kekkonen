@@ -11,6 +11,12 @@
   (r/uri->action "/api/user/add-user!") => :api/user/add-user!
   (r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!")
 
+(fact "ring-input-schema"
+  (r/ring-input-schema
+    {:input {:data {:x s/Str}}
+     :ring {:type-config {:parameters [[[:request :query-params] [:data]]]}}})
+  => {:request {:query-params {:x s/Str}}})
+
 (p/defnk ^:handler ping [] "pong")
 
 (p/defnk ^:handler snoop [request] (ok request))
@@ -160,7 +166,10 @@
                           (k/handler
                             {:name :test}
                             (partial k/get-handler))}}))]
+
     (app {:uri "/api/test" :request-method :post}) => (contains
                                                         {:ring
                                                          (contains
-                                                           {:methods #{:post}})})))
+                                                           {:type-config
+                                                            (contains
+                                                              {:methods #{:post}})})})))

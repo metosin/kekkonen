@@ -18,7 +18,7 @@
         ;; deep-merge back the mappings to get right request requirements
         input (reduce kc/deep-merge-to-from input (:parameters ring))
         {:keys [body-params query-params path-params header-params]} (:request input)
-        methods (-> ring :methods sort)
+        methods (-> ring :type-config :methods sort)
         path (r/handler-uri handler)]
     (if-not no-doc
       {path (p/for-map [method methods]

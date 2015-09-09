@@ -5,7 +5,8 @@
             [ring.swagger.coerce :as rsc]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.walk :as walk]))
 
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
@@ -62,10 +63,21 @@
     request
     coercion))
 
+(defn ring-input-schema [handler]
+  (let [input (:input handler)
+        parameters (get-in handler [:ring :type-config :parameters])]
+    (if-not parameters
+      input
+      (reduce (fn [input [to from]]
+                (-> input
+                    (assoc-in to (get-in input from))
+                    (kc/dissoc-in from))) input parameters))))
+
 (s/defn attach-ring-meta
   [options :- Options, handler :- k/Handler]
   (let [type-config (get (:types options) (:type handler))]
-    (assoc handler :ring type-config)))
+    (assoc handler :ring {:type-config type-config
+                          :input (ring-input-schema handler)})))
 
 (s/defn ring-handler
   "Creates a ring handler from Kekkonen and options."
@@ -77,12 +89,12 @@
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
           (if-let [handler (k/some-handler kekkonen action)]
-            (if-let [{:keys [methods parameters transformers]} (:ring handler)]
+            (if-let [{:keys [methods parameters transformers]} (get-in handler [:ring :type-config])]
               (if (get methods request-method)
                 (let [request (coerce-request! request handler options)
                       context (as-> {:request request} context
-                                    (reduce kc/deep-merge-from-to context parameters)
-                                    (reduce (fn [ctx mapper] (mapper ctx)) context transformers))
+                                    (reduce (fn [ctx mapper] (mapper ctx)) context transformers)
+                                    (reduce kc/deep-merge-from-to context parameters))
                       responses (-> handler :user :responses)
                       response (k/invoke kekkonen action context)]
                   (if responses

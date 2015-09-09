@@ -34,3 +34,9 @@
 
 (def query (partial action http/get))
 (def command (partial action http/post))
+
+(let [k (create "http://localhost:3000")]
+  (./aprint (:body (query k :api/system/ping)))
+  (query k :/api/calculator/plus)
+
+  )
