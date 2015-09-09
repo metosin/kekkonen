@@ -21,7 +21,9 @@
         {:keys [body-params query-params path-params header-params]} (:request input)
         methods (-> type-config :methods sort)
         path (r/handler-uri handler)]
-    (if-not no-doc
+
+    ;; discard handlers with :no-doc or without :ring metadata
+    (if (and (not no-doc) ring)
       {path (p/for-map [method methods]
               method (merge
                        (if ns {:tags [ns]})
