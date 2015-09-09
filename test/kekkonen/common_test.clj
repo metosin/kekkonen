@@ -30,4 +30,10 @@
   (kc/move-to-from
     {:data {:x String, :y String}}
     [[:request :body-params] [:data]])
-  => {:request {:body-params {:x String, :y String}}})
+  => {:request {:body-params {:x String, :y String}}}
+
+  (fact "will not copy nil data"
+    (kc/move-to-from
+      {:request {:body-params {:x String, :y String}}}
+      [[:request :body-params] [:data]])
+    => {:request {:body-params {:x String, :y String}}}))
