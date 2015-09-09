@@ -31,7 +31,8 @@
                                        :query query-params
                                        :path path-params
                                        :header header-params})}
-                       (if description {:description description})))})))
+                       (if description {:description description
+                                        :summary description})))})))
 
 (s/defn ring-swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Kekkonen and extra info"
