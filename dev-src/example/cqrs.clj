@@ -48,8 +48,14 @@
 (p/defnk ^:query pong [] (success {:pong "ping"}))
 
 (p/defnk ^:query plus
+  {:responses {success-status {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
-  (success {:resutl (+ x y)}))
+  (success {:result (+ x y)}))
+
+(p/defnk ^:command times
+  {:responses {success-status {:schema {:result s/Int}}}}
+  [[:data x :- s/Int, y :- s/Int]]
+  (success {:result (* x y)}))
 
 ;;
 ;; Application
@@ -59,7 +65,7 @@
   (cqrs-api
     {:info {:info {:title "Kekkonen"}}
      :core {:handlers {:api {:item [#'get-items #'add-item! #'reset-items!]
-                             :calculator [#'plus]
+                             :calculator [#'plus #'times]
                              :system [#'ping #'pong]}}
             :context {:components {:db (atom {})
                                    :ids (atom 0)}}}}))
