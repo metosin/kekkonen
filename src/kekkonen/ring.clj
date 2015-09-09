@@ -14,7 +14,7 @@
                                                      (s/one [s/Keyword] 'to)]]
                       (s/optional-key :transformers) [k/Function]}}
    :coercion {s/Keyword k/Function}
-   :middleware [k/Function]})
+   :transformers [k/Function]})
 
 (s/def +default-options+ :- Options
   ; TODO: no types in default bindings?
@@ -26,7 +26,7 @@
               :form-params rsc/query-schema-coercion-matcher
               :header-params rsc/query-schema-coercion-matcher
               :body-params rsc/json-schema-coercion-matcher}
-   :middleware []})
+   :transformers []})
 
 (s/defn uri->action :- s/Keyword
   "Converts an action keyword from a uri string."
@@ -83,46 +83,49 @@
     (ring-handler kekkonen {}))
   ([kekkonen, options :- k/KeywordMap]
     (let [options (kc/deep-merge +default-options+ options)
-          kekkonen (k/transform-handlers kekkonen (partial attach-ring-meta options))
-          handler (fn [{:keys [request-method uri] :as request}]
-                    (let [action (uri->action uri)]
-                      (if-let [handler (k/some-handler kekkonen action)]
-                        (if-let [{:keys [methods parameters transformers]} (get-in handler [:ring :type-config])]
-                          (if (get methods request-method)
-                            (let [request (coerce-request! request handler options)
-                                  context (as-> {:request request} context
-                                                (reduce (fn [ctx mapper] (mapper ctx)) context transformers)
-                                                (reduce kc/deep-merge-from-to context parameters))
-                                  responses (-> handler :user :responses)
-                                  response (k/invoke kekkonen action context)]
-                              (if responses
-                                (let [status (or (:status response) 200)
-                                      schema (get-in responses [status :schema])
-                                      matcher (get-in options [:coercion :body-params])
-                                      value (:body response)]
-                                  (if schema
-                                    (let [coerced (coerce! schema matcher value :response ::response)]
-                                      (assoc response :body coerced))
-                                    response))
-                                response)))))))]
-      (reduce (fn [request middleware] (middleware request)) handler (:middleware options)))))
+          kekkonen (k/transform-handlers kekkonen (partial attach-ring-meta options))]
+      (fn [{:keys [request-method uri] :as request}]
+        (let [action (uri->action uri)]
+          (if-let [handler (k/some-handler kekkonen action)]
+            (if-let [type-config (-> handler :ring :type-config)]
+              (if (get (:methods type-config) request-method)
+                (let [request (coerce-request! request handler options)
+                      context (as-> {:request request} context
+                                    ;; global transformers first
+                                    (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
+                                    ;; type-level transformers
+                                    (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config))
+                                    ;; map parameters from ring-request into common keys
+                                    (reduce kc/deep-merge-from-to context (:parameters type-config)))
+                      response (k/invoke kekkonen action context)
+                      responses (-> handler :user :responses)]
+                  (if responses
+                    (let [status (or (:status response) 200)
+                          schema (get-in responses [status :schema])
+                          matcher (get-in options [:coercion :body-params])
+                          value (:body response)]
+                      (if schema
+                        (let [coerced (coerce! schema matcher value :response ::response)]
+                          (assoc response :body coerced))
+                        response))
+                    response))))))))))
 
-(s/defn routes :- k/Function
-  "Creates a ring handler of multiples handlers, matches in orcer."
-  [ring-handlers :- [k/Function]]
-  (apply some-fn ring-handlers))
+  (s/defn routes :- k/Function
+    "Creates a ring handler of multiples handlers, matches in orcer."
+    [ring-handlers :- [k/Function]]
+    (apply some-fn ring-handlers))
 
-(s/defn match
-  ([match-uri ring-handler]
-    (match match-uri identity ring-handler))
-  ([match-uri match-request-method ring-handler]
-    (fn [{:keys [uri request-method] :as request}]
-      (if (and (= match-uri uri)
-               (match-request-method request-method))
-        (ring-handler request)))))
+  (s/defn match
+    ([match-uri ring-handler]
+      (match match-uri identity ring-handler))
+    ([match-uri match-request-method ring-handler]
+      (fn [{:keys [uri request-method] :as request}]
+        (if (and (= match-uri uri)
+                 (match-request-method request-method))
+          (ring-handler request)))))
 
-(s/defn keywordize-keys
-  "Returns a function, that keywordizes keys in a given path in context"
-  [in :- [s/Any]]
-  (fn [context]
-    (update-in context in walk/keywordize-keys)))
+  (s/defn keywordize-keys
+    "Returns a function, that keywordizes keys in a given path in context"
+    [in :- [s/Any]]
+    (fn [context]
+      (update-in context in walk/keywordize-keys)))

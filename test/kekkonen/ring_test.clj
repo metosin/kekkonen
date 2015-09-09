@@ -177,18 +177,17 @@
                                                             (contains
                                                               {:methods #{:post}})})})))
 
-(fact "middlewares"
+(fact "global transformers"
   (let [app (r/ring-handler
               (k/create {:handlers
                          {:api
                           (k/handler
                             {:name :test}
                             (fn [context]
-                              {:user (-> context :request ::user)}))}})
-              {:middleware [(fn [handler]
-                              (fn [request]
-                                (let [user (some-> request :header-params (get "user"))]
-                                  (handler (assoc request ::user user)))))]})]
+                              {:user (-> context ::user)}))}})
+              {:transformers [(fn [context]
+                                (let [user (get-in context [:request :header-params "user"])]
+                                  (assoc context ::user user)))]})]
 
     (app {:uri "/api/test" :request-method :post}) => {:user nil}
     (app {:uri "/api/test" :request-method :post
