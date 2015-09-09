@@ -37,7 +37,7 @@
                               "application/transit+json"
                               "application/transit+msgpack"]
                    :definitions {}
-                   :paths (contains
+                   :paths (just
                             {:/api/ping
                              {:post
                               {:responses
