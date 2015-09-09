@@ -8,8 +8,6 @@
             [kekkonen.ring :as r]))
 
 (def +cqrs-types+ {:query {:methods #{:get}
-                           ;; TODO: should we do this for all requests?
-                           :transformers [(r/keywordize-keys [:request :query-params])]
                            :parameters [[[:request :query-params] [:data]]]}
                    :command {:methods #{:post}
                              :parameters [[[:request :body-params] [:data]]]}})

@@ -97,6 +97,14 @@
     (slingshot/throw+ e)))
 
 ;;
+;; Keyword params
+;;
+
+(defn wrap-keyword-keys [handler path]
+  (fn [request]
+    (handler (update-in request path walk/keywordize-keys))))
+
+;;
 ;; api info
 ;;
 
@@ -153,6 +161,7 @@
          (wrap-restful-response
            (merge {:formats formats}
                   response-opts))
+         (wrap-keyword-keys [:query-params])
          wrap-keyword-params
          wrap-nested-params
          wrap-params))))

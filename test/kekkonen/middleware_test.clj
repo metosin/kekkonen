@@ -54,3 +54,7 @@
                               :produces ["application/json"
                                          "application/transit+json"
                                          "application/edn"]}))
+
+(facts "wrap-keyword-keys"
+  ((mw/wrap-keyword-keys identity [:a :b]) {:a {:b {"kissa" "koira", "banaani" "valas"}}})
+  => {:a {:b {:kissa "koira", :banaani "valas"}}})

@@ -19,7 +19,6 @@
     [:header-params z :- s/Bool]]]
   (ok [x y z body-params]))
 
-
 (fact "swagger-docs"
   (let [kekkonen (k/transform-handlers
                    (k/create {:handlers {:api {:admin #'echo}}})
