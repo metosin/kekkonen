@@ -22,7 +22,7 @@
   {:function Function
    :name s/Keyword
    :type s/Keyword
-   :ns s/Keyword
+   :ns (s/maybe s/Keyword)
    :user KeywordMap
    :description (s/maybe s/Str)
    :input s/Any
@@ -177,10 +177,10 @@
    :user {}})
 
 (defn- collect-and-enrich
-  [handlers type-resolver]
+  [handlers type-resolver allow-empty-namespaces?]
   (let [enrich (fn [h m]
-                 (if (seq m)
-                   (let [ns (->> m (map name) (str/join ".") keyword)]
+                  (if (or (seq m) allow-empty-namespaces?)
+                    (let [ns (if (seq m) (->> m (map name) (str/join ".") keyword))]
                      (assoc h :ns ns))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
@@ -194,7 +194,7 @@
   "Creates a Kekkonen."
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
-        handlers (collect-and-enrich (:handlers options) (:type-resolver options))]
+        handlers (collect-and-enrich (:handlers options) (:type-resolver options) false)]
     {:context (:context options)
      :handlers handlers
      :transformers (:transformers options)

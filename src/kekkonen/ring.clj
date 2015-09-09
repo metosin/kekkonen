@@ -15,7 +15,9 @@
    :coercion {s/Keyword k/Function}})
 
 (s/def +default-options+ :- Options
-  {:types {:handler {:methods #{:post}
+  ; TODO: no types in default bindings?
+  {:types {::handler {:methods #{:get :head :patch :delete :options :post :put}}
+           :handler {:methods #{:post}
                      :parameters [[[:request :body-params] [:data]]]}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
               :path-params rsc/query-schema-coercion-matcher
