@@ -24,15 +24,15 @@
       {path (p/for-map [method methods]
               method (merge
                        (if ns {:tags [ns]})
+                       (if description {:description description
+                                        :summary description})
                        (if summary {:summary summary})
                        (if responses {:responses responses})
                        {:parameters (kc/strip-nil-values
                                       {:body body-params
                                        :query query-params
                                        :path path-params
-                                       :header header-params})}
-                       (if description {:description description
-                                        :summary description})))})))
+                                       :header header-params})}))})))
 
 (s/defn ring-swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Kekkonen and extra info"
