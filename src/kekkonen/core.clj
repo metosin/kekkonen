@@ -179,15 +179,15 @@
 (defn- collect-and-enrich
   [handlers type-resolver allow-empty-namespaces?]
   (let [enrich (fn [h m]
-                  (if (or (seq m) allow-empty-namespaces?)
-                    (let [ns (if (seq m) (->> m (map name) (str/join ".") keyword))]
-                      (assoc h :ns ns))
-                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
+                 (if (or (seq m) allow-empty-namespaces?)
+                   (let [ns (if (seq m) (->> m (map name) (str/join ".") keyword))]
+                     (assoc h :ns ns))
+                   (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
-                    (p/for-map [[k v] x]
-                      k (if (handler? v)
-                          (enrich v m)
-                          (traverse v (conj m k)))))]
+                   (p/for-map [[k v] x]
+                     k (if (handler? v)
+                         (enrich v m)
+                         (traverse v (conj m k)))))]
     (traverse (collect handlers type-resolver) [])))
 
 (s/defn create :- Kekkonen
@@ -232,6 +232,51 @@
   (let [handler (collect-and-enrich handler any-type-resolver true)]
     (update-in kekkonen (into [:handlers] (:ns handler)) merge handler)))
 
+;;
+;; Calling handlers
+;;
+
+(s/defn ^:private prepare
+  "Prepares a context for invocation or validation. Returns an 0-arity function
+  or throws exception."
+  [{:keys [transformers] :as kekkonen} action context]
+  (if-let [{:keys [function user] :as handler} (some-handler kekkonen action)]
+    (let [context (as-> context context
+                        (kc/deep-merge (:context kekkonen) context)
+                        (reduce (fn [context mapper] (mapper context)) context transformers)
+                        (reduce
+                          (fn [context [k v]]
+                            (if-let [mapper (get-in kekkonen [:user k])]
+                              (mapper context v)
+                              context))
+                          context
+                          user)
+                        (merge context {::kekkonen kekkonen
+                                        ::handler handler}))]
+      (fn [invoke?]
+        (if invoke?
+          (function context)
+          context)))
+    (throw (ex-info (str "Invalid action " action) {}))))
+
+(s/defn invoke
+  "Invokes an action handler with the given context."
+  ([kekkonen action]
+    (invoke kekkonen action {}))
+  ([kekkonen action context]
+    ((prepare kekkonen action context) true)))
+
+(s/defn validate
+  "Validates an action handler with the given context."
+  ([kekkonen action]
+    (invoke kekkonen action {}))
+  ([kekkonen action context]
+    ((prepare kekkonen action context) false)))
+
+;;
+;; Listing handlers
+;;
+
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
   [kekkonen]
@@ -241,26 +286,6 @@
       (fn [handler]
         (swap! handlers conj handler) nil))
     @handlers))
-
-(s/defn invoke
-  "Invokes a action handler with the given context."
-  ([kekkonen action]
-    (invoke kekkonen action {}))
-  ([{:keys [transformers] :as kekkonen} action context]
-    (if-let [{:keys [function user] :as handler} (some-handler kekkonen action)]
-      (let [context (kc/deep-merge (:context kekkonen) context)
-            context (reduce (fn [context mapper] (mapper context)) context transformers)
-            context (reduce
-                      (fn [context [k v]]
-                        (if-let [mapper (get-in kekkonen [:user k])]
-                          (mapper context v)
-                          context))
-                      context
-                      user)
-            context (merge context {::kekkonen kekkonen
-                                    ::handler handler})]
-        (function context))
-      (throw (ex-info (str "Invalid action " action) {})))))
 
 ;;
 ;; Working with contexts
