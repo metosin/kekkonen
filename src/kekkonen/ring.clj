@@ -80,9 +80,9 @@
             (if-let [{:keys [methods parameters transformers]} (:ring handler)]
               (if (get methods request-method)
                 (let [request (coerce-request! request handler options)
-                      context {:request request}
-                      context (reduce kc/deep-merge-from-to context parameters)
-                      context (reduce (fn [ctx mapper] (mapper ctx)) context transformers)
+                      context (as-> {:request request} context
+                                    (reduce kc/deep-merge-from-to context parameters)
+                                    (reduce (fn [ctx mapper] (mapper ctx)) context transformers))
                       responses (-> handler :user :responses)
                       response (k/invoke kekkonen action context)]
                   (if responses
