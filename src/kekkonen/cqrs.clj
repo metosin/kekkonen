@@ -4,8 +4,7 @@
             [kekkonen.common :as kc]
             [ring.util.http-response :as hr]
             [ring.util.http-status :as hs]
-            [ring.util.http-predicates :as hp]
-            [kekkonen.ring :as r]))
+            [ring.util.http-predicates :as hp]))
 
 (def +cqrs-types+ {:query {:methods #{:get}
                            :parameters [[[:request :query-params] [:data]]]}

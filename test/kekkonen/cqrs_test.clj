@@ -53,6 +53,9 @@
   (failure) => (contains {:status failure-status})
   (error) => (contains {:status error-status})
 
+  (failure!) => (throws? {:type :ring.util.http-response/response})
+  (error!) => (throws? {:type :ring.util.http-response/response})
+
   (success) => success?
   (failure) => failure?
   (error) => error?)

@@ -281,16 +281,19 @@
           (k/invoke kekkonen :api/plus {:data {:y 2}}) => 3)))))
 
 (fact "user-meta"
-  (let [k (k/create {:handlers {:api (k/handler
-                                       {:name :test
-                                        ::roles #{:admin}}
-                                       (p/fn-> :x))}
-                     :user {::roles (fn [context allowed-roles]
-                                      (let [role (::role context)]
-                                        (if (allowed-roles role)
-                                          context
-                                          (throw (ex-info "invalid role" {:role role
-                                                                          :required allowed-roles})))))}})]
+  (let [k (k/create
+            {:handlers {:api (k/handler
+                               {:name :test
+                                ::roles #{:admin}}
+                               (p/fn-> :x))}
+             :user {::roles (fn [context allowed-roles]
+                              (let [role (::role context)]
+                                (if (allowed-roles role)
+                                  context
+                                  (throw (ex-info
+                                           "invalid role"
+                                           {:role role
+                                            :required allowed-roles})))))}})]
 
     (k/all-handlers k) => (just [anything])
 
