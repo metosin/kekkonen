@@ -45,7 +45,8 @@
 ;; Handlers
 ;;
 
-(s/defn handler [meta :- KeywordMap, f :- Function]
+(s/defn handler
+  [meta :- KeywordMap, f :- Function]
   (vary-meta f merge {:type :handler} meta))
 
 (defn handler? [x]
@@ -226,7 +227,7 @@
              x))
          (:handlers kekkonen)))}))
 
-(defn inject-handler
+(defn inject
   "Injects handlers into an existing Kekkonen"
   [kekkonen handler]
   (let [handler (collect-and-enrich handler any-type-resolver true)]

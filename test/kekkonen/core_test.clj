@@ -366,7 +366,7 @@
 ; TODO: will override paths as we do merge
 (fact "handlers can be injected into existing kekkonen"
   (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-              (k/inject-handler (k/handler {:name :ping} identity)))]
+              (k/inject (k/handler {:name :ping} identity)))]
     k => (contains
            {:handlers
             (just
