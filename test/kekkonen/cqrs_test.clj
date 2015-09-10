@@ -1,7 +1,7 @@
 (ns kekkonen.cqrs-test
   (:require [kekkonen.core :as k]
             [kekkonen.ring :as r]
-            [kekkonen.cqrs :as cqrs :refer [success failure error]]
+            [kekkonen.cqrs :as cqrs :refer :all]
             [kekkonen.midje :refer :all]
             [midje.sweet :refer :all]
             [schema.core :as s]
@@ -42,3 +42,17 @@
       (app {:uri "/api/items/add-item!"
             :request-method :post
             :body-params {:item "kikka"}}) => (success #{"kikka"}))))
+
+(fact "statuses"
+
+  success-status => 200
+  failure-status => 400
+  error-status => 500
+
+  (success) => (contains {:status success-status})
+  (failure) => (contains {:status failure-status})
+  (error) => (contains {:status error-status})
+
+  (success) => success?
+  (failure) => failure?
+  (error) => error?)
