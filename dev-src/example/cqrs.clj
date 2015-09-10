@@ -6,6 +6,36 @@
             [clojure.set :as set]))
 
 ;;
+;; Security
+;;
+
+(do
+  (s/defschema User
+    {:name s/Str
+     :roles #{s/Keyword}})
+
+  (defn api-key-authenticator [context]
+    (let [api-key (-> context :request :query-params :api_key)
+          user (condp = api-key
+                 "123" {:name "Seppo" :roles #{}}
+                 "234" {:name "Sirpa" :roles #{:boss}}
+                 nil)]
+      (assoc context :user user)))
+
+  (defn require-roles [context required]
+    (let [roles (-> context :user :roles)]
+      (if (seq (set/intersection roles required))
+        context
+        (error! {:code "Missing role"
+                 :roles roles
+                 :required required})))))
+
+(p/defnk ^:query get-user
+  {:responses {success-status {:schema (s/maybe User)}}}
+  [user]
+  (success user))
+
+;;
 ;; Schemas
 ;;
 
@@ -49,46 +79,24 @@
 (p/defnk ^:query ping [] (success {:ping "pong"}))
 (p/defnk ^:query pong [] (success {:pong "ping"}))
 
+;;
+;; parameters
+;;
+
 (p/defnk ^:query plus
   {:responses {success-status {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
 
-(p/defnk ^:command times
+(p/defnk ^:query times
   {:responses {success-status {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (* x y)}))
 
-(p/defnk ^:query get-user
-  {:responses {success-status {:schema (s/maybe security/User)}}}
-  [user]
-  (success user))
-
-;;
-;; Security
-;;
-
-(s/defschema User
-  {:name s/Str
-   :roles #{s/Keyword}})
-
-(defn api-key-authenticator [context]
-  (let [api-key (-> context :request :query-params :api_key)
-        user (condp = api-key
-               "123" {:name "Seppo" :roles #{}}
-               "234" {:name "Sirpa" :roles #{:boss}}
-               nil)]
-    (assoc context :user user)))
-
-(defn require-roles [context required]
-  (let [roles (-> context :user :roles)]
-    (if (seq (set/intersection roles required))
-      context
-      (error! {:code "Missing role"
-               :roles roles
-               :required required}))))
-
-(require-roles {:user {:roles #{:boss}}} #{:boss})
+(p/defnk ^:command inc!
+  {:responses {success-status {:schema {:result s/Int}}}}
+  [[:components counter]]
+  (success {:result (swap! counter inc)}))
 
 ;;
 ;; Application
@@ -98,18 +106,21 @@
   (cqrs-api
     {:info {:info {:title "Kekkonen"}}
      :core {:handlers {:api {:item [#'get-items #'add-item! #'reset-items!]
-                             :calculator [#'plus #'times]
-                             :system [#'ping #'pong #'get-user]}}
+                             :calculator [#'plus #'times #'inc!]
+                             :security #'get-user
+                             :system [#'ping #'pong]}}
             :context {:components {:db (atom {})
-                                   :ids (atom 0)}}
+                                   :ids (atom 0)
+                                   :counter (atom 0)}}
             :user {:roles require-roles}}
      :ring {:transformers [api-key-authenticator]}}))
 
-(defn start []
-  (jetty/run-jetty
-    #'app
-    {:port 3000
-     :join? false}))
+(do
+  (defn start []
+    (jetty/run-jetty
+      #'app
+      {:port 3000
+       :join? false}))
 
-(comment
-  (start))
+  (comment
+    (start)))
