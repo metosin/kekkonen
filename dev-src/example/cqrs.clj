@@ -28,12 +28,12 @@
         context
         (error! {:code "Missing role"
                  :roles roles
-                 :required required})))))
+                 :required required}))))
 
-(p/defnk ^:query get-user
-  {:responses {success-status {:schema (s/maybe User)}}}
-  [user]
-  (success user))
+  (p/defnk ^:query get-user
+    {:responses {success-status {:schema (s/maybe User)}}}
+    [user]
+    (success user)))
 
 ;;
 ;; Schemas
