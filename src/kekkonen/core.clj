@@ -261,7 +261,7 @@
       (fn [invoke?]
         (if invoke?
           (function context)
-          context)))
+          true)))
     (throw (ex-info (str "Invalid action " action) {}))))
 
 (s/defn invoke
@@ -274,7 +274,7 @@
 (s/defn validate
   "Checks if context is valid for the handler (without calling the body)"
   ([kekkonen action]
-    (invoke kekkonen action {}))
+    (prepare kekkonen action {}))
   ([kekkonen action context]
     ((prepare kekkonen action context) false)))
 
