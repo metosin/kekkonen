@@ -29,7 +29,7 @@
   (r/internal-server-error {:type "unknown-exception"
                             :class (.getName (.getClass e))}))
 
-(defn stringify-error
+(defn stringify
   "Stringifies symbols and validation errors in Schema error, keeping the structure intact."
   [error]
   (walk/postwalk
@@ -43,7 +43,7 @@
 
 (defn coerce-error-handler [f]
   (fn [_ data _]
-    (f (-> data (dissoc :schema) (update :error #(stringify-error (su/error-val %)))))))
+    (f (-> data (dissoc :schema) (update :error #(stringify (su/error-val %)))))))
 
 (def ^:private request-validation-handler (coerce-error-handler r/bad-request))
 (def ^:private response-validation-handler (coerce-error-handler r/internal-server-error))
