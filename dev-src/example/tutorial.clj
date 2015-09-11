@@ -46,7 +46,7 @@
 
 (multiply {:data {:x 4, :y 7}})
 
-; statefull inc!
+; stateful inc!
 (p/defnk ^:handler inc!
   "adds a global counter"
   [[:components counter]]
