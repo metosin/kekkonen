@@ -208,6 +208,9 @@
         name (last tokens)]
     (map keyword (conj nss name))))
 
+(s/defn handler-action [handler :- Handler]
+  (keyword (str/join "/" (map name (filter identity [(:ns handler) (:name handler)])))))
+
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
   [kekkonen, action :- s/Keyword]
@@ -289,13 +292,15 @@
         (swap! handlers conj handler) nil))
     @handlers))
 
-#_(s/defn available-handlers :- [Handler]
-    "Returns all handlers which are available under a given context"
-    [kekkonen context]
-    (filter
-      (fn [handler]
-        (validate kekkonen (act)))
-      (all-handlers kekkonen)))
+(s/defn available-handlers :- [Handler]
+  "Returns all handlers which are available under a given context"
+  [context kekkonen]
+  (filter
+    (fn [handler]
+      (try
+        (validate kekkonen (handler-action handler) context)
+        (catch Exception _)))
+    (all-handlers kekkonen)))
 
 (defn stringify-schema [schema]
   (walk/prewalk
@@ -309,7 +314,8 @@
   (-> handler
       (select-keys [:input :name :ns :output :source-map :type])
       (update :input stringify-schema)
-      (update :output stringify-schema)))
+      (update :output stringify-schema)
+      (assoc :action (handler-action handler))))
 
 ;;
 ;; Working with contexts

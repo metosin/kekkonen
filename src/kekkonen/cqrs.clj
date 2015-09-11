@@ -41,6 +41,15 @@
                                           (->> context
                                                k/get-kekkonen
                                                k/all-handlers
+                                               (map k/->public)))))
+                                    (k/handler
+                                      {:type :query
+                                       :name "available"}
+                                      (fn [context]
+                                        (success
+                                          (->> context
+                                               k/get-kekkonen
+                                               ((partial k/available-handlers context))
                                                (map k/->public)))))]}}
        :ring {:types {:query {:methods #{:get}
                               :parameters [[[:request :query-params] [:data]]]}
