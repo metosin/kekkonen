@@ -105,13 +105,15 @@
     [[:components counter]]
     (success {:result (swap! counter inc)})))
 
+
 ;;
 ;; Application
 ;;
 
 (def app
   (cqrs-api
-    {:info {:info {:title "Kekkonen"}}
+    {:info {:info {:title "Kekkonen"
+                   :version "1.0"}}
      :core {:handlers {:api {:github [#'get-repository
                                       #'list-repositorys
                                       #'fork
@@ -126,8 +128,7 @@
             :context {:components {:repos (atom {(:id compojure-api)
                                                  compojure-api})
                                    :counter (atom 0)}}
-            :user {:roles security/require-roles
-                   :require-repo-access security/require-repo-access}}
+            :user {:roles security/require-roles}}
      :ring {:transformers [security/api-key-authenticator]}}))
 
 ;;

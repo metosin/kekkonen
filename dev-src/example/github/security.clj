@@ -25,8 +25,8 @@
     (if (seq (set/intersection roles required))
       context
       (failure! {:code "Missing role"
-               :roles roles
-               :required required}))))
+                 :roles roles
+                 :required required}))))
 
 (p/defnk ^:query get-user
   {:responses {success-status {:schema (s/maybe User)}}}
