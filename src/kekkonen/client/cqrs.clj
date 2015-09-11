@@ -2,28 +2,31 @@
   (:require [clj-http.client :as http]
             [clojure.string :as str]
             [schema.core :as s]
+            [kekkonen.common :as kc]
             [ring.util.http-predicates :as hp]))
 
 (s/defn ^:private action->uri [action :- s/Keyword]
   (str/replace (str/join "/" ((juxt namespace name) action)) #"\." "/"))
 
+(defn context [client data]
+  (kc/deep-merge client {:data data}))
+
 (s/defn ^:private action
-  ([f client name]
-    (action f client name {}))
-  ([f client name data]
-    (let [uri (str (:url client) "/" (action->uri name))
+  ([query? client name]
+    (action query? client name {}))
+  ([query? client name data]
+    (let [params (if query? :query-params :body-params)
+          f (if query? http/get http/post)
+          uri (str (:url client) "/" (action->uri name))
           request (merge
                     (:request client)
-                    {:query-params (merge (:data client) data)})]
+
+                    {params (merge (:data client) data)})]
       (f uri request))))
 
 ;;
 ;; Public api
 ;;
-
-(def success? hp/ok?)
-(def failure? hp/bad-request?)
-(def error? hp/internal-server-error?)
 
 (defn create [url]
   {:url url
@@ -32,10 +35,9 @@
              :throw-exceptions false
              :content-type :transit+json}})
 
-(def query (partial action http/get))
-(def command (partial action http/post))
+(def query (partial action :get))
+(def command (partial action :post))
 
-(comment
-  (let [k (create "http://localhost:3000")]
-    (./aprint (:body (query k :api/system/ping)))
-    (query k :/api/calculator/plus)))
+(def success? hp/ok?)
+(def failure? hp/bad-request?)
+(def error? hp/internal-server-error?)
