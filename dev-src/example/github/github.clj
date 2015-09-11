@@ -95,7 +95,7 @@
     [[:data x :- s/Int, y :- s/Int]]
     (success {:result (+ x y)}))
 
-  (p/defnk ^:query times
+  (p/defnk ^:command times
     {:responses {success-status {:schema {:result s/Int}}}}
     [[:data x :- s/Int, y :- s/Int]]
     (success {:result (* x y)}))
