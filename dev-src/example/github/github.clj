@@ -1,4 +1,4 @@
-(ns example.github.api
+(ns example.github.github
   (:require [example.github.security :as security]
             [ring.adapter.jetty :as jetty]
             [kekkonen.cqrs :refer :all]
@@ -55,7 +55,7 @@
   (success {:forked id}))
 
 (p/defnk ^:command un-watch
-  "Watch a repo"
+  "Unwatch a repo"
   [user
    [:data id :- s/Int]
    [:components repos]]
@@ -63,7 +63,7 @@
   (success {:forked id}))
 
 (p/defnk ^:command star
-  "Watch a repo"
+  "Star a repo"
   [user
    [:data id :- s/Int]
    [:components repos]]
@@ -71,7 +71,7 @@
   (success))
 
 (p/defnk ^:command un-star
-  "Watch a repo"
+  "Unstar a repo"
   [user
    [:data id :- s/Int]
    [:components repos]]
@@ -80,11 +80,15 @@
 
 (do
   ;;
-  ;; testsing
+  ;; testing
   ;;
 
   (p/defnk ^:query ping [] (success {:ping "pong"}))
-  (p/defnk ^:query pong [] (success {:pong "ping"}))
+
+  (p/defnk ^:command boss-move
+    "For bosses only"
+    {:roles #{:boss}}
+    [] (success {:all :done}))
 
   (p/defnk ^:query plus
     {:responses {success-status {:schema {:result s/Int}}}}
@@ -117,22 +121,21 @@
                                       #'un-star]
                              :calculator [#'plus #'times #'inc!]
                              :security #'security/get-user
-                             :system {:ping [#'ping #'pong]}}}
+                             :a {:b {:c [#'ping
+                                         #'boss-move]}}}}
             :context {:components {:repos (atom {(:id compojure-api)
                                                  compojure-api})
                                    :counter (atom 0)}}
-            :user {:roles security/require-roles}}
+            :user {:roles security/require-roles
+                   :require-repo-access security/require-repo-access}}
      :ring {:transformers [security/api-key-authenticator]}}))
 
 ;;
 ;; Main
 ;;
 
-(defn start []
+(comment
   (jetty/run-jetty
     #'app
     {:port 3000
      :join? false}))
-
-(comment
-  (start))

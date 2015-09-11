@@ -24,7 +24,7 @@
   (let [roles (-> context :user :roles)]
     (if (seq (set/intersection roles required))
       context
-      (error! {:code "Missing role"
+      (failure! {:code "Missing role"
                :roles roles
                :required required}))))
 
