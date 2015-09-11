@@ -1,4 +1,4 @@
-(ns examples.tutorial)
+(ns example.tutorial)
 
 (require '[kekkonen.core :as k])
 (require '[schema.core :as s])

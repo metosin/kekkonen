@@ -24,7 +24,8 @@
   [[:components db]]
   (success (swap! db empty)))
 
-(facts "commands and querys"
+; TODO: test the api, not the internals
+#_(facts "commands and querys"
   (let [kekkonen (k/create
                    {:context {:components {:db (atom #{})}}
                     :handlers {:api {:items [#'get-items #'add-item! #'reset-items!]}}
