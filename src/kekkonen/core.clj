@@ -4,7 +4,8 @@
             [clojure.string :as str]
             [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk]
-            [kekkonen.common :as kc])
+            [kekkonen.common :as kc]
+            [clojure.walk :as walk])
   (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction]))
 
 ;;
@@ -268,7 +269,7 @@
     ((prepare kekkonen action context) true)))
 
 (s/defn validate
-  "Validates an action handler with the given context."
+  "Checks if context is valid for the handler (without calling the body)"
   ([kekkonen action]
     (invoke kekkonen action {}))
   ([kekkonen action context]
@@ -287,6 +288,28 @@
       (fn [handler]
         (swap! handlers conj handler) nil))
     @handlers))
+
+#_(s/defn available-handlers :- [Handler]
+    "Returns all handlers which are available under a given context"
+    [kekkonen context]
+    (filter
+      (fn [handler]
+        (validate kekkonen (act)))
+      (all-handlers kekkonen)))
+
+(defn stringify-schema [schema]
+  (walk/prewalk
+    (fn [x]
+      (if-not (or (and (map? x) (not (record? x))) (vector? x) (string? x) (keyword? x))
+        (pr-str x) x))
+    schema))
+
+(s/defn ->public
+  [handler :- Handler]
+  (-> handler
+      (select-keys [:input :name :ns :output :source-map :type])
+      (update :input stringify-schema)
+      (update :output stringify-schema)))
 
 ;;
 ;; Working with contexts

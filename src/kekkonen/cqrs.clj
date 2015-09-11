@@ -6,23 +6,9 @@
             [ring.util.http-status :as hs]
             [ring.util.http-predicates :as hp]))
 
-(def +cqrs-types+ {:query {:methods #{:get}
-                           :parameters [[[:request :query-params] [:data]]]}
-                   :command {:methods #{:post}
-                             :parameters [[[:request :body-params] [:data]]]}})
-
-(def +cqrs-type-resolver+ (k/type-resolver :command :query))
-
-(defn cqrs-api [options]
-  (ka/api
-    (kc/deep-merge
-      {:core {:type-resolver +cqrs-type-resolver+}
-       :ring {:types +cqrs-types+}}
-      options)))
-
-;;
-;; Return types
-;;
+;;;
+;;; statuses
+;;;
 
 (def success hr/ok)
 (def failure hr/bad-request)
@@ -38,4 +24,27 @@
 (def success? hp/ok?)
 (def failure? hp/bad-request?)
 (def error? hp/internal-server-error?)
+
+;;
+;; api
+;;
+
+(defn cqrs-api [options]
+  (ka/api
+    (kc/deep-merge
+      {:core {:type-resolver (k/type-resolver :command :query)
+              :handlers {:kekkonen [(k/handler
+                                      {:type :query
+                                       :name "all"}
+                                      (fn [context]
+                                        (success
+                                          (->> context
+                                               k/get-kekkonen
+                                               k/all-handlers
+                                               (map k/->public)))))]}}
+       :ring {:types {:query {:methods #{:get}
+                              :parameters [[[:request :query-params] [:data]]]}
+                      :command {:methods #{:post}
+                                :parameters [[[:request :body-params] [:data]]]}}}}
+      options)))
 
