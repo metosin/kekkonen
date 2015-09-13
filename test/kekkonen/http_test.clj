@@ -14,8 +14,7 @@
 (p/defnk ^:any     any-it [] (ok))
 
 (facts "web-options"
-  (let [app (h/http-api
-              {:core {:handlers {:api 'kekkonen.http-test}}})]
+  (let [app (h/http-api {:core {:handlers {:api 'kekkonen.http-test}}})]
 
     (fact "get"     (app {:uri "/api/get-it",     :request-method :get})     => (ok))
     (fact "head"    (app {:uri "/api/head-it",    :request-method :head})    => (ok))

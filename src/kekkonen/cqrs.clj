@@ -4,7 +4,8 @@
             [kekkonen.common :as kc]
             [ring.util.http-response :as hr]
             [ring.util.http-status :as hs]
-            [ring.util.http-predicates :as hp]))
+            [ring.util.http-predicates :as hp]
+            [schema.core :as s]))
 
 ;;;
 ;;; statuses
@@ -24,6 +25,14 @@
 (def success? hp/ok?)
 (def failure? hp/bad-request?)
 (def error? hp/internal-server-error?)
+
+(s/defn command
+  [meta :- k/KeywordMap, f :- k/Function]
+  (vary-meta f merge {:type :command} meta))
+
+(s/defn query
+  [meta :- k/KeywordMap, f :- k/Function]
+  (vary-meta f merge {:type :query} meta))
 
 ;;
 ;; api

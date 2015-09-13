@@ -1,7 +1,5 @@
 (ns kekkonen.cqrs-test
-  (:require [kekkonen.core :as k]
-            [kekkonen.ring :as r]
-            [kekkonen.cqrs :as cqrs :refer :all]
+  (:require [kekkonen.cqrs :refer :all]
             [kekkonen.midje :refer :all]
             [midje.sweet :refer :all]
             [schema.core :as s]
@@ -24,25 +22,26 @@
   [[:components db]]
   (success (swap! db empty)))
 
-; TODO: test the api, not the internals
-#_(facts "commands and querys"
-  (let [kekkonen (k/create
-                   {:context {:components {:db (atom #{})}}
-                    :handlers {:api {:items [#'get-items #'add-item! #'reset-items!]}}
-                    :type-resolver cqrs/+cqrs-type-resolver+})
-        app (r/ring-handler
-              kekkonen
-              {:types cqrs/+cqrs-types+})]
+(facts "cqrs-api"
+  (let [app (cqrs-api
+              {:core
+               {:context {:components {:db (atom #{})}}
+                :handlers {:api {:items [#'get-items
+                                         #'add-item!
+                                         #'reset-items!]}}}})]
 
     (fact "get-items"
-      (k/invoke kekkonen :api/items/get-items) => (success #{})
-      (app {:uri "/api/items/get-items", :request-method :get}) => (success #{}))
+      (let [response (app {:uri "/api/items/get-items"
+                           :request-method :get})]
+        response => success?
+        (parse response) => []))
 
     (fact "add-item!"
-      (k/invoke kekkonen :api/items/add-item! {:data {:item "kikka"}}) => (success #{"kikka"})
-      (app {:uri "/api/items/add-item!"
-            :request-method :post
-            :body-params {:item "kikka"}}) => (success #{"kikka"}))))
+      (let [response (app {:uri "/api/items/add-item!"
+                           :request-method :post
+                           :body-params {:item "kikka"}})]
+        response => success?
+        (parse response) => ["kikka"]))))
 
 (fact "statuses"
 

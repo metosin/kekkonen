@@ -24,7 +24,6 @@
     {(s/optional-key :data) s/Any}))
 
 (s/defschema Handler
-  "Action handler metadata"
   {:function Function
    :type s/Keyword
    :name s/Keyword
