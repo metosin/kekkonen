@@ -11,16 +11,17 @@
 (defn context [client data]
   (kc/deep-merge client {:data data}))
 
+(def +options+ {:query {:params :query-params, :f http/get}
+                :command {:params :body-params, :f http/post}})
+
 (s/defn ^:private action
-  ([query? client name]
-    (action query? client name {}))
-  ([query? client name data]
-    (let [params (if query? :query-params :body-params)
-          f (if query? http/get http/post)
+  ([options client name]
+    (action options client name {}))
+  ([options client name data]
+    (let [{:keys [f params]} options
           uri (str (:url client) "/" (action->uri name))
           request (merge
                     (:request client)
-
                     {params (merge (:data client) data)})]
       (f uri request))))
 
@@ -35,8 +36,8 @@
              :throw-exceptions false
              :content-type :transit+json}})
 
-(def query (partial action :get))
-(def command (partial action :post))
+(def query (partial action (:get +options+)))
+(def command (partial action (:post +options+)))
 
 (def success? hp/ok?)
 (def failure? hp/bad-request?)
