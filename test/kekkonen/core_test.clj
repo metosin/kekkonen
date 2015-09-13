@@ -195,7 +195,7 @@
                        :echo k/handler?
                        :plus k/handler?})))))
 
-(fact "kekkonen"
+(fact "registry"
   (s/with-fn-validation
 
     (fact "can't be created without handlers"
@@ -208,77 +208,78 @@
       (k/create {:handlers {:test 'kekkonen.core-test}}) => truthy)
 
     (fact "with handlers and context"
-      (let [kekkonen (k/create {:context {:components {:db (atom #{})}}
-                                :handlers {:test 'kekkonen.core-test}})]
+      (let [k (k/create {:context {:components {:db (atom #{})}}
+                         :handlers {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
-          (count (k/all-handlers kekkonen)) => 6)
+          (count (k/all-handlers k)) => 6)
 
         (fact "non-existing action"
-          (k/some-handler kekkonen :test/non-existing) => nil
-          (k/invoke kekkonen :test/non-existing) => throws?)
+          (k/some-handler k :test/non-existing) => nil
+          (k/invoke k :test/non-existing) => throws?)
 
-        (fact "existing action contains :type and :ns"
-          (k/some-handler kekkonen :test/ping) => (contains {:type :handler, :ns :test})
-          (k/invoke kekkonen :test/ping) => "pong")
+        (fact "existing action contains :type, :ns and :action"
+          (k/some-handler k :test/ping) => (contains {:type :handler, :ns :test, :action :test/ping})
+          (k/invoke k :test/ping) => "pong")
 
-        (fact "crud via kekkonen"
-          (k/invoke kekkonen :test/get-items) => #{}
-          (k/invoke kekkonen :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
-          (k/invoke kekkonen :test/get-items) => #{"kikka"}
-          (k/invoke kekkonen :test/reset-items!) => #{}
-          (k/invoke kekkonen :test/get-items) => #{}
+        (fact "crud via registry"
+          (k/invoke k :test/get-items) => #{}
+          (k/invoke k :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
+          (k/invoke k :test/get-items) => #{"kikka"}
+          (k/invoke k :test/reset-items!) => #{}
+          (k/invoke k :test/get-items) => #{}
 
           (fact "context-level overrides FTW!"
-            (k/invoke kekkonen :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
+            (k/invoke k :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
     (fact "lots of handlers"
-      (let [kekkonen (k/create {:handlers
-                                {:admin
-                                 {:kikka 'kekkonen.core-test
-                                  :kukka 'kekkonen.core-test}
-                                 :public 'kekkonen.core-test
-                                 :kiss #'ping
-                                 :abba [#'ping #'echo]
-                                 :wasp ['kekkonen.core-test]
-                                 :bon (k/handler
-                                        {:name :jovi}
-                                        (constantly :runaway))}})]
+      (let [k (k/create {:handlers
+                         {:admin
+                          {:kikka 'kekkonen.core-test
+                           :kukka 'kekkonen.core-test}
+                          :public 'kekkonen.core-test
+                          :kiss #'ping
+                          :abba [#'ping #'echo]
+                          :wasp ['kekkonen.core-test]
+                          :bon (k/handler
+                                 {:name :jovi}
+                                 (constantly :runaway))}})]
 
         (fact "deeply nested"
           (fact "namespaces can be joined with ."
-            (k/invoke kekkonen :admin.kikka/ping) => "pong")
+            (k/some-handler k :admin.kikka/ping) => (contains {:action :admin.kikka/ping})
+            (k/invoke k :admin.kikka/ping) => "pong")
           (fact "namespaces can be joined with /"
-            (k/invoke kekkonen :admin/kukka/ping) => "pong")
+            (k/invoke k :admin/kukka/ping) => "pong")
           (fact "ns is set to handler with ."
-            (k/some-handler kekkonen :admin.kukka/ping) => (contains {:ns :admin.kukka})))
+            (k/some-handler k :admin.kukka/ping) => (contains {:ns :admin.kukka})))
 
         (fact "not nested"
-          (k/invoke kekkonen :kiss/ping) => "pong")
+          (k/invoke k :kiss/ping) => "pong")
 
         (fact "var"
-          (k/invoke kekkonen :abba/ping) => "pong")
+          (k/invoke k :abba/ping) => "pong")
 
         (fact "vector of vars"
-          (k/invoke kekkonen :wasp/ping) => "pong")
+          (k/invoke k :wasp/ping) => "pong")
 
         (fact "vector of namespaces"
-          (k/invoke kekkonen :wasp/ping) => "pong")
+          (k/invoke k :wasp/ping) => "pong")
 
         (fact "handler"
-          (k/invoke kekkonen :bon/jovi) => :runaway)))
+          (k/invoke k :bon/jovi) => :runaway)))
 
     (fact "sub-context"
-      (let [kekkonen (k/create {:handlers {:api #'plus}})]
+      (let [k (k/create {:handlers {:api #'plus}})]
 
-        (k/invoke kekkonen :api/plus {}) => throws?
-        (k/invoke kekkonen :api/plus {:data {:x 1}}) => throws?
-        (k/invoke kekkonen :api/plus {:data {:x 1, :y 2}}) => 3
+        (k/invoke k :api/plus {}) => throws?
+        (k/invoke k :api/plus {:data {:x 1}}) => throws?
+        (k/invoke k :api/plus {:data {:x 1, :y 2}}) => 3
 
-        (let [kekkonen (k/with-context kekkonen {:data {:x 1}})]
-          (k/invoke kekkonen :api/plus {}) => throws?
-          (k/invoke kekkonen :api/plus {:data {:x 1}}) => throws?
-          (k/invoke kekkonen :api/plus {:data {:y 2}}) => 3)))))
+        (let [k (k/with-context k {:data {:x 1}})]
+          (k/invoke k :api/plus {}) => throws?
+          (k/invoke k :api/plus {:data {:x 1}}) => throws?
+          (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
 
 (fact "user-meta"
   (let [k (k/create
@@ -343,8 +344,8 @@
   (let [k (k/create {:handlers
                      {:api
                       [(k/handler
-                         {:name :kekkonen}
-                         (partial k/get-kekkonen))
+                         {:name :registry}
+                         (partial k/get-registry))
                        (k/handler
                          {:name :handler
                           :description "magic"}
@@ -353,21 +354,21 @@
                          {:name :names}
                          (fn [context]
                            (->> context
-                                k/get-kekkonen
+                                k/get-registry
                                 k/all-handlers
                                 (map :name))))]}})]
 
-    (fact "::kekkonen"
-      (s/validate k/Kekkonen (k/invoke k :api/kekkonen)) => truthy)
+    (fact "::registry"
+      (s/validate k/Registry (k/invoke k :api/registry)) => truthy)
 
     (fact "::handler"
       (k/invoke k :api/handler) => (contains {:description "magic"}))
 
     (fact "going meta boing boing"
-      (k/invoke k :api/names) => [:kekkonen :handler :names])))
+      (k/invoke k :api/names) => [:registry :handler :names])))
 
 ; TODO: will override paths as we do merge
-(fact "handlers can be injected into existing kekkonen"
+(fact "handlers can be injected into existing registry"
   (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
               (k/inject (k/handler {:name :ping} identity)))]
     k => (contains

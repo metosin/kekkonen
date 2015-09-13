@@ -2,9 +2,7 @@
   (:require [midje.sweet :refer :all]
             [ring.util.http-response :refer [ok]]
             [plumbing.core :as p]
-            [kekkonen.ring :as r]
-            [kekkonen.http :as h]
-            [kekkonen.core :as k]))
+            [kekkonen.http :as h]))
 
 (p/defnk ^:get     get-it [] (ok))
 (p/defnk ^:head    head-it [] (ok))
@@ -16,11 +14,8 @@
 (p/defnk ^:any     any-it [] (ok))
 
 (facts "web-options"
-  (let [app (r/ring-handler
-              (k/create
-                {:handlers {:api [#'get-it #'head-it #'patch-it #'delete-it #'options-it #'post-it #'put-it #'any-it]}
-                 :type-resolver h/+http-type-resolver+})
-              {:types h/+http-types+})]
+  (let [app (h/http-api
+              {:core {:handlers {:api 'kekkonen.http-test}}})]
 
     (fact "get"     (app {:uri "/api/get-it",     :request-method :get})     => (ok))
     (fact "head"    (app {:uri "/api/head-it",    :request-method :head})    => (ok))

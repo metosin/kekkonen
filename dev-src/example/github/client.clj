@@ -41,23 +41,4 @@
     (map (juxt :action :type) (:body (k/query context3 :/kekkonen/all))))
 
   (./pprint
-    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/available))))
-
-  #_(./pprint
-      (map (juxt :action :type) (:body (k/query context3 :/kekkonen/invokable)))))
-
-
-
-[:div.col-md-3
- [ui/btn-primary
-  :on-click (disaptch ::boss-move)
-  :enabled (and (has-role? user :boss)
-                (has-access? user repository)
-                (some-other-thingie? user))]]
-
-[:div.col-md-3
- [ui/btn-primary
-  :on-click (disaptch ::boss-move)
-  :enabled (k/validate k ::boss-move)]]
-
-
+    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/available)))))

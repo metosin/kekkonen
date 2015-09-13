@@ -39,18 +39,18 @@
                                       (fn [context]
                                         (success
                                           (->> context
-                                               k/get-kekkonen
+                                               k/get-registry
                                                k/all-handlers
-                                               (map k/->public)))))
+                                               (map k/public-meta)))))
                                     (k/handler
                                       {:type :query
                                        :name "available"}
                                       (fn [context]
                                         (success
                                           (->> context
-                                               k/get-kekkonen
+                                               k/get-registry
                                                ((partial k/available-handlers context))
-                                               (map k/->public)))))]}}
+                                               (map k/public-meta)))))]}}
        :ring {:types {:query {:methods #{:get}
                               :parameters [[[:request :query-params] [:data]]]}
                       :command {:methods #{:post}

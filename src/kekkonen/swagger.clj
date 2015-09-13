@@ -38,9 +38,9 @@
                                        :header header-params})}))})))
 
 (s/defn ring-swagger :- rs2/Swagger
-  "Creates a ring-swagger object out of Kekkonen and extra info"
-  [kekkonen info]
-  (let [handlers (k/all-handlers kekkonen)]
+  "Creates a ring-swagger object out of Registry and extra info"
+  [registry info]
+  (let [handlers (k/all-handlers registry)]
     (merge
       info
       {:paths (apply merge (map transform-handler handlers))})))
@@ -61,7 +61,7 @@
      :name "swagger.json"
      :no-doc true}
     (fn [context]
-      (let [kekkonen (k/get-kekkonen context)]
+      (let [registry (k/get-registry context)]
         (ok (swagger-object
-              (ring-swagger kekkonen info)
+              (ring-swagger registry info)
               options))))))

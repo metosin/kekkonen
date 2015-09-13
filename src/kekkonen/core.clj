@@ -18,12 +18,18 @@
 (s/defschema KeywordMap
   {s/Keyword s/Any})
 
+(s/defschema Context
+  (merge
+    KeywordMap
+    {(s/optional-key :data) s/Any}))
+
 (s/defschema Handler
   "Action handler metadata"
   {:function Function
-   :name s/Keyword
    :type s/Keyword
+   :name s/Keyword
    :ns (s/maybe s/Keyword)
+   :action s/Keyword
    :user KeywordMap
    :description (s/maybe s/Str)
    :input s/Any
@@ -35,7 +41,7 @@
                                  :name s/Symbol}
    s/Keyword s/Any})
 
-(s/defschema Kekkonen
+(s/defschema Registry
   {:handlers KeywordMap
    :context KeywordMap
    :transformers [Function]
@@ -77,7 +83,7 @@
 (s/defn ^:private user-meta [meta :- KeywordMap]
   (dissoc
     meta
-    ; reserved kekkonen handler stuff
+    ; reserved registry handler stuff
     :type :input :output :description
     ; clojure var meta
     :line :column :file :name :ns :doc
@@ -180,10 +186,13 @@
 
 (defn- collect-and-enrich
   [handlers type-resolver allow-empty-namespaces?]
-  (let [enrich (fn [h m]
+  (let [handler-action (fn [n ns]
+                         (keyword (str/join "/" (map name (filter identity [ns n])))))
+        enrich (fn [h m]
                  (if (or (seq m) allow-empty-namespaces?)
                    (let [ns (if (seq m) (->> m (map name) (str/join ".") keyword))]
-                     (assoc h :ns ns))
+                     (merge h {:ns ns
+                               :action (handler-action (:name h) ns)}))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
                    (p/for-map [[k v] x]
@@ -192,8 +201,8 @@
                          (traverse v (conj m k)))))]
     (traverse (collect handlers type-resolver) [])))
 
-(s/defn create :- Kekkonen
-  "Creates a Kekkonen."
+(s/defn create :- Registry
+  "Creates a Registry."
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
         handlers (collect-and-enrich (:handlers options) (:type-resolver options) false)]
@@ -208,20 +217,17 @@
         name (last tokens)]
     (map keyword (conj nss name))))
 
-(s/defn handler-action [handler :- Handler]
-  (keyword (str/join "/" (map name (filter identity [(:ns handler) (:name handler)])))))
-
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
-  [kekkonen, action :- s/Keyword]
-  (get-in (:handlers kekkonen) (action-kws action)))
+  [registry :- Registry, action :- s/Keyword]
+  (get-in (:handlers registry) (action-kws action)))
 
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,
   the handler is removed."
-  [kekkonen f]
+  [registry :- Registry, f :- Function]
   (merge
-    kekkonen
+    registry
     {:handlers
      (kc/strip-nil-values
        (w/prewalk
@@ -229,13 +235,13 @@
            (if (handler? x)
              (f x)
              x))
-         (:handlers kekkonen)))}))
+         (:handlers registry)))}))
 
-(defn inject
-  "Injects handlers into an existing Kekkonen"
-  [kekkonen handler]
+(s/defn inject
+  "Injects handlers into an existing Registry"
+  [registry :- Registry, handler]
   (let [handler (collect-and-enrich handler any-type-resolver true)]
-    (update-in kekkonen (into [:handlers] (:ns handler)) merge handler)))
+    (update-in registry (into [:handlers] (:ns handler)) merge handler)))
 
 ;;
 ;; Calling handlers
@@ -244,19 +250,23 @@
 (s/defn ^:private prepare
   "Prepares a context for invocation or validation. Returns an 0-arity function
   or throws exception."
-  [{:keys [transformers] :as kekkonen} action context]
-  (if-let [{:keys [function user] :as handler} (some-handler kekkonen action)]
+  [registry :- Registry, action :- s/Keyword, context :- Context]
+  (if-let [{:keys [function user] :as handler} (some-handler registry action)]
     (let [context (as-> context context
-                        (kc/deep-merge (:context kekkonen) context)
-                        (reduce (fn [context mapper] (mapper context)) context transformers)
+                        (kc/deep-merge (:context registry) context)
+                        (reduce
+                          (fn [context mapper]
+                            (mapper context))
+                          context
+                          (:transformers registry))
                         (reduce
                           (fn [context [k v]]
-                            (if-let [mapper (get-in kekkonen [:user k])]
+                            (if-let [mapper (get-in registry [:user k])]
                               (mapper context v)
                               context))
                           context
                           user)
-                        (merge context {::kekkonen kekkonen
+                        (merge context {::registry registry
                                         ::handler handler}))]
       (fn [invoke?]
         (if invoke?
@@ -266,17 +276,17 @@
 
 (s/defn invoke
   "Invokes an action handler with the given context."
-  ([kekkonen action]
-    (invoke kekkonen action {}))
-  ([kekkonen action context]
-    ((prepare kekkonen action context) true)))
+  ([registry :- Registry, action :- s/Keyword]
+    (invoke registry action {}))
+  ([registry :- Registry, action :- s/Keyword, context :- Context]
+    ((prepare registry action context) true)))
 
 (s/defn validate
   "Checks if context is valid for the handler (without calling the body)"
-  ([kekkonen action]
-    (prepare kekkonen action {}))
-  ([kekkonen action context]
-    ((prepare kekkonen action context) false)))
+  ([registry :- Registry, action :- s/Keyword]
+    (prepare registry action {}))
+  ([registry :- Registry, action :- s/Keyword, context :- Context]
+    ((prepare registry action context) false)))
 
 ;;
 ;; Listing handlers
@@ -284,23 +294,23 @@
 
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
-  [kekkonen]
+  [registry :- Registry]
   (let [handlers (atom [])]
     (transform-handlers
-      kekkonen
+      registry
       (fn [handler]
         (swap! handlers conj handler) nil))
     @handlers))
 
 (s/defn available-handlers :- [Handler]
   "Returns all handlers which are available under a given context"
-  [context kekkonen]
+  [context :- Context, registry :- Registry]
   (filter
     (fn [handler]
       (try
-        (validate kekkonen (handler-action handler) context)
+        (validate registry (:action handler) context)
         (catch Exception _)))
-    (all-handlers kekkonen)))
+    (all-handlers registry)))
 
 (defn stringify-schema [schema]
   (walk/prewalk
@@ -309,34 +319,33 @@
         (pr-str x) x))
     schema))
 
-(s/defn ->public
+(s/defn public-meta
   [handler :- Handler]
   (-> handler
-      (select-keys [:input :name :ns :output :source-map :type])
+      (select-keys [:input :name :ns :output :source-map :type :action])
       (update :input stringify-schema)
-      (update :output stringify-schema)
-      (assoc :action (handler-action handler))))
+      (update :output stringify-schema)))
 
 ;;
 ;; Working with contexts
 ;;
 
-(s/defn get-kekkonen [context]
-  (get context ::kekkonen))
+(s/defn get-registry [context :- Context]
+  (get context ::registry))
 
-(s/defn get-handler [context]
+(s/defn get-handler [context :- Context]
   (get context ::handler))
 
-(defn with-context [kekkonen context]
-  (update-in kekkonen [:context] kc/deep-merge context))
+(s/defn with-context [registry :- Registry, context :- Context]
+  (update-in registry [:context] kc/deep-merge context))
 
 (s/defn context-copy
   "Returns a function that assocs in a value from to-kws path into from-kws in a context"
   [from :- [s/Any], to :- [s/Any]]
-  (fn [context]
+  (s/fn [context :- Context]
     (assoc-in context to (get-in context from {}))))
 
-(defn context-dissoc [from-kws]
+(s/defn context-dissoc [from-kws :- [s/Any]]
   "Returns a function that dissocs in a value from from-kws in a context"
-  (fn [context]
+  (s/fn [context :- Context]
     (kc/dissoc-in context from-kws)))
