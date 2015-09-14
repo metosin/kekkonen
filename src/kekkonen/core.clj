@@ -104,10 +104,8 @@
   (-collect [this type-resolver]))
 
 (s/defn collect
-  ([collector]
-    (collect collector default-type-resolver))
-  ([collector type-resolver]
-    (-collect collector type-resolver)))
+  [collector type-resolver]
+  (-collect collector type-resolver))
 
 (defn- -collect-var [v type-resolver]
   (if-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta v))]

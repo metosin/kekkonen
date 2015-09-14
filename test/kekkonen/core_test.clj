@@ -109,16 +109,17 @@
             (k/handler
               {:name :echo
                :input {:name s/Str}}
-              identity)) => (just
-                              {:echo
-                               (just
-                                 {:function fn?
-                                  :description ""
-                                  :user {}
-                                  :type :handler
-                                  :name :echo
-                                  :input {:name s/Str}
-                                  :output s/Any})}))
+              identity)
+            k/default-type-resolver) => (just
+                                          {:echo
+                                           (just
+                                             {:function fn?
+                                              :description ""
+                                              :user {}
+                                              :type :handler
+                                              :name :echo
+                                              :input {:name s/Str}
+                                              :output s/Any})}))
 
         (fact "type can be overridden"
           (k/collect
@@ -138,18 +139,19 @@
              :description "Echoes the user"
              :query true
              :roles #{:admin :user}}
-            (p/fnk f :- User [data :- User] data))) => (just
-                                                         {:echo
-                                                          (just
-                                                            {:function fn?
-                                                             :type :handler
-                                                             :name :echo
-                                                             :user {:query true
-                                                                    :roles #{:admin :user}}
-                                                             :description "Echoes the user"
-                                                             :input {:data User
-                                                                     s/Keyword s/Any}
-                                                             :output User})}))
+            (p/fnk f :- User [data :- User] data))
+          k/default-type-resolver) => (just
+                                        {:echo
+                                         (just
+                                           {:function fn?
+                                            :type :handler
+                                            :name :echo
+                                            :user {:query true
+                                                   :roles #{:admin :user}}
+                                            :description "Echoes the user"
+                                            :input {:data User
+                                                    s/Keyword s/Any}
+                                            :output User})}))
 
       (fact "with unresolved type"
         (let [handler (k/handler
@@ -158,33 +160,35 @@
                         identity)]
           (k/collect
             handler
-            {:type-resolver (k/type-resolver :ILLEGAL)}) => (throws? {:target handler}))))
+            (k/type-resolver :ILLEGAL)) => (throws? {:target handler}))))
 
     (fact "Var"
       (fact "with resolved type"
-        (k/collect #'echo) => (just
-                                {:echo
-                                 (just
-                                   {:function fn?
-                                    :type :handler
-                                    :name :echo
-                                    :user {:roles #{:admin :user}}
-                                    :description "Echoes the user"
-                                    :input {:data User
-                                            s/Keyword s/Any}
-                                    :output User
-                                    :source-map (just
-                                                  {:line 38
-                                                   :column 1
-                                                   :file string?
-                                                   :ns 'kekkonen.core-test
-                                                   :name 'echo})})}))
+        (k/collect
+          #'echo
+          k/default-type-resolver) => (just
+                                        {:echo
+                                         (just
+                                           {:function fn?
+                                            :type :handler
+                                            :name :echo
+                                            :user {:roles #{:admin :user}}
+                                            :description "Echoes the user"
+                                            :input {:data User
+                                                    s/Keyword s/Any}
+                                            :output User
+                                            :source-map (just
+                                                          {:line 38
+                                                           :column 1
+                                                           :file string?
+                                                           :ns 'kekkonen.core-test
+                                                           :name 'echo})})}))
 
       (fact "with unresolved type"
-        (k/collect #'echo {:type-resolver (k/type-resolver :ILLEGAL)}) => (throws? {:target #'echo})))
+        (k/collect #'echo (k/type-resolver :ILLEGAL)) => (throws? {:target #'echo})))
 
     (fact "Namespaces"
-      (let [handlers (k/collect 'kekkonen.core-test)]
+      (let [handlers (k/collect 'kekkonen.core-test k/default-type-resolver)]
 
         (count handlers) => 6
         handlers => (just
@@ -319,78 +323,78 @@
 
       (k/all-handlers k) => (just [anything anything]))))
 
-  (fact "context transformations"
-    (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
-          remove-ab (k/context-dissoc [:a :b])]
+(fact "context transformations"
+  (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
+        remove-ab (k/context-dissoc [:a :b])]
 
-      (copy-ab-to-cd {:a {:b 1}}) => {:a {:b 1} :c {:d 1}}
-      (remove-ab {:a {:b 1}}) => {}
-      ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
+    (copy-ab-to-cd {:a {:b 1}}) => {:a {:b 1} :c {:d 1}}
+    (remove-ab {:a {:b 1}}) => {}
+    ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
 
-  (fact "transforming"
-    (s/with-fn-validation
-      (let [k (k/create {:handlers {:api (k/handler {:name :test} #(:y %))}
-                         :transformers [(k/context-copy [:x] [:y])
-                                        (k/context-dissoc [:x])]})]
+(fact "transforming"
+  (s/with-fn-validation
+    (let [k (k/create {:handlers {:api (k/handler {:name :test} #(:y %))}
+                       :transformers [(k/context-copy [:x] [:y])
+                                      (k/context-dissoc [:x])]})]
 
-        (fact "transformers are executed"
-          (k/invoke k :api/test {:x 1}) => 1))))
+      (fact "transformers are executed"
+        (k/invoke k :api/test {:x 1}) => 1))))
 
-  (fact "transforming handlers"
-    (fact "enriching handlers"
-      (k/transform-handlers
-        (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-        (fn [handler]
-          (assoc handler :kikka :kukka)))
+(fact "transforming handlers"
+  (fact "enriching handlers"
+    (k/transform-handlers
+      (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+      (fn [handler]
+        (assoc handler :kikka :kukka)))
 
-      => (contains
+    => (contains
+         {:handlers
+          (just
+            {:api
+             (just
+               {:test
+                (contains
+                  {:kikka :kukka})})})}))
+
+  (fact "stripping handlers"
+    (k/transform-handlers
+      (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+      (constantly nil)) => (contains {:handlers {}})))
+
+(fact "invoke-time extra data"
+  (let [k (k/create {:handlers
+                     {:api
+                      [(k/handler
+                         {:name :registry}
+                         (partial k/get-registry))
+                       (k/handler
+                         {:name :handler
+                          :description "magic"}
+                         (partial k/get-handler))
+                       (k/handler
+                         {:name :names}
+                         (fn [context]
+                           (->> context
+                                k/get-registry
+                                k/all-handlers
+                                (map :name))))]}})]
+
+    (fact "::registry"
+      (s/validate k/Registry (k/invoke k :api/registry)) => truthy)
+
+    (fact "::handler"
+      (k/invoke k :api/handler) => (contains {:description "magic"}))
+
+    (fact "going meta boing boing"
+      (k/invoke k :api/names) => [:registry :handler :names])))
+
+; TODO: will override paths as we do merge
+(fact "handlers can be injected into existing registry"
+  (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+              (k/inject (k/handler {:name :ping} identity)))]
+    k => (contains
            {:handlers
             (just
-              {:api
-               (just
-                 {:test
-                  (contains
-                    {:kikka :kukka})})})}))
-
-    (fact "stripping handlers"
-      (k/transform-handlers
-        (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-        (constantly nil)) => (contains {:handlers {}})))
-
-  (fact "invoke-time extra data"
-    (let [k (k/create {:handlers
-                       {:api
-                        [(k/handler
-                           {:name :registry}
-                           (partial k/get-registry))
-                         (k/handler
-                           {:name :handler
-                            :description "magic"}
-                           (partial k/get-handler))
-                         (k/handler
-                           {:name :names}
-                           (fn [context]
-                             (->> context
-                                  k/get-registry
-                                  k/all-handlers
-                                  (map :name))))]}})]
-
-      (fact "::registry"
-        (s/validate k/Registry (k/invoke k :api/registry)) => truthy)
-
-      (fact "::handler"
-        (k/invoke k :api/handler) => (contains {:description "magic"}))
-
-      (fact "going meta boing boing"
-        (k/invoke k :api/names) => [:registry :handler :names])))
-
-  ; TODO: will override paths as we do merge
-  (fact "handlers can be injected into existing registry"
-    (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-                (k/inject (k/handler {:name :ping} identity)))]
-      k => (contains
-             {:handlers
-              (just
-                {:api (just
-                        {:test anything})
-                 :ping anything})})))
+              {:api (just
+                      {:test anything})
+               :ping anything})})))
