@@ -88,6 +88,10 @@ rules both on the client-side & the server-side. State and dependencies should b
   (start))
 ```
 
+Start the server and browse to http://localhost:3000 and you should see the following:
+
+![swagger-example](https://raw.githubusercontent.com/wiki/metosin/kekkonen/swagger-example.png)
+
 # Special thanks
 
 - [Schema](https://github.com/Prismatic/schema) for everything
