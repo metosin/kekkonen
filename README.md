@@ -2,6 +2,8 @@
 
 A library for creating and consuming remote APIs for Clojure(Script). http://kekkonen.io/
 
+Status: Alpha. `0.1.0` will be released soon.
+
 # Mission statement
 
 We are building complex UIs and need better tools to support that. Focus should on consuming
@@ -91,9 +93,9 @@ rules both on the client-side & the server-side. State and dependencies should b
 - [Schema](https://github.com/Prismatic/schema) for everything
 - [Plumbing](https://github.com/Prismatic/plumbing) for the `fnk`y syntax
 - [Fnhouse](https://github.com/Prismatic/fnhouse) for inspiration
-- [Ring-swagger](https://github.com/metosin/ring-swagger) for the Swagger-bindings
+- [Ring-swagger](https://github.com/metosin/ring-swagger) for the Schema2Swagger -bindings
 - [Ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format) for all the http-transports
-- [Schema-tools](https://github.com/metosin/schema-tools) for web-schemas
+- [Compojure-api](https://github.com/metosin/compojure-api) for some middleware goodies
 
 ## License
 
