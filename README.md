@@ -2,20 +2,21 @@
 
 A library for creating and consuming remote APIs for Clojure(Script). http://kekkonen.io/
 
-Status: Alpha. `0.1.0` will be released soon.
+Status: **Alpha**, `0.1.0` will be released soon.
 
 # Mission statement
 
-We are building complex UIs and need better tools to support that. Focus should on consuming
-the apis, not just producing those (like REST does). One should be able to enforce business
-rules both on the client-side & the server-side. State and dependencies should be managed too.
+We are building complex UIs and need api libraries to support that. Instead of focusing how to to 
+provide the api, focus should be on how to easily consume them - context-aware validation business
+rules both on the server and in the client, transparent security and support for both pull & push.
+State and dependencies should be managed elegantly.
 
 # Idea
 
 - Simple **library** to create and consume apis
 - Expose simple Clojure **functions** as message handlers
 - Manage handlers in virtual **namespaces** to enable refactorings
-- **Schema** for describing all the things
+- **Schema** for data descriptions and coercion
 - Data-driven, no macros, **no magic**
 - Declarative dependencies and state management
 - Explicit **extensions** via protocols, options and **meta-data**
@@ -34,7 +35,7 @@ rules both on the client-side & the server-side. State and dependencies should b
 (ns example.api
   (:require [org.httpkit.server :as server]
             [kekkonen.cqrs :refer :all]
-            [plumbing.core :as p]
+            [plumbing.core :refer [defnk]]
             [schema.core :as s]))
 
 ;;
@@ -51,20 +52,20 @@ rules both on the client-side & the server-side. State and dependencies should b
 ;; Handlers
 ;;
 
-(p/defnk ^:query ping []
+(defnk ^:query ping []
   (success {:ping "pong"}))
 
-(p/defnk ^:command echo-pizza
+(defnk ^:command echo-pizza
   "Echoes a pizza"
   {:responses {:default {:schema Pizza}}}
   [data :- Pizza]
   (success data))
 
-(p/defnk ^:query plus
+(defnk ^:query plus
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
 
-(p/defnk ^:command inc!
+(defnk ^:command inc!
   [[:components counter]]
   (success {:result (swap! counter inc)}))
 
@@ -152,7 +153,7 @@ Sample result of endpoint `/kekkonen/get-handler?action=api.example/echo-pizza` 
 - [ ] ClojureScript client
 - [ ] JavaScript client
 - [ ] Re-kekkonen, a Reagent template
-- [ ] Emitting Events
+- [ ] Emitting Events / Websockets
 - [ ] Go fully async
 - [ ] Web-schemas
 
