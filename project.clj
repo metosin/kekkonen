@@ -17,6 +17,6 @@
   :profiles {:dev {:plugins [[lein-midje "3.1.3"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.7.0"]
-                                  [ring/ring-jetty-adapter "1.4.0"]
+                                  [http-kit "2.1.18"]
                                   [midje "1.7.0"]]}}
   :aliases {"test-ancient" ["midje"]})

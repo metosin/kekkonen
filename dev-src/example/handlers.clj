@@ -1,5 +1,5 @@
 (ns example.handlers
-  (:require [ring.adapter.jetty :as jetty]
+  (:require [org.httpkit.server :as server]
             [plumbing.core :as p]
             [ring.util.http-response :refer [ok]]
             [kekkonen.ring :as r]
@@ -23,17 +23,7 @@
         {:handlers {:api 'example.handlers}}))))
 
 (defn start []
-  (def server
-    (jetty/run-jetty
-      #'app
-      {:port 3000
-       :join? false})))
-
-(defn stop []
-  (.stop server))
+  (server/run-server #'app {:port 3000}))
 
 (comment
-  (start)
-  (stop))
-
-
+  (start))

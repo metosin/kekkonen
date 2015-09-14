@@ -1,5 +1,5 @@
 (ns example.cqrs
-  (:require [ring.adapter.jetty :as jetty]
+  (:require [org.httpkit.server :as server]
             [kekkonen.cqrs :refer :all]
             [plumbing.core :as p]
             [schema.core :as s]
@@ -115,12 +115,8 @@
             :user {:roles require-roles}}
      :ring {:transformers [api-key-authenticator]}}))
 
-(do
-  (defn start []
-    (jetty/run-jetty
-      #'app
-      {:port 3000
-       :join? false}))
+(defn start []
+  (server/run-server #'app {:port 3000}))
 
-  (comment
-    (start)))
+(comment
+  (start))

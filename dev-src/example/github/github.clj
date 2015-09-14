@@ -1,6 +1,6 @@
 (ns example.github.github
   (:require [example.github.security :as security]
-            [ring.adapter.jetty :as jetty]
+            [org.httpkit.server :as server]
             [kekkonen.cqrs :refer :all]
             [plumbing.core :as p]
             [schema.core :as s]))
@@ -132,11 +132,11 @@
      :ring {:transformers [security/api-key-authenticator]}}))
 
 ;;
-;; Main
+;; Start it
 ;;
 
+(defn start []
+  (server/run-server #'app {:port 3000}))
+
 (comment
-  (jetty/run-jetty
-    #'app
-    {:port 3000
-     :join? false}))
+  (start))
