@@ -105,7 +105,7 @@ be both a Clojure(Script) and JavaScript client libraries easy operation of thes
 * `get-handler` info a single handler.
 * `validate` runs all validations of the handler with the given context without calling the actual body.
 
-Sample result of http://localhost:3000/kekkonen/get-handler?action=api.example/echo-pizza as JSON:
+Sample result of endpoint `/kekkonen/get-handler?action=api.example/echo-pizza` as JSON:
 
 ```json
 {
