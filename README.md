@@ -28,6 +28,8 @@ rules both on the client-side & the server-side. State and dependencies should b
   
 # A Simple example
 
+## The Server
+
 ```clojure
 (ns example.api
   (:require [org.httpkit.server :as server]
@@ -92,6 +94,18 @@ Start the server and browse to http://localhost:3000 and you should see the foll
 
 ![swagger-example](https://raw.githubusercontent.com/wiki/metosin/kekkonen/swagger-example.png)
 
+## The Client
+
+The APIs prodive few extra endpoints for the clients to use, these are found at `kekkonen` namespace.
+
+* `get-all` all (exposed) handlers in the api
+* `get-available` all handlers that can be called by the user (runs validations without calling the body)
+* `get-validated` all handlers that can be called by the user with the given context.
+* `get-handler` info a single handler.
+* `validate` runs all validations of the handler with the given context without calling the actual body.
+
+There will be both a Clojure(Script) and JavaScript client libraries easy operation of these.
+
 # Special thanks
 
 - [Schema](https://github.com/Prismatic/schema) for everything
@@ -100,6 +114,18 @@ Start the server and browse to http://localhost:3000 and you should see the foll
 - [Ring-swagger](https://github.com/metosin/ring-swagger) for the Schema2Swagger -bindings
 - [Ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format) for all the http-transports
 - [Compojure-api](https://github.com/metosin/compojure-api) for some middleware goodies
+
+# TODO
+
+- [ ] Finalize things
+- [ ] Support Namespace-level user meta
+- [ ] Wiki tutorial, describing internals
+- [ ] ClojureScript client
+- [ ] JavaScript client
+- [ ] Re-kekkonen, a Reagent template
+- [ ] Emitting Events
+- [ ] Go fully async
+- [ ] Web-schemas
 
 ## License
 

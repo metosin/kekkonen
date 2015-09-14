@@ -318,6 +318,7 @@
         (pr-str x) x))
     schema))
 
+; TODO: pass Schemas as-is -> implement https://github.com/metosin/web-schemas
 (s/defn public-meta
   [handler :- Handler]
   (-> handler

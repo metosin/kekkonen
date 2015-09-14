@@ -5,7 +5,8 @@
             [ring.util.http-response :as hr]
             [ring.util.http-status :as hs]
             [ring.util.http-predicates :as hp]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [plumbing.core :as p]))
 
 ;;;
 ;;; statuses
@@ -44,7 +45,8 @@
       {:core {:type-resolver (k/type-resolver :command :query)
               :handlers {:kekkonen [(k/handler
                                       {:type :query
-                                       :name "all"}
+                                       :name "get-all"
+                                       :description "Returns a list of all handlers."}
                                       (fn [context]
                                         (success
                                           (->> context
@@ -53,13 +55,36 @@
                                                (map k/public-meta)))))
                                     (k/handler
                                       {:type :query
-                                       :name "available"}
+                                       :name "get-available"
+                                       :description "Returns a list of all available handlers."}
                                       (fn [context]
                                         (success
                                           (->> context
                                                k/get-registry
                                                ((partial k/available-handlers context))
-                                               (map k/public-meta)))))]}}
+                                               (map k/public-meta)))))
+                                    (k/handler
+                                      {:type :query
+                                       :name "get-handler"
+                                       :description "Returns a handler info or nil."}
+                                      (p/fnk [[:data action :- s/Keyword] :as context]
+                                        (success
+                                          (k/public-meta
+                                            (k/some-handler
+                                              (k/get-registry context)
+                                              action)))))
+                                    (k/handler
+                                      {:type :command
+                                       :name "validate"
+                                       :description "Validates an action against the given context."}
+                                      (p/fnk [[:request [:query-params action :- s/Keyword]]
+                                              data :- k/KeywordMap
+                                              :as context]
+                                        (success
+                                          (k/validate
+                                            (k/get-registry context)
+                                            action
+                                            context))))]}}
        :ring {:types {:query {:methods #{:get}
                               :parameters [[[:request :query-params] [:data]]]}
                       :command {:methods #{:post}

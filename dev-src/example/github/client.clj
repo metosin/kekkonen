@@ -38,7 +38,7 @@
     (:body (k/query context3 :/kekkonen/all)))
 
   (./pprint
-    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/all))))
+    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/get-all))))
 
   (./pprint
-    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/available)))))
+    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/get-available)))))
