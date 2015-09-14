@@ -96,7 +96,8 @@ Start the server and browse to http://localhost:3000 and you should see the foll
 
 ## The Client
 
-The APIs prodive few extra endpoints for the clients to use, these are found at `kekkonen` namespace.
+The APIs prodive few extra endpoints for the clients to use, these are found at `kekkonen` namespace. There will
+be both a Clojure(Script) and JavaScript client libraries easy operation of these.
 
 * `get-all` all (exposed) handlers in the api
 * `get-available` all handlers that can be called by the user (runs validations without calling the body)
@@ -104,7 +105,35 @@ The APIs prodive few extra endpoints for the clients to use, these are found at 
 * `get-handler` info a single handler.
 * `validate` runs all validations of the handler with the given context without calling the actual body.
 
-There will be both a Clojure(Script) and JavaScript client libraries easy operation of these.
+Sample result of http://localhost:3000/kekkonen/get-handler?action=api.example/echo-pizza as JSON:
+
+```json
+{
+    "action": "api.example/echo-pizza",
+    "input": {
+        "Keyword": "Any",
+        "data": {
+            "#schema.core.OptionalKey{:k :description}": "java.lang.String",
+            "name": "java.lang.String",
+            "origin": {
+                "country": "(enum :PO :FI)"
+            },
+            "size": "(enum :L :M :S)"
+        }
+    },
+    "name": "echo-pizza",
+    "ns": "api.example",
+    "output": "Any",
+    "source-map": {
+        "column": 1,
+        "file": "/Users/tommi/projects/metosin/kekkonen/dev-src/example/simple.clj",
+        "line": 24,
+        "name": "echo-pizza",
+        "ns": "example.api"
+    },
+    "type": "command"
+}
+```
 
 # Special thanks
 
