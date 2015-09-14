@@ -281,99 +281,116 @@
           (k/invoke k :api/plus {:data {:x 1}}) => throws?
           (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
 
-(fact "user-meta"
-  (let [k (k/create
-            {:handlers {:api (k/handler
-                               {:name :test
-                                ::roles #{:admin}}
-                               (p/fn-> :x))}
-             :user {::roles (fn [context allowed-roles]
-                              (let [role (::role context)]
-                                (if (allowed-roles role)
-                                  context
-                                  (throw (ex-info
-                                           "invalid role"
-                                           {:role role
-                                            :required allowed-roles})))))}})]
+(facts "user-meta"
+  (fact "on handler"
+    (let [k (k/create
+              {:handlers {:api (k/handler
+                                 {:name :test
+                                  ::roles #{:admin}}
+                                 (p/fn-> :x))}
+               :user {::roles (fn [context allowed-roles]
+                                (let [role (::role context)]
+                                  (if (allowed-roles role)
+                                    context
+                                    (throw (ex-info
+                                             "invalid role"
+                                             {:role role
+                                              :required allowed-roles})))))}})]
 
-    (k/all-handlers k) => (just [anything])
+      (k/all-handlers k) => (just [anything])
 
-    (k/invoke k :api/test {:x 1}) => (throws? {:role nil, :required #{:admin}})
-    (k/invoke k :api/test {:x 1 ::role :user}) => (throws? {:role :user, :required #{:admin}})
-    (k/invoke k :api/test {:x 1 ::role :admin}) => 1))
+      (k/invoke k :api/test {:x 1}) => (throws? {:role nil, :required #{:admin}})
+      (k/invoke k :api/test {:x 1 ::role :user}) => (throws? {:role :user, :required #{:admin}})
+      (k/invoke k :api/test {:x 1 ::role :admin}) => 1))
 
-(fact "context transformations"
-  (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
-        remove-ab (k/context-dissoc [:a :b])]
+  (fact "on namespaces"
+    (let [k (k/create
+              {:handlers {:api {(k/namespace
+                                  {:name :admin}) (k/handler {:name :test1} (p/fn-> :x))
+                                :public (k/handler {:name :test2} (p/fn-> :x))}}
+               :user {::roles (fn [context allowed-roles]
+                                (let [role (::role context)]
+                                  (if (allowed-roles role)
+                                    context
+                                    (throw (ex-info
+                                             "invalid role"
+                                             {:role role
+                                              :required allowed-roles})))))}})]
 
-    (copy-ab-to-cd {:a {:b 1}}) => {:a {:b 1} :c {:d 1}}
-    (remove-ab {:a {:b 1}}) => {}
-    ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
+      (k/all-handlers k) => (just [anything anything]))))
 
-(fact "transforming"
-  (s/with-fn-validation
-    (let [k (k/create {:handlers {:api (k/handler {:name :test} #(:y %))}
-                       :transformers [(k/context-copy [:x] [:y])
-                                      (k/context-dissoc [:x])]})]
+  (fact "context transformations"
+    (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
+          remove-ab (k/context-dissoc [:a :b])]
 
-      (fact "transformers are executed"
-        (k/invoke k :api/test {:x 1}) => 1))))
+      (copy-ab-to-cd {:a {:b 1}}) => {:a {:b 1} :c {:d 1}}
+      (remove-ab {:a {:b 1}}) => {}
+      ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
 
-(fact "transforming handlers"
-  (fact "enriching handlers"
-    (k/transform-handlers
-      (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-      (fn [handler]
-        (assoc handler :kikka :kukka)))
+  (fact "transforming"
+    (s/with-fn-validation
+      (let [k (k/create {:handlers {:api (k/handler {:name :test} #(:y %))}
+                         :transformers [(k/context-copy [:x] [:y])
+                                        (k/context-dissoc [:x])]})]
 
-    => (contains
-         {:handlers
-          (just
-            {:api
-             (just
-               {:test
-                (contains
-                  {:kikka :kukka})})})}))
+        (fact "transformers are executed"
+          (k/invoke k :api/test {:x 1}) => 1))))
 
-  (fact "stripping handlers"
-    (k/transform-handlers
-      (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-      (constantly nil)) => (contains {:handlers {}})))
+  (fact "transforming handlers"
+    (fact "enriching handlers"
+      (k/transform-handlers
+        (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+        (fn [handler]
+          (assoc handler :kikka :kukka)))
 
-(fact "invoke-time extra data"
-  (let [k (k/create {:handlers
-                     {:api
-                      [(k/handler
-                         {:name :registry}
-                         (partial k/get-registry))
-                       (k/handler
-                         {:name :handler
-                          :description "magic"}
-                         (partial k/get-handler))
-                       (k/handler
-                         {:name :names}
-                         (fn [context]
-                           (->> context
-                                k/get-registry
-                                k/all-handlers
-                                (map :name))))]}})]
-
-    (fact "::registry"
-      (s/validate k/Registry (k/invoke k :api/registry)) => truthy)
-
-    (fact "::handler"
-      (k/invoke k :api/handler) => (contains {:description "magic"}))
-
-    (fact "going meta boing boing"
-      (k/invoke k :api/names) => [:registry :handler :names])))
-
-; TODO: will override paths as we do merge
-(fact "handlers can be injected into existing registry"
-  (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
-              (k/inject (k/handler {:name :ping} identity)))]
-    k => (contains
+      => (contains
            {:handlers
             (just
-              {:api (just
-                      {:test anything})
-               :ping anything})})))
+              {:api
+               (just
+                 {:test
+                  (contains
+                    {:kikka :kukka})})})}))
+
+    (fact "stripping handlers"
+      (k/transform-handlers
+        (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+        (constantly nil)) => (contains {:handlers {}})))
+
+  (fact "invoke-time extra data"
+    (let [k (k/create {:handlers
+                       {:api
+                        [(k/handler
+                           {:name :registry}
+                           (partial k/get-registry))
+                         (k/handler
+                           {:name :handler
+                            :description "magic"}
+                           (partial k/get-handler))
+                         (k/handler
+                           {:name :names}
+                           (fn [context]
+                             (->> context
+                                  k/get-registry
+                                  k/all-handlers
+                                  (map :name))))]}})]
+
+      (fact "::registry"
+        (s/validate k/Registry (k/invoke k :api/registry)) => truthy)
+
+      (fact "::handler"
+        (k/invoke k :api/handler) => (contains {:description "magic"}))
+
+      (fact "going meta boing boing"
+        (k/invoke k :api/names) => [:registry :handler :names])))
+
+  ; TODO: will override paths as we do merge
+  (fact "handlers can be injected into existing registry"
+    (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+                (k/inject (k/handler {:name :ping} identity)))]
+      k => (contains
+             {:handlers
+              (just
+                {:api (just
+                        {:test anything})
+                 :ping anything})})))

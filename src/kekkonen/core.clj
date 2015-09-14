@@ -6,7 +6,8 @@
             [plumbing.fnk.pfnk :as pfnk]
             [kekkonen.common :as kc]
             [clojure.walk :as walk])
-  (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction]))
+  (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction Keyword])
+  (:refer-clojure :exclude [namespace]))
 
 ;;
 ;; Definitions
@@ -48,17 +49,6 @@
    s/Keyword s/Any})
 
 ;;
-;; Handlers
-;;
-
-(s/defn handler
-  [meta :- KeywordMap, f :- Function]
-  (vary-meta f merge {:type :handler} meta))
-
-(defn handler? [x]
-  (and (map? x) (:function x) (:type x)))
-
-;;
 ;; Type Resolution
 ;;
 
@@ -76,7 +66,7 @@
 (def default-type-resolver (type-resolver :handler))
 
 ;;
-;; Collecting
+;; Handlers
 ;;
 
 (s/defn ^:private user-meta [meta :- KeywordMap]
@@ -88,6 +78,27 @@
     :line :column :file :name :ns :doc
     ; plumbing details
     :schema :plumbing.fnk.impl/positional-info))
+
+(s/defn handler
+  [meta :- KeywordMap, f :- Function]
+  (assert (:name meta) "handler should have :name")
+  (vary-meta f merge {:type :handler} meta))
+
+(defn handler? [x]
+  (and (map? x) (:function x) (:type x)))
+
+;;
+;; Namespaces
+;;
+
+(s/defrecord Namespace [name :- s/Keyword, meta :- KeywordMap])
+
+(s/defn namespace [meta :- KeywordMap]
+  (->Namespace (:name meta) (dissoc meta :name)))
+
+;;
+;; Collection helpers
+;;
 
 (defprotocol CollectHandlers
   (-collect [this type-resolver]))
@@ -151,6 +162,11 @@
   (-collect [this type-resolver]
     (-collect-ns this type-resolver)))
 
+(extend-type Keyword
+  CollectHandlers
+  (-collect [this type-resolver]
+    (namespace {:name this})))
+
 (extend-type PersistentVector
   CollectHandlers
   (-collect [this type-resolver]
@@ -162,7 +178,7 @@
   CollectHandlers
   (-collect [this type-resolver]
     (p/for-map [[k v] this]
-      k (-collect v type-resolver))))
+      (-collect k type-resolver) (-collect v type-resolver))))
 
 ;;
 ;; Registry
@@ -349,3 +365,11 @@
   "Returns a function that dissocs in a value from from-kws in a context"
   (s/fn [context :- Context]
     (kc/dissoc-in context from-kws)))
+
+;;
+;;
+;;
+
+(./aprint
+  (collect {:api {:public []
+                  :admin []}}))
