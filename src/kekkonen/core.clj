@@ -261,6 +261,7 @@
              x))
          (:handlers registry)))}))
 
+; TODO: we should give separate root-handlers?
 (s/defn inject
   "Injects handlers into an existing Registry"
   [registry :- Registry, handler]

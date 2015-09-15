@@ -6,10 +6,11 @@ Status: **Alpha**, `0.1.0` will be released soon.
 
 # Mission statement
 
-We are building complex UIs and need api libraries to support that. Instead of focusing how to to 
-provide the api, focus should be on how to easily consume them - context-aware validation business
-rules both on the server and in the client, transparent security and support for both pull & push.
-State and dependencies should be managed elegantly.
+We are building complex UIs and need great remote api libraries to support that. APIs should be easy to
+create, compose and consume. They should be interaction- & domain-driven, not spec-driven (like the REST).
+Security should be inbuilt. One should be able to run the (context-aware) business rules both on the client
+and on the server without duplicating the code and logic. Both pull and push models should be supported.
+State and dependencies should be managed elegantly. The library should be named after a Finnish president.
 
 # Idea
 
@@ -21,7 +22,7 @@ State and dependencies should be managed elegantly.
 - Declarative dependencies and state management
 - Explicit **extensions** via protocols, options and **meta-data**
 - **Transports** abstracted away
-  - http via ring, websockets coming up
+  - http via ring, websockets or use the queues, Luke.
 - **Clients** as first-class citizens
   - Remote **api documentation** as clojure/json data
     - client helpers for both ClojureScript & Javascript
@@ -148,13 +149,12 @@ Sample result of endpoint `/kekkonen/get-handler?action=api.example/echo-pizza` 
 # TODO
 
 - [ ] Finalize things
-- [ ] Support Namespace-level user meta
 - [ ] Wiki tutorial, describing internals
 - [ ] ClojureScript client
 - [ ] JavaScript client
-- [ ] Re-kekkonen, a Reagent template
-- [ ] Emitting Events / Websockets
-- [ ] Go fully async
+- [ ] re-kekkonen, a Reagent template
+- [ ] Emitting Events / Websockets, towards Event Sourcing?
+- [ ] Ring -> Async
 - [ ] Web-schemas
 
 ## License
