@@ -71,7 +71,7 @@
 ;; Collecting
 ;;
 
-(defprotocol CollectHandlers
+(defprotocol Collector
   (-collect [this type-resolver]))
 
 (s/defn collect
@@ -105,7 +105,7 @@
 ;;
 
 (s/defrecord Namespace [name :- s/Keyword, meta :- KeywordMap]
-  CollectHandlers
+  Collector
   (-collect [this _]
     this))
 
@@ -116,77 +116,68 @@
 ;; Collection helpers
 ;;
 
-(defn- -collect-var [v type-resolver]
-  (if-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta v))]
-    (if (and name schema)
-      {(namespace
-         {:name (keyword name)})
-       {:function @v
-        :type type
-        :name (keyword name)
-        :user (user-meta meta)
-        :description doc
-        :input (pfnk/input-schema @v)
-        :output (pfnk/output-schema @v)
-        :source-map {:line line
-                     :column column
-                     :file file
-                     :ns (ns-name ns)
-                     :name name}}})
-    (throw (ex-info (format "Var %s can't be type-resolved" v) {:target v}))))
-
-(defn- -collect-fn [function type-resolver]
-  (if-let [{:keys [name description schema type input output] :as meta} (type-resolver (meta function))]
-    (if name
-      {(namespace
-         {:name (keyword name)})
-       {:function function
-        :type type
-        :name (keyword name)
-        :user (user-meta meta)
-        :description (or description "")
-        :input (or (and schema (pfnk/input-schema function)) input s/Any)
-        :output (or (and schema (pfnk/output-schema function)) output s/Any)}})
-    (throw (ex-info (format "Function %s can't be type-resolved" function) {:target function}))))
-
-(defn- -collect-ns [ns type-resolver]
-  (require ns)
-  (some->> ns
-           ns-publics
-           (map val)
-           (filter #(type-resolver (meta %)))
-           (map #(-collect-var % type-resolver))
-           (apply merge)))
-
 (extend-type AFunction
-  CollectHandlers
+  Collector
   (-collect [this type-resolver]
-    (-collect-fn this type-resolver)))
+    (if-let [{:keys [name description schema type input output] :as meta} (type-resolver (meta this))]
+      (if name
+        {(namespace
+           {:name (keyword name)})
+         {:function this
+          :type type
+          :name (keyword name)
+          :user (user-meta meta)
+          :description (or description "")
+          :input (or (and schema (pfnk/input-schema this)) input s/Any)
+          :output (or (and schema (pfnk/output-schema this)) output s/Any)}})
+      (throw (ex-info (format "Function %s can't be type-resolved" this) {:target this})))))
 
 (extend-type Var
-  CollectHandlers
+  Collector
   (-collect [this type-resolver]
-    (-collect-var this type-resolver)))
+    (if-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta this))]
+      (if (and name schema)
+        {(namespace
+           {:name (keyword name)})
+         {:function @this
+          :type type
+          :name (keyword name)
+          :user (user-meta meta)
+          :description doc
+          :input (pfnk/input-schema @this)
+          :output (pfnk/output-schema @this)
+          :source-map {:line line
+                       :column column
+                       :file file
+                       :ns (ns-name ns)
+                       :name name}}})
+      (throw (ex-info (format "Var %s can't be type-resolved" this) {:target this})))))
 
 (extend-type Symbol
-  CollectHandlers
+  Collector
   (-collect [this type-resolver]
-    (-collect-ns this type-resolver)))
+    (require this)
+    (some->> this
+             ns-publics
+             (map val)
+             (filter #(type-resolver (meta %)))
+             (map #(-collect % type-resolver))
+             (apply merge))))
 
 (extend-type Keyword
-  CollectHandlers
+  Collector
   (-collect [this _]
     (namespace {:name this})))
 
 (extend-type PersistentVector
-  CollectHandlers
+  Collector
   (-collect [this type-resolver]
     (->> this
          (map #(-collect % type-resolver))
          (apply merge))))
 
 (extend-type IPersistentMap
-  CollectHandlers
+  Collector
   (-collect [this type-resolver]
     (p/for-map [[k v] this]
       (-collect k type-resolver) (-collect v type-resolver))))
