@@ -21,6 +21,7 @@
 (def echo
   (k/handler
     {:description "this is a handler for echoing data"
+     :name :echo
      :summery "echoes data"}
     (fn [{:keys [data]}]
       data)))
@@ -31,6 +32,7 @@
 (def ^:handler plus
   (k/handler
     {:description "fnk echo"
+     :name :fnkecho
      :summery "echoes data"}
     (p/fnk [[:data x :- s/Int, y :- s/Int]]
       (+ x y))))
