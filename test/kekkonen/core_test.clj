@@ -3,7 +3,8 @@
             [kekkonen.midje :refer :all]
             [midje.sweet :refer :all]
             [schema.core :as s]
-            [plumbing.core :as p]))
+            [plumbing.core :as p]
+            [clojure.set :as set]))
 
 ;;
 ;; test handlers
@@ -178,7 +179,7 @@
                                                     s/Keyword s/Any}
                                             :output User
                                             :source-map (just
-                                                          {:line 38
+                                                          {:line 39
                                                            :column 1
                                                            :file string?
                                                            :ns 'kekkonen.core-test
@@ -286,42 +287,67 @@
           (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
 
 (facts "user-meta"
-  (fact "on handler"
-    (let [k (k/create
-              {:handlers {:api (k/handler
-                                 {:name :test
-                                  ::roles #{:admin}}
-                                 (p/fn-> :x))}
-               :user {::roles (fn [context allowed-roles]
-                                (let [role (::role context)]
-                                  (if (allowed-roles role)
-                                    context
-                                    (throw (ex-info
-                                             "invalid role"
-                                             {:role role
-                                              :required allowed-roles})))))}})]
+  (let [role-enforcer (fn [context required-roles]
+                        (let [roles (::roles context)]
+                          (if (seq (set/intersection roles required-roles))
+                            context
+                            (throw (ex-info
+                                     "invalid role"
+                                     {:roles roles
+                                      :required required-roles})))))]
+    (fact "on handler"
+      (let [k (k/create
+                {:handlers {:api (k/handler
+                                   {:name :test
+                                    ::roles #{:admin}}
+                                   (p/fn-> :x))}
+                 :user {::roles role-enforcer}})]
 
-      (k/all-handlers k) => (just [anything])
+        (fact "user-meta is populated correctly"
+          (k/all-handlers k) => (just [(contains {:user {::roles #{:admin}}
+                                                  :ns-user []
+                                                  :all-user [{::roles #{:admin}}]})]))
 
-      (k/invoke k :api/test {:x 1}) => (throws? {:role nil, :required #{:admin}})
-      (k/invoke k :api/test {:x 1 ::role :user}) => (throws? {:role :user, :required #{:admin}})
-      (k/invoke k :api/test {:x 1 ::role :admin}) => 1))
+        (fact "invoking api enforces rules"
 
-  (fact "on namespaces"
-    (let [k (k/create
-              {:handlers {:api {(k/namespace
-                                  {:name :admin}) (k/handler {:name :test1} (p/fn-> :x))
-                                :public (k/handler {:name :test2} (p/fn-> :x))}}
-               :user {::roles (fn [context allowed-roles]
-                                (let [role (::role context)]
-                                  (if (allowed-roles role)
-                                    context
-                                    (throw (ex-info
-                                             "invalid role"
-                                             {:role role
-                                              :required allowed-roles})))))}})]
+          (k/invoke k :api/test {:x 1})
+          => (throws? {:roles nil, :required #{:admin}})
 
-      (k/all-handlers k) => (just [anything anything]))))
+          (k/invoke k :api/test {:x 1 ::roles #{:user}})
+          => (throws? {:roles #{:user}, :required #{:admin}})
+
+          (k/invoke k :api/test {:x 1 ::roles #{:admin}})
+          => 1)))
+
+    (fact "nested rules on namespaces"
+      (let [handler (k/handler {:name :test, ::roles #{:superadmin}} (p/fn-> :x))
+            api-ns (k/namespace {:name :api, ::roles #{:anyone}})
+            admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
+            k (k/create
+                {:handlers {api-ns {admin-ns handler}}
+                 :user {::roles role-enforcer}})]
+
+        (fact "user-meta is populated correctly"
+          (k/all-handlers k) => (just [(contains {:user {::roles #{:superadmin}}
+                                                  :ns-user [{::roles #{:anyone}}
+                                                            {::roles #{:admin}}]
+                                                  :all-user [{::roles #{:anyone}}
+                                                             {::roles #{:admin}}
+                                                             {::roles #{:superadmin}}]})]))
+
+        (fact "invoking api enforces rules"
+
+          (k/invoke k :api/admin/test {:x 1})
+          => (throws? {:roles nil, :required #{:anyone}})
+
+          (k/invoke k :api/admin/test {:x 1 ::roles #{:anyone}})
+          => (throws? {:roles #{:anyone}, :required #{:admin}})
+
+          (k/invoke k :api/admin/test {:x 1 ::roles #{:anyone, :admin}})
+          => (throws? {:roles #{:anyone :admin}, :required #{:superadmin}})
+
+          (k/invoke k :api/admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
+          => 1)))))
 
 (fact "context transformations"
   (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])

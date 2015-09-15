@@ -31,6 +31,8 @@
    :ns (s/maybe s/Keyword)
    :action s/Keyword
    :user KeywordMap
+   (s/optional-key :ns-user) [KeywordMap]
+   (s/optional-key :all-user) [KeywordMap]
    :description (s/maybe s/Str)
    :input s/Any
    :output s/Any
@@ -208,16 +210,21 @@
    :type-resolver default-type-resolver
    :user {}})
 
+;; TODO: just collect handlers into a list?
 (defn- collect-and-enrich
   [handlers type-resolver allow-empty-namespaces?]
-  (let [handler-action (fn [n ns]
-                         (keyword (str/join "/" (map name (filter identity [ns n])))))
+  (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
+        collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
+        handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
         enrich (fn [h m]
                  (if (or (seq m) allow-empty-namespaces?)
-                   (let [ns (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword))
-                         ns-user (if (seq m) (->> m (map :meta) (filterv (complement empty?))))]
+                   (let [ns (handler-ns m)
+                         ns-user (collect-ns-meta m)
+                         user-meta (:user h)
+                         all-user (if-not (empty? user-meta) (conj ns-user user-meta) ns-user)]
                      (merge h {:ns ns
                                :ns-user ns-user
+                               :all-user all-user
                                :action (handler-action (:name h) ns)}))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
@@ -277,7 +284,7 @@
   "Prepares a context for invocation or validation. Returns an 0-arity function
   or throws exception."
   [registry :- Registry, action :- s/Keyword, context :- Context]
-  (if-let [{:keys [function user] :as handler} (some-handler registry action)]
+  (if-let [{:keys [function all-user] :as handler} (some-handler registry action)]
     (let [context (as-> context context
                         (kc/deep-merge (:context registry) context)
                         (reduce
@@ -291,7 +298,7 @@
                               (mapper context v)
                               context))
                           context
-                          user)
+                          (apply concat all-user))
                         (merge context {::registry registry
                                         ::handler handler}))]
       (fn [invoke?]
