@@ -111,7 +111,7 @@
                :input {:name s/Str}}
               identity)
             k/default-type-resolver) => (just
-                                          {:echo
+                                          {(k/namespace {:name :echo})
                                            (just
                                              {:function fn?
                                               :description ""
@@ -128,7 +128,7 @@
                :type :kikka}
               identity)
             k/any-type-resolver) => (just
-                                      {:echo
+                                      {(k/namespace {:name :echo})
                                        (contains
                                          {:type :kikka})})))
 
@@ -141,7 +141,7 @@
              :roles #{:admin :user}}
             (p/fnk f :- User [data :- User] data))
           k/default-type-resolver) => (just
-                                        {:echo
+                                        {(k/namespace {:name :echo})
                                          (just
                                            {:function fn?
                                             :type :handler
@@ -167,7 +167,7 @@
         (k/collect
           #'echo
           k/default-type-resolver) => (just
-                                        {:echo
+                                        {(k/namespace {:name :echo})
                                          (just
                                            {:function fn?
                                             :type :handler
@@ -192,12 +192,12 @@
 
         (count handlers) => 6
         handlers => (just
-                      {:ping k/handler?
-                       :get-items k/handler?
-                       :add-item! k/handler?
-                       :reset-items! k/handler?
-                       :echo k/handler?
-                       :plus k/handler?})))))
+                      {(k/namespace {:name :ping}) k/handler?
+                       (k/namespace {:name :get-items}) k/handler?
+                       (k/namespace {:name :add-item!}) k/handler?
+                       (k/namespace {:name :reset-items!}) k/handler?
+                       (k/namespace {:name :echo}) k/handler?
+                       (k/namespace {:name :plus}) k/handler?})))))
 
 (fact "registry"
   (s/with-fn-validation

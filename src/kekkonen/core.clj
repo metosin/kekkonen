@@ -66,6 +66,17 @@
 (def default-type-resolver (type-resolver :handler))
 
 ;;
+;; Collecting
+;;
+
+(defprotocol CollectHandlers
+  (-collect [this type-resolver]))
+
+(s/defn collect
+  [collector type-resolver]
+  (-collect collector type-resolver))
+
+;;
 ;; Handlers
 ;;
 
@@ -91,7 +102,10 @@
 ;; Namespaces
 ;;
 
-(s/defrecord Namespace [name :- s/Keyword, meta :- KeywordMap])
+(s/defrecord Namespace [name :- s/Keyword, meta :- KeywordMap]
+  CollectHandlers
+  (-collect [this _]
+    this))
 
 (s/defn namespace [meta :- KeywordMap]
   (->Namespace (:name meta) (dissoc meta :name)))
@@ -100,40 +114,37 @@
 ;; Collection helpers
 ;;
 
-(defprotocol CollectHandlers
-  (-collect [this type-resolver]))
-
-(s/defn collect
-  [collector type-resolver]
-  (-collect collector type-resolver))
-
 (defn- -collect-var [v type-resolver]
   (if-let [{:keys [line column file ns name doc schema type] :as meta} (type-resolver (meta v))]
     (if (and name schema)
-      {(keyword name) {:function @v
-                       :type type
-                       :name (keyword name)
-                       :user (user-meta meta)
-                       :description doc
-                       :input (pfnk/input-schema @v)
-                       :output (pfnk/output-schema @v)
-                       :source-map {:line line
-                                    :column column
-                                    :file file
-                                    :ns (ns-name ns)
-                                    :name name}}})
+      {(namespace
+         {:name (keyword name)})
+       {:function @v
+        :type type
+        :name (keyword name)
+        :user (user-meta meta)
+        :description doc
+        :input (pfnk/input-schema @v)
+        :output (pfnk/output-schema @v)
+        :source-map {:line line
+                     :column column
+                     :file file
+                     :ns (ns-name ns)
+                     :name name}}})
     (throw (ex-info (format "Var %s can't be type-resolved" v) {:target v}))))
 
 (defn- -collect-fn [function type-resolver]
   (if-let [{:keys [name description schema type input output] :as meta} (type-resolver (meta function))]
     (if name
-      {(keyword name) {:function function
-                       :type type
-                       :name (keyword name)
-                       :user (user-meta meta)
-                       :description (or description "")
-                       :input (or (and schema (pfnk/input-schema function)) input s/Any)
-                       :output (or (and schema (pfnk/output-schema function)) output s/Any)}})
+      {(namespace
+         {:name (keyword name)})
+       {:function function
+        :type type
+        :name (keyword name)
+        :user (user-meta meta)
+        :description (or description "")
+        :input (or (and schema (pfnk/input-schema function)) input s/Any)
+        :output (or (and schema (pfnk/output-schema function)) output s/Any)}})
     (throw (ex-info (format "Function %s can't be type-resolved" function) {:target function}))))
 
 (defn- -collect-ns [ns type-resolver]
@@ -162,7 +173,7 @@
 
 (extend-type Keyword
   CollectHandlers
-  (-collect [this type-resolver]
+  (-collect [this _]
     (namespace {:name this})))
 
 (extend-type PersistentVector
@@ -203,15 +214,17 @@
                          (keyword (str/join "/" (map name (filter identity [ns n])))))
         enrich (fn [h m]
                  (if (or (seq m) allow-empty-namespaces?)
-                   (let [ns (if (seq m) (->> m (map name) (str/join ".") keyword))]
+                   (let [ns (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword))
+                         ns-user (if (seq m) (->> m (map :meta) (filterv (complement empty?))))]
                      (merge h {:ns ns
+                               :ns-user ns-user
                                :action (handler-action (:name h) ns)}))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
                    (p/for-map [[k v] x]
-                     k (if (handler? v)
-                         (enrich v m)
-                         (traverse v (conj m k)))))]
+                     (:name k) (if (handler? v)
+                                 (enrich v m)
+                                 (traverse v (conj m k)))))]
     (traverse (collect handlers type-resolver) [])))
 
 (s/defn create :- Registry
@@ -363,11 +376,3 @@
   "Returns a function that dissocs in a value from from-kws in a context"
   (s/fn [context :- Context]
     (kc/dissoc-in context from-kws)))
-
-;;
-;;
-;;
-
-(./aprint
-  (collect {:api {:public []
-                  :admin []}}))
