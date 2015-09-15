@@ -286,12 +286,18 @@
   [registry :- Registry, action :- s/Keyword, context :- Context]
   (if-let [{:keys [function all-user] :as handler} (some-handler registry action)]
     (let [context (as-> context context
+
+                        ;; base-context from Registry
                         (kc/deep-merge (:context registry) context)
+
+                        ;; run all the transformers
                         (reduce
                           (fn [context mapper]
                             (mapper context))
                           context
                           (:transformers registry))
+
+                        ;; run all the user transformers per namespace/handler, start from the root
                         (reduce
                           (fn [context [k v]]
                             (if-let [mapper (get-in registry [:user k])]
@@ -299,6 +305,8 @@
                               context))
                           context
                           (apply concat all-user))
+
+                        ;; inject in stuff the context
                         (merge context {::registry registry
                                         ::handler handler}))]
       (fn [invoke?]

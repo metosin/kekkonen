@@ -320,9 +320,9 @@
           => 1)))
 
     (fact "nested rules on namespaces"
-      (let [handler (k/handler {:name :test, ::roles #{:superadmin}} (p/fn-> :x))
-            api-ns (k/namespace {:name :api, ::roles #{:anyone}})
+      (let [api-ns (k/namespace {:name :api, ::roles #{:anyone}})
             admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
+            handler (k/handler {:name :test, ::roles #{:superadmin}} (p/fn-> :x))
             k (k/create
                 {:handlers {api-ns {admin-ns handler}}
                  :user {::roles role-enforcer}})]
@@ -337,16 +337,16 @@
 
         (fact "invoking api enforces rules"
 
-          (k/invoke k :api/admin/test {:x 1})
+          (k/invoke k :api.admin/test {:x 1})
           => (throws? {:roles nil, :required #{:anyone}})
 
-          (k/invoke k :api/admin/test {:x 1 ::roles #{:anyone}})
+          (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone}})
           => (throws? {:roles #{:anyone}, :required #{:admin}})
 
-          (k/invoke k :api/admin/test {:x 1 ::roles #{:anyone, :admin}})
+          (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone, :admin}})
           => (throws? {:roles #{:anyone :admin}, :required #{:superadmin}})
 
-          (k/invoke k :api/admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
+          (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
           => 1)))))
 
 (fact "context transformations"
