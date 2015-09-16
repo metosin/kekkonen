@@ -27,10 +27,10 @@
   (s/with-fn-validation
     (let [options (kc/deep-merge +default-options+ options)
           info (merge (:info options) (mw/api-info (:mw options)))
-          kekkonen (-> (k/create (:core options))
+          registry (-> (k/create (:core options))
                        (k/inject (ks/swagger-handler info options)))]
       (mw/api-middleware
         (r/routes
-          [(r/ring-handler kekkonen (:ring options))
+          [(r/ring-handler registry (:ring options))
            (ks/swagger-ui (:swagger-ui options))])
         (:mw options)))))

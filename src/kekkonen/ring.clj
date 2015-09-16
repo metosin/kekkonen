@@ -6,7 +6,10 @@
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
             [clojure.string :as str]
+            [ring.swagger.json-schema :as rsjs]
             [clojure.walk :as walk]))
+
+(def ^:private mode-parameter "kekkonen.mode")
 
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
@@ -60,36 +63,46 @@
       (if-let [schema (get-in handler [:ring :input :request k])]
         (let [value (get request k {})
               coerced (coerce! schema matcher value k ::request)]
-          (assoc request k coerced))
+          (if-not (empty? value)
+            (assoc request k coerced)
+            request))
         request))
     request
     coercion))
 
-(defn ring-input-schema [input parameters]
+(defn- ring-input-schema [input parameters]
   (if parameters
     (reduce kc/move-to-from input parameters)
     input))
 
+(defn- attach-mode-parameter [schema]
+  (let [key (s/optional-key mode-parameter)
+        value (rsjs/describe (s/enum "invoke" "validate") "mode" :default "invoke")
+        extra-keys-schema (s/find-extra-keys-schema (get-in schema [:request :header-params]))]
+    (update-in schema [:request :header-params] merge {key value} (if-not extra-keys-schema {s/Any s/Any}))))
+
+(defn is-validate-request? [request]
+  (= (get-in request [:header-params mode-parameter]) "validate"))
+
 (s/defn attach-ring-meta
   [options :- Options, handler :- k/Handler]
   (let [type-config (get (:types options) (:type handler))
-        input-schema (ring-input-schema (:input handler) (:parameters type-config))]
+        input-schema (-> (:input handler)
+                         (ring-input-schema (:parameters type-config))
+                         attach-mode-parameter)]
     (assoc handler :ring {:type-config type-config
                           :input input-schema})))
 
-(defn is-validate-request? [request]
-  (= (get-in request [:headers "kekkonen.mode"]) "validate"))
-
 (s/defn ring-handler
-  "Creates a ring handler from Kekkonen and options."
-  ([kekkonen]
-    (ring-handler kekkonen {}))
-  ([kekkonen, options :- k/KeywordMap]
+  "Creates a ring handler from Registry and options."
+  ([registry :- k/Registry]
+    (ring-handler registry {}))
+  ([registry :- k/Registry, options :- k/KeywordMap]
     (let [options (kc/deep-merge +default-options+ options)
-          kekkonen (k/transform-handlers kekkonen (partial attach-ring-meta options))]
+          registry (k/transform-handlers registry (partial attach-ring-meta options))]
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
-          (if-let [handler (k/some-handler kekkonen action)]
+          (if-let [handler (k/some-handler registry action)]
             (if-let [type-config (-> handler :ring :type-config)]
               (if (get (:methods type-config) request-method)
                 (let [request (coerce-request! request handler options)
@@ -101,8 +114,8 @@
                                     ;; map parameters from ring-request into common keys
                                     (reduce kc/deep-merge-from-to context (:parameters type-config)))]
                   (if (is-validate-request? request)
-                    {:body (k/validate kekkonen action context)}
-                    (let [response (k/invoke kekkonen action context)]
+                    {:status 200, :headers {}, :body (k/validate registry action context)}
+                    (let [response (k/invoke registry action context)]
                       (if-let [responses (-> handler :user :responses)]
                         (let [status (or (:status response) 200)
                               schema (get-in responses [status :schema])
@@ -114,22 +127,22 @@
                             response))
                         response))))))))))))
 
-  (s/defn routes :- k/Function
-    "Creates a ring handler of multiples handlers, matches in orcer."
-    [ring-handlers :- [k/Function]]
-    (apply some-fn ring-handlers))
+(s/defn routes :- k/Function
+  "Creates a ring handler of multiples handlers, matches in orcer."
+  [ring-handlers :- [k/Function]]
+  (apply some-fn ring-handlers))
 
-  (s/defn match
-    ([match-uri ring-handler]
-      (match match-uri identity ring-handler))
-    ([match-uri match-request-method ring-handler]
-      (fn [{:keys [uri request-method] :as request}]
-        (if (and (= match-uri uri)
-                 (match-request-method request-method))
-          (ring-handler request)))))
+(s/defn match
+  ([match-uri ring-handler]
+    (match match-uri identity ring-handler))
+  ([match-uri match-request-method ring-handler]
+    (fn [{:keys [uri request-method] :as request}]
+      (if (and (= match-uri uri)
+               (match-request-method request-method))
+        (ring-handler request)))))
 
-  (s/defn keywordize-keys
-    "Returns a function, that keywordizes keys in a given path in context"
-    [in :- [s/Any]]
-    (fn [context]
-      (update-in context in walk/keywordize-keys)))
+(s/defn keywordize-keys
+  "Returns a function, that keywordizes keys in a given path in context"
+  [in :- [s/Any]]
+  (fn [context]
+    (update-in context in walk/keywordize-keys)))

@@ -12,7 +12,7 @@
   (r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!")
 
 (fact "ring-input-schema"
-  (r/ring-input-schema
+  (@#'r/ring-input-schema
     {:data {:d s/Str}
      :request {:query-params {:q s/Str}
                :body-params {:b s/Str}}}
@@ -123,7 +123,27 @@
            {:type :kekkonen.ring/response
             :in :response
             :value {:value 1}
-            :schema {:value s/Str}}))))
+            :schema {:value s/Str}}))
+
+    (fact "validation"
+
+      (fact "missing parameters throws errors as expected"
+        (app {:uri "/api/plus"
+              :request-method :post
+              :query-params {:x "1"}
+              :header-params {"kekkonen.mode" "validate"}})
+
+        => (throws?
+             {:type :kekkonen.ring/request
+              :in :query-params
+              :value {:x "1"}
+              :schema {:x s/Int, :y s/Int s/Keyword s/Any}}))
+
+      (fact "all good returns ok nil"
+        (app {:uri "/api/plus"
+              :request-method :post
+              :query-params {:x "1" :y "2"}
+              :header-params {"kekkonen.mode" "validate"}}) => (ok nil)))))
 
 (facts "mapping"
   (facts "default body-params -> data"
@@ -189,6 +209,9 @@
                                 (let [user (get-in context [:request :header-params "user"])]
                                   (assoc context ::user user)))]})]
 
-    (app {:uri "/api/test" :request-method :post}) => {:user nil}
-    (app {:uri "/api/test" :request-method :post
+    (app {:uri "/api/test"
+          :request-method :post}) => {:user nil}
+
+    (app {:uri "/api/test"
+          :request-method :post
           :header-params {"user" "tommi"}}) => {:user "tommi"}))

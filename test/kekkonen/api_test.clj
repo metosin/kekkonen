@@ -40,7 +40,14 @@
                    :paths (just
                             {:/api/ping
                              {:post
-                              {:responses
+                              {:parameters [{:in "header"
+                                             :name "kekkonen.mode"
+                                             :description "mode"
+                                             :type "string"
+                                             :enum ["invoke" "validate"]
+                                             :default "invoke"
+                                             :required false}]
+                               :responses
                                {:default
                                 {:description ""}}
                                :tags ["api"]}}})})))

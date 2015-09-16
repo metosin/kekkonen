@@ -20,12 +20,12 @@
   (ok [x y z body-params]))
 
 (fact "swagger-docs"
-  (let [kekkonen (k/transform-handlers
+  (let [registry (k/transform-handlers
                    (k/create {:handlers {:api {:admin #'echo}}})
                    (partial r/attach-ring-meta r/+default-options+))
 
         swagger (ks/ring-swagger
-                  kekkonen
+                  registry
                   {:info {:version "1.0.0"
                           :title "Kekkonen"
                           :description "Kekkonen Swagger API"}})]
@@ -38,7 +38,8 @@
                   :paths {"/api/admin/echo"
                           {:post
                            {:parameters {:body {:country (s/enum :CA :FI)}
-                                         :header {:z s/Bool, s/Keyword s/Any}
+                                         :header {:z s/Bool, s/Keyword s/Any
+                                                  (s/optional-key "kekkonen.mode") (s/enum "invoke" "validate")}
                                          :path {:y s/Int, s/Keyword s/Any}
                                          :query {:x [s/Str], s/Keyword s/Any}}
                             :responses {200 {:schema {:x [s/Str]
