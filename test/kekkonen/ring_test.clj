@@ -131,7 +131,7 @@
         (app {:uri "/api/plus"
               :request-method :post
               :query-params {:x "1"}
-              :header-params {"kekkonen.mode" "validate"}})
+              :headers {"kekkonen.mode" "validate"}})
 
         => (throws?
              {:type :kekkonen.ring/request
@@ -143,7 +143,7 @@
         (app {:uri "/api/plus"
               :request-method :post
               :query-params {:x "1" :y "2"}
-              :header-params {"kekkonen.mode" "validate"}}) => (ok nil)))))
+              :headers {"kekkonen.mode" "validate"}}) => (ok nil)))))
 
 (facts "mapping"
   (facts "default body-params -> data"

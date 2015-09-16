@@ -82,7 +82,7 @@
     (update-in schema [:request :header-params] merge {key value} (if-not extra-keys-schema {s/Any s/Any}))))
 
 (defn is-validate-request? [request]
-  (= (get-in request [:header-params mode-parameter]) "validate"))
+  (= (get-in request [:headers mode-parameter]) "validate"))
 
 (s/defn attach-ring-meta
   [options :- Options, handler :- k/Handler]
