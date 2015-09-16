@@ -220,12 +220,29 @@
           (count (k/all-handlers k)) => 6)
 
         (fact "non-existing action"
-          (k/some-handler k :test/non-existing) => nil
-          (k/invoke k :test/non-existing) => throws?)
 
-        (fact "existing action contains :type, :ns and :action"
-          (k/some-handler k :test/ping) => (contains {:type :handler, :ns :test, :action :test/ping})
-          (k/invoke k :test/ping) => "pong")
+          (fact "is nil"
+            (k/some-handler k :test/non-existing) => nil)
+
+          (fact "cann't be validated (against a context)"
+            (k/validate k :test/non-existing) => throws?)
+
+          (fact "can be invoked (with a context)"
+            (k/invoke k :test/non-existing) => throws?))
+
+        (facts "existing action"
+
+          (fact "contains :type, :ns and :action"
+            (k/some-handler k :test/ping) => (contains
+                                               {:ns :test
+                                                :type :handler
+                                                :action :test/ping}))
+
+          (fact "can be validated (against a context)"
+            (k/validate k :test/ping) => nil)
+
+          (fact "can be invoked (with a context)"
+            (k/invoke k :test/ping) => "pong"))
 
         (fact "crud via registry"
           (k/invoke k :test/get-items) => #{}
@@ -277,13 +294,24 @@
     (fact "sub-context"
       (let [k (k/create {:handlers {:api #'plus}})]
 
+        (k/validate k :api/plus {}) => throws?
         (k/invoke k :api/plus {}) => throws?
+
+        (k/validate k :api/plus {:data {:x 1}}) => throws?
         (k/invoke k :api/plus {:data {:x 1}}) => throws?
+
+        (k/validate k :api/plus {:data {:x 1, :y 2}}) => nil
         (k/invoke k :api/plus {:data {:x 1, :y 2}}) => 3
 
         (let [k (k/with-context k {:data {:x 1}})]
+
+          (k/validate k :api/plus {}) => throws?
           (k/invoke k :api/plus {}) => throws?
+
+          (k/validate k :api/plus {:data {:x 1}}) => throws?
           (k/invoke k :api/plus {:data {:x 1}}) => throws?
+
+          (k/validate k :api/plus {:data {:y 2}}) => nil
           (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
 
 (facts "user-meta"

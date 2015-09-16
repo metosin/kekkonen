@@ -303,8 +303,7 @@
                                         ::handler handler}))]
       (fn [invoke?]
         (if invoke?
-          (function context)
-          true)))
+          (function context))))
     (throw (ex-info (str "Invalid action " action) {}))))
 
 (s/defn invoke
@@ -315,9 +314,10 @@
     ((prepare registry action context) true)))
 
 (s/defn validate
-  "Checks if context is valid for the handler (without calling the body)"
+  "Checks if context is valid for the handler (without calling the body).
+  Returns nil or throws an exception."
   ([registry :- Registry, action :- s/Keyword]
-    (prepare registry action {}))
+    (validate registry action {}))
   ([registry :- Registry, action :- s/Keyword, context :- Context]
     ((prepare registry action context) false)))
 
