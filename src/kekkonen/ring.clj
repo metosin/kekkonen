@@ -77,6 +77,9 @@
     (assoc handler :ring {:type-config type-config
                           :input input-schema})))
 
+(defn is-validate-request? [request]
+  (= (get-in request [:headers "kekkonen.mode"]) "validate"))
+
 (s/defn ring-handler
   "Creates a ring handler from Kekkonen and options."
   ([kekkonen]
@@ -96,19 +99,20 @@
                                     ;; type-level transformers
                                     (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config))
                                     ;; map parameters from ring-request into common keys
-                                    (reduce kc/deep-merge-from-to context (:parameters type-config)))
-                      response (k/invoke kekkonen action context)
-                      responses (-> handler :user :responses)]
-                  (if responses
-                    (let [status (or (:status response) 200)
-                          schema (get-in responses [status :schema])
-                          matcher (get-in options [:coercion :body-params])
-                          value (:body response)]
-                      (if schema
-                        (let [coerced (coerce! schema matcher value :response ::response)]
-                          (assoc response :body coerced))
-                        response))
-                    response))))))))))
+                                    (reduce kc/deep-merge-from-to context (:parameters type-config)))]
+                  (if (is-validate-request? request)
+                    {:body (k/validate kekkonen action context)}
+                    (let [response (k/invoke kekkonen action context)]
+                      (if-let [responses (-> handler :user :responses)]
+                        (let [status (or (:status response) 200)
+                              schema (get-in responses [status :schema])
+                              matcher (get-in options [:coercion :body-params])
+                              value (:body response)]
+                          (if schema
+                            (let [coerced (coerce! schema matcher value :response ::response)]
+                              (assoc response :body coerced))
+                            response))
+                        response))))))))))))
 
   (s/defn routes :- k/Function
     "Creates a ring handler of multiples handlers, matches in orcer."

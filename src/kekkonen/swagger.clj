@@ -19,6 +19,8 @@
         ;; deep-merge back the mappings to get right request requirements
         input (reduce kc/deep-merge-to-from input parameters)
         {:keys [body-params query-params path-params header-params]} (:request input)
+        ;; TODO: do this on the ring side. no spaghetti.
+        header-params (assoc header-params :kekkonen.mode (s/enum "invoke" "validate"))
         methods (-> type-config :methods sort)
         path (r/handler-uri handler)]
 
