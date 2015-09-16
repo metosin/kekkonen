@@ -72,19 +72,7 @@
                                           (k/public-meta
                                             (k/some-handler
                                               (k/get-registry context)
-                                              action)))))
-                                    (k/handler
-                                      {:type :command
-                                       :name "validate"
-                                       :description "Validates an action against the given context."}
-                                      (p/fnk [[:request [:query-params action :- s/Keyword]]
-                                              data :- k/KeywordMap
-                                              :as context]
-                                        (success
-                                          (k/validate
-                                            (k/get-registry context)
-                                            action
-                                            context))))]}}
+                                              action)))))]}}
        :ring {:types {:query {:methods #{:get}
                               :parameters [[[:request :query-params] [:data]]]}
                       :command {:methods #{:post}

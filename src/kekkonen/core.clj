@@ -355,10 +355,10 @@
 ; TODO: pass Schemas as-is -> implement https://github.com/metosin/web-schemas
 (s/defn public-meta
   [handler :- Handler]
-  (-> handler
-      (select-keys [:input :name :ns :output :source-map :type :action])
-      (update :input stringify-schema)
-      (update :output stringify-schema)))
+  (some-> handler
+          (select-keys [:input :name :ns :output :source-map :type :action])
+          (update :input stringify-schema)
+          (update :output stringify-schema)))
 
 ;;
 ;; Working with contexts

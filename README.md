@@ -8,15 +8,15 @@ Status: **Alpha**, `0.1.0` will be released soon.
 
 We are building complex UIs and need great remote api libraries to support that. APIs should be easy to
 create, compose and consume. They should be interaction- & domain-driven, not spec-driven (like the REST).
-Security should be inbuilt. One should be able to run the (context-aware) business rules both on the client
-and on the server without duplicating the code and logic. Both pull and push models should be supported.
-State and dependencies should be managed elegantly. The library should be named after a Finnish president.
+Security should be inbuilt. One should be able to validate business rules both on the client and on the server
+without duplicating the code and logic. Data should flow both ways. State and dependencies should be managed
+elegantly. The library should be named after a Finnish president.
 
 # Idea
 
 - Simple **library** to create and consume apis
 - Expose simple Clojure **functions** as message handlers
-- Manage handlers in virtual **namespaces** to enable refactorings
+- Manage handlers in virtual **namespaces** to enable refactoring
 - **Schema** for data descriptions and coercion
 - Data-driven, no macros, **no magic**
 - Declarative dependencies and state management
@@ -24,13 +24,14 @@ State and dependencies should be managed elegantly. The library should be named 
 - **Transports** abstracted away
   - http via ring, websockets or use the queues, Luke.
 - **Clients** as first-class citizens
-  - Remote **api documentation** as clojure/json data
+  - Ability to **validate** requests against handlers
+  - Remote **api documentation** as plain clojure/json data
     - client helpers for both ClojureScript & Javascript
   - Public http api documentation via **Swagger**
   
 # A Simple example
 
-## The Server
+## Creating an API
 
 ```clojure
 (ns example.api
@@ -77,8 +78,8 @@ State and dependencies should be managed elegantly. The library should be named 
 (def app
   (cqrs-api
     {:info {:info {:title "Kekkonen example"}}
-     :core {:handlers {:api {:example [#'echo-pizza #'plus #'ping]
-                             :state #'inc!}}
+     :core {:handlers {:api {:pizza #'echo-pizza
+                             :example [#'ping #'inc! #'plus]}}
             :context {:components {:counter (atom 0)}}}}))
 
 ;;
@@ -96,22 +97,82 @@ Start the server and browse to http://localhost:3000 and you should see the foll
 
 ![swagger-example](https://raw.githubusercontent.com/wiki/metosin/kekkonen/swagger-example.png)
 
-## The Client
+## Consuming an API
 
-The APIs prodive few extra endpoints for the clients to use, these are found at `kekkonen` namespace. There will
-be both a Clojure(Script) and JavaScript client libraries easy operation of these.
+By default, Kekkonen supports the most common wire-formats (`json`, `edn`, `yaml`, `transit-json` 
+and `transit-msgpack`) for all APIs (and errors), selected by the standard content-negotiation process.
 
-* `get-all` all (exposed) handlers in the api
-* `get-available` all handlers that can be called by the user (runs validations without calling the body)
-* `get-validated` all handlers that can be called by the user with the given context.
-* `get-handler` info a single handler.
-* `validate` runs all validations of the handler with the given context without calling the actual body.
+Clients can also choose whether they want the handler to actually process the request or just validate the
+context against the handler. With http-apis, this is done by setting a `kekkonen.mode` header to either
+`validate` or `invoke`. By not emitting the header, `invoke` is used.
 
-Sample result of endpoint `/kekkonen/get-handler?action=api.example/echo-pizza` as JSON:
+Examples with [httpie](https://github.com/jkbrzt/httpie):
 
-```json
+Invoking a handler with invalid input:
+
+```bash
+➜  http :3000/api/sample/plus
+HTTP/1.1 400 Bad Request
+Content-Length: 127
+Content-Type: application/json; charset=utf-8
+Date: Wed, 16 Sep 2015 21:09:41 GMT
+Server: http-kit
+
 {
-    "action": "api.example/echo-pizza",
+    "error": {
+        "x": "missing-required-key",
+        "y": "missing-required-key"
+    },
+    "in": "query-params",
+    "type": "kekkonen.ring/request",
+    "value": {}
+}
+```
+
+Invoking a handler with valid input:
+
+```bash
+➜  http :3000/api/sample/plus x==1 y==2
+HTTP/1.1 200 OK
+Content-Length: 12
+Content-Type: application/json; charset=utf-8
+Date: Wed, 16 Sep 2015 21:13:43 GMT
+Server: http-kit
+
+{
+    "result": 3
+}
+```
+
+Validating a handler with valid input (does not run the actual body):
+
+```bash
+➜  http :3000/api/sample/plus x==1 y==2 kekkonen.mode:validate
+HTTP/1.1 200 OK
+Content-Length: 0
+Date: Wed, 16 Sep 2015 21:14:39 GMT
+Server: http-kit
+
+```
+
+There are also few special endpoints mounted in the `kekkonen` namespace:
+
+* `kekkonen/get-all` list all handlers in the api
+* `kekkonen/get-available` all handlers that are available for the current context (handler rules applied, no body)
+* `kekkonen/get-handler` info of a single handler.
+
+Example call to the get-handler:
+
+```bash
+➜  http :3000/kekkonen/get-handler action==api.pizza/echo-pizza
+HTTP/1.1 200 OK
+Content-Length: 436
+Content-Type: application/json; charset=utf-8
+Date: Wed, 16 Sep 2015 21:25:26 GMT
+Server: http-kit
+
+{
+    "action": "api.pizza/echo-pizza",
     "input": {
         "Keyword": "Any",
         "data": {
@@ -124,11 +185,11 @@ Sample result of endpoint `/kekkonen/get-handler?action=api.example/echo-pizza` 
         }
     },
     "name": "echo-pizza",
-    "ns": "api.example",
+    "ns": "api.pizza",
     "output": "Any",
     "source-map": {
         "column": 1,
-        "file": "/Users/tommi/projects/metosin/kekkonen/dev-src/example/simple.clj",
+        "file": "/Users/tommi/projects/metosin/kekkonen/dev-src/example/api.clj",
         "line": 24,
         "name": "echo-pizza",
         "ns": "example.api"
@@ -136,6 +197,8 @@ Sample result of endpoint `/kekkonen/get-handler?action=api.example/echo-pizza` 
     "type": "command"
 }
 ```
+
+There will be both a Clojure(Script) and JavaScript client library to wotk with the handler metadata.
 
 # Special thanks
 

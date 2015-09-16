@@ -1,7 +1,7 @@
 (ns example.api
   (:require [org.httpkit.server :as server]
             [kekkonen.cqrs :refer :all]
-            [plumbing.core :as p]
+            [plumbing.core :refer [defnk]]
             [schema.core :as s]))
 
 ;;
@@ -18,20 +18,20 @@
 ;; Handlers
 ;;
 
-(p/defnk ^:query ping []
+(defnk ^:query ping []
   (success {:ping "pong"}))
 
-(p/defnk ^:command echo-pizza
+(defnk ^:command echo-pizza
   "Echoes a pizza"
   {:responses {:default {:schema Pizza}}}
   [data :- Pizza]
   (success data))
 
-(p/defnk ^:query plus
+(defnk ^:query plus
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
 
-(p/defnk ^:command inc!
+(defnk ^:command inc!
   [[:components counter]]
   (success {:result (swap! counter inc)}))
 
@@ -42,8 +42,8 @@
 (def app
   (cqrs-api
     {:info {:info {:title "Kekkonen example"}}
-     :core {:handlers {:api {:example [#'echo-pizza #'plus #'ping]
-                             :state #'inc!}}
+     :core {:handlers {:api {:pizza #'echo-pizza
+                             :sample [#'ping #'inc! #'plus]}}
             :context {:components {:counter (atom 0)}}}}))
 
 ;;
