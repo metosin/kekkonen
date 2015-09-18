@@ -1,4 +1,4 @@
-# Kekkonen
+# Kekkonen [![Build Status](https://travis-ci.org/metosin/kekkonen.svg?branch=master)](https://travis-ci.org/metosin/kekkonen) [![Dependencies Status](http://jarkeeper.com/metosin/kekkonen/status.png)](http://jarkeeper.com/metosin/kekkonen)
 
 A library for creating and consuming remote APIs for Clojure(Script). http://kekkonen.io/
 
