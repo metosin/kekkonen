@@ -39,6 +39,7 @@
 ;; api
 ;;
 
+; TODO: test the special :kekkonen -handlers
 (defn cqrs-api [options]
   (ka/api
     (kc/deep-merge
@@ -46,22 +47,28 @@
               :handlers {:kekkonen [(k/handler
                                       {:type :query
                                        :name "get-all"
-                                       :description "Returns a list of all handlers."}
-                                      (fn [context]
+                                       :description "Returns a list of all handlers in a given namespace."}
+                                      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
                                         (success
                                           (->> context
                                                k/get-registry
-                                               k/all-handlers
+                                               (p/<- (k/all-handlers ns))
+                                               (filter (p/fn-> :ring))
+                                               (remove (p/fn-> :ns (= :kekkonen)))
+                                               (remove (p/fn-> :user :no-doc))
                                                (map k/public-meta)))))
                                     (k/handler
                                       {:type :query
                                        :name "get-available"
-                                       :description "Returns a list of all available handlers."}
-                                      (fn [context]
+                                       :description "Returns a list of all available handlers in a given namespace."}
+                                      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
                                         (success
                                           (->> context
                                                k/get-registry
-                                               ((partial k/available-handlers context))
+                                               (p/<- (k/available-handlers context ns))
+                                               (filter (p/fn-> :ring))
+                                               (remove (p/fn-> :ns (= :kekkonen)))
+                                               (remove (p/fn-> :user :no-doc))
                                                (map k/public-meta)))))
                                     (k/handler
                                       {:type :query
