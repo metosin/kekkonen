@@ -57,7 +57,7 @@
 (inc! {:components {:counter (atom 10)}})
 
 ;;
-;; Registry
+;; Dispatcher
 ;;
 
 ; create

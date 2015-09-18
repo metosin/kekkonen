@@ -94,15 +94,15 @@
                           :input input-schema})))
 
 (s/defn ring-handler
-  "Creates a ring handler from Registry and options."
-  ([registry :- k/Registry]
-    (ring-handler registry {}))
-  ([registry :- k/Registry, options :- k/KeywordMap]
+  "Creates a ring handler from Dispatcher and options."
+  ([dispatcher :- k/Dispatcher]
+    (ring-handler dispatcher {}))
+  ([dispatcher :- k/Dispatcher, options :- k/KeywordMap]
     (let [options (kc/deep-merge +default-options+ options)
-          registry (k/transform-handlers registry (partial attach-ring-meta options))]
+          dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))]
       (fn [{:keys [request-method uri] :as request}]
         (let [action (uri->action uri)]
-          (if-let [handler (k/some-handler registry action)]
+          (if-let [handler (k/some-handler dispatcher action)]
             (if-let [type-config (-> handler :ring :type-config)]
               (if (get (:methods type-config) request-method)
                 (let [request (coerce-request! request handler options)
@@ -114,8 +114,8 @@
                                     ;; map parameters from ring-request into common keys
                                     (reduce kc/deep-merge-from-to context (:parameters type-config)))]
                   (if (is-validate-request? request)
-                    {:status 200, :headers {}, :body (k/validate registry action context)}
-                    (let [response (k/invoke registry action context)]
+                    {:status 200, :headers {}, :body (k/validate dispatcher action context)}
+                    (let [response (k/invoke dispatcher action context)]
                       (if-let [responses (-> handler :user :responses)]
                         (let [status (or (:status response) 200)
                               schema (get-in responses [status :schema])

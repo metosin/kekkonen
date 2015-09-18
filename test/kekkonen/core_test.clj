@@ -200,7 +200,7 @@
                        (k/namespace {:name :echo}) k/handler?
                        (k/namespace {:name :plus}) k/handler?})))))
 
-(fact "registry"
+(fact "dispatcher"
   (s/with-fn-validation
 
     (fact "can't be created without handlers"
@@ -244,7 +244,7 @@
           (fact "can be invoked (against a context)"
             (k/invoke k :test/ping) => "pong"))
 
-        (fact "crud via registry"
+        (fact "crud via dispatcher"
           (k/invoke k :test/get-items) => #{}
           (k/invoke k :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
           (k/invoke k :test/get-items) => #{"kikka"}
@@ -456,8 +456,8 @@
   (let [k (k/create {:handlers
                      {:api
                       [(k/handler
-                         {:name :registry}
-                         (partial k/get-registry))
+                         {:name :dispatcher}
+                         (partial k/get-dispatcher))
                        (k/handler
                          {:name :handler
                           :description "magic"}
@@ -466,21 +466,21 @@
                          {:name :names}
                          (fn [context]
                            (->> context
-                                k/get-registry
+                                k/get-dispatcher
                                 k/all-handlers
                                 (map :name))))]}})]
 
-    (fact "::registry"
-      (s/validate k/Registry (k/invoke k :api/registry)) => truthy)
+    (fact "::dispatcher"
+      (s/validate k/Dispatcher (k/invoke k :api/dispatcher)) => truthy)
 
     (fact "::handler"
       (k/invoke k :api/handler) => (contains {:description "magic"}))
 
     (fact "going meta boing boing"
-      (k/invoke k :api/names) => (just [:registry :handler :names] :in-any-order))))
+      (k/invoke k :api/names) => (just [:dispatcher :handler :names] :in-any-order))))
 
 ; TODO: will override paths as we do merge
-(fact "handlers can be injected into existing registry"
+(fact "handlers can be injected into existing dispatcher"
   (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
               (k/inject (k/handler {:name :ping} identity)))]
     k => (contains

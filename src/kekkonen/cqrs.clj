@@ -51,7 +51,7 @@
                                       (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
                                         (success
                                           (->> context
-                                               k/get-registry
+                                               k/get-dispatcher
                                                (p/<- (k/all-handlers ns))
                                                (filter (p/fn-> :ring))
                                                (remove (p/fn-> :ns (= :kekkonen)))
@@ -64,7 +64,7 @@
                                       (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
                                         (success
                                           (->> context
-                                               k/get-registry
+                                               k/get-dispatcher
                                                (p/<- (k/available-handlers context ns))
                                                (filter (p/fn-> :ring))
                                                (remove (p/fn-> :ns (= :kekkonen)))
@@ -78,7 +78,7 @@
                                         (success
                                           (k/public-meta
                                             (k/some-handler
-                                              (k/get-registry context)
+                                              (k/get-dispatcher context)
                                               action)))))]}}
        :ring {:types {:query {:methods #{:get}
                               :parameters [[[:request :query-params] [:data]]]}

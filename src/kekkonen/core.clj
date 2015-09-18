@@ -43,7 +43,7 @@
                                  :name s/Symbol}
    s/Keyword s/Any})
 
-(s/defschema Registry
+(s/defschema Dispatcher
   {:handlers KeywordMap
    :context KeywordMap
    :transformers [Function]
@@ -85,7 +85,7 @@
 (s/defn ^:private user-meta [meta :- KeywordMap]
   (dissoc
     meta
-    ; reserved registry handler stuff
+    ; reserved dispatcher handler stuff
     :type :input :output :description
     ; clojure var meta
     :line :column :file :name :ns :doc
@@ -183,7 +183,7 @@
       (-collect k type-resolver) (-collect v type-resolver))))
 
 ;;
-;; Registry
+;; Dispatcher
 ;;
 
 (s/defschema Options
@@ -225,8 +225,8 @@
                                  (traverse v (conj m k)))))]
     (traverse (collect handlers type-resolver) [])))
 
-(s/defn create :- Registry
-  "Creates a Registry."
+(s/defn create :- Dispatcher
+  "Creates a Dispatcher."
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
         handlers (collect-and-enrich (:handlers options) (:type-resolver options) false)]
@@ -243,15 +243,15 @@
 
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
-  [registry :- Registry, action :- s/Keyword]
-  (get-in (:handlers registry) (action-kws action)))
+  [dispatcher :- Dispatcher, action :- s/Keyword]
+  (get-in (:handlers dispatcher) (action-kws action)))
 
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,
   the handler is removed."
-  [registry :- Registry, f :- Function]
+  [dispatcher :- Dispatcher, f :- Function]
   (merge
-    registry
+    dispatcher
     {:handlers
      (kc/strip-nil-values
        (w/prewalk
@@ -259,14 +259,14 @@
            (if (handler? x)
              (f x)
              x))
-         (:handlers registry)))}))
+         (:handlers dispatcher)))}))
 
 ; TODO: we should give separate root-handlers?
 (s/defn inject
-  "Injects handlers into an existing Registry"
-  [registry :- Registry, handler]
+  "Injects handlers into an existing Dispatcher"
+  [dispatcher :- Dispatcher, handler]
   (let [handler (collect-and-enrich handler any-type-resolver true)]
-    (update-in registry (into [:handlers] (:ns handler)) merge handler)))
+    (update-in dispatcher (into [:handlers] (:ns handler)) merge handler)))
 
 ;;
 ;; Calling handlers
@@ -275,31 +275,31 @@
 (s/defn ^:private prepare
   "Prepares a context for invocation or validation. Returns an 0-arity function
   or throws exception."
-  [registry :- Registry, action :- s/Keyword, context :- Context]
-  (if-let [{:keys [function all-user] :as handler} (some-handler registry action)]
+  [dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
+  (if-let [{:keys [function all-user] :as handler} (some-handler dispatcher action)]
     (let [context (as-> context context
 
-                        ;; base-context from Registry
-                        (kc/deep-merge (:context registry) context)
+                        ;; base-context from Dispatcher
+                        (kc/deep-merge (:context dispatcher) context)
 
                         ;; run all the transformers
                         (reduce
                           (fn [context mapper]
                             (mapper context))
                           context
-                          (:transformers registry))
+                          (:transformers dispatcher))
 
                         ;; run all the user transformers per namespace/handler, start from the root
                         (reduce
                           (fn [context [k v]]
-                            (if-let [mapper (get-in registry [:user k])]
+                            (if-let [mapper (get-in dispatcher [:user k])]
                               (mapper context v)
                               context))
                           context
                           (apply concat all-user))
 
                         ;; inject in stuff the context
-                        (merge context {::registry registry
+                        (merge context {::dispatcher dispatcher
                                         ::handler handler}))]
       (fn [invoke?]
         (if invoke?
@@ -308,18 +308,18 @@
 
 (s/defn invoke
   "Invokes an action handler with the given context."
-  ([registry :- Registry, action :- s/Keyword]
-    (invoke registry action {}))
-  ([registry :- Registry, action :- s/Keyword, context :- Context]
-    ((prepare registry action context) true)))
+  ([dispatcher :- Dispatcher, action :- s/Keyword]
+    (invoke dispatcher action {}))
+  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
+    ((prepare dispatcher action context) true)))
 
 (s/defn validate
   "Checks if context is valid for the handler (without calling the body).
   Returns nil or throws an exception."
-  ([registry :- Registry, action :- s/Keyword]
-    (validate registry action {}))
-  ([registry :- Registry, action :- s/Keyword, context :- Context]
-    ((prepare registry action context) false)))
+  ([dispatcher :- Dispatcher, action :- s/Keyword]
+    (validate dispatcher action {}))
+  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
+    ((prepare dispatcher action context) false)))
 
 ;;
 ;; Listing handlers
@@ -327,12 +327,12 @@
 
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
-  ([registry :- Registry]
-    (all-handlers registry nil))
-  ([registry :- Registry, prefix :- (s/maybe s/Keyword)]
+  ([dispatcher :- Dispatcher]
+    (all-handlers dispatcher nil))
+  ([dispatcher :- Dispatcher, prefix :- (s/maybe s/Keyword)]
     (let [handlers (atom [])]
       (transform-handlers
-        registry
+        dispatcher
         (fn [handler]
           (swap! handlers conj handler) nil))
       (if-not prefix
@@ -349,16 +349,16 @@
 
 (s/defn available-handlers :- [Handler]
   "Returns all handlers which are available under a given context"
-  ([registry :- Registry, context :- Context]
-    (available-handlers registry context nil))
-  ([registry :- Registry, context :- Context, prefix :- (s/maybe s/Keyword)]
+  ([dispatcher :- Dispatcher, context :- Context]
+    (available-handlers dispatcher context nil))
+  ([dispatcher :- Dispatcher, context :- Context, prefix :- (s/maybe s/Keyword)]
     (filter
       (fn [handler]
         (try
-          (validate registry (:action handler) context)
+          (validate dispatcher (:action handler) context)
           true
           (catch Exception _)))
-      (all-handlers registry prefix))))
+      (all-handlers dispatcher prefix))))
 
 (defn stringify-schema [schema]
   (walk/prewalk
@@ -379,14 +379,14 @@
 ;; Working with contexts
 ;;
 
-(s/defn get-registry [context :- Context]
-  (get context ::registry))
+(s/defn get-dispatcher [context :- Context]
+  (get context ::dispatcher))
 
 (s/defn get-handler [context :- Context]
   (get context ::handler))
 
-(s/defn with-context [registry :- Registry, context :- Context]
-  (update-in registry [:context] kc/deep-merge context))
+(s/defn with-context [dispatcher :- Dispatcher, context :- Context]
+  (update-in dispatcher [:context] kc/deep-merge context))
 
 (s/defn context-copy
   "Returns a function that assocs in a value from to-kws path into from-kws in a context"

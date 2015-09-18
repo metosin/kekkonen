@@ -20,12 +20,12 @@
   (ok [x y z body-params]))
 
 (fact "swagger-docs"
-  (let [registry (k/transform-handlers
+  (let [dispatcher (k/transform-handlers
                    (k/create {:handlers {:api {:admin #'echo}}})
                    (partial r/attach-ring-meta r/+default-options+))
 
         swagger (ks/ring-swagger
-                  registry
+                  dispatcher
                   {:info {:version "1.0.0"
                           :title "Kekkonen"
                           :description "Kekkonen Swagger API"}})]
