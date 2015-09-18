@@ -12,7 +12,7 @@
                  [metosin/ring-middleware-format "0.6.0"]
                  [metosin/ring-http-response "0.6.5"]
 
-                 ;; client stuff
+                 ;; client stuff, separate module?
                  [clj-http "2.0.0"]]
   :profiles {:dev {:plugins [[lein-midje "3.1.3"]]
                    :source-paths ["dev-src" "src"]
