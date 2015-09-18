@@ -327,23 +327,38 @@
 
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
-  [registry :- Registry]
-  (let [handlers (atom [])]
-    (transform-handlers
-      registry
-      (fn [handler]
-        (swap! handlers conj handler) nil))
-    @handlers))
+  ([registry :- Registry]
+    (all-handlers registry nil))
+  ([registry :- Registry, prefix :- (s/maybe s/Keyword)]
+    (let [handlers (atom [])]
+      (transform-handlers
+        registry
+        (fn [handler]
+          (swap! handlers conj handler) nil))
+      (if-not prefix
+        @handlers
+        (seq
+          (filter
+            (fn [{:keys [ns]}]
+              (if ns
+                (let [prefix-seq (str/split (subs (str prefix) 1) #"[\.]")
+                      action-seq (str/split (subs (str ns) 1) #"[\.]")]
+                  (= prefix-seq (take (count prefix-seq) action-seq)))
+                true))
+            @handlers))))))
 
 (s/defn available-handlers :- [Handler]
   "Returns all handlers which are available under a given context"
-  [context :- Context, registry :- Registry]
-  (filter
-    (fn [handler]
-      (try
-        (validate registry (:action handler) context)
-        (catch Exception _)))
-    (all-handlers registry)))
+  ([registry :- Registry, context :- Context]
+    (available-handlers registry context nil))
+  ([registry :- Registry, context :- Context, prefix :- (s/maybe s/Keyword)]
+    (filter
+      (fn [handler]
+        (try
+          (validate registry (:action handler) context)
+          true
+          (catch Exception _)))
+      (all-handlers registry prefix))))
 
 (defn stringify-schema [schema]
   (walk/prewalk

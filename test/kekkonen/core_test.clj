@@ -224,10 +224,10 @@
           (fact "is nil"
             (k/some-handler k :test/non-existing) => nil)
 
-          (fact "cann't be validated (against a context)"
+          (fact "can't be validated (against a context)"
             (k/validate k :test/non-existing) => throws?)
 
-          (fact "can be invoked (with a context)"
+          (fact "can't be invoked (against a context)"
             (k/invoke k :test/non-existing) => throws?))
 
         (facts "existing action"
@@ -241,7 +241,7 @@
           (fact "can be validated (against a context)"
             (k/validate k :test/ping) => nil)
 
-          (fact "can be invoked (with a context)"
+          (fact "can be invoked (against a context)"
             (k/invoke k :test/ping) => "pong"))
 
         (fact "crud via registry"
@@ -314,68 +314,105 @@
           (k/validate k :api/plus {:data {:y 2}}) => nil
           (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
 
+(defn role-enforcer [context required-roles]
+  (let [roles (::roles context)]
+    (if (seq (set/intersection roles required-roles))
+      context
+      (throw (ex-info
+               "invalid role"
+               {:roles roles
+                :required required-roles})))))
+
 (facts "user-meta"
-  (let [role-enforcer (fn [context required-roles]
-                        (let [roles (::roles context)]
-                          (if (seq (set/intersection roles required-roles))
-                            context
-                            (throw (ex-info
-                                     "invalid role"
-                                     {:roles roles
-                                      :required required-roles})))))]
-    (fact "on handler"
-      (let [k (k/create
-                {:handlers {:api (k/handler
-                                   {:name :test
-                                    ::roles #{:admin}}
-                                   (p/fn-> :x))}
-                 :user {::roles role-enforcer}})]
+  (fact "on handler"
+    (let [k (k/create
+              {:handlers {:api (k/handler
+                                 {:name :test
+                                  ::roles #{:admin}}
+                                 (p/fn-> :x))}
+               :user {::roles role-enforcer}})]
 
-        (fact "user-meta is populated correctly"
-          (k/all-handlers k) => (just [(contains {:user {::roles #{:admin}}
-                                                  :ns-user []
-                                                  :all-user [{::roles #{:admin}}]})]))
+      (fact "user-meta is populated correctly"
+        (k/all-handlers k) => (just [(contains {:user {::roles #{:admin}}
+                                                :ns-user []
+                                                :all-user [{::roles #{:admin}}]})]))
 
-        (fact "invoking api enforces rules"
+      (fact "invoking api enforces rules"
 
-          (k/invoke k :api/test {:x 1})
-          => (throws? {:roles nil, :required #{:admin}})
+        (k/invoke k :api/test {:x 1})
+        => (throws? {:roles nil, :required #{:admin}})
 
-          (k/invoke k :api/test {:x 1 ::roles #{:user}})
-          => (throws? {:roles #{:user}, :required #{:admin}})
+        (k/invoke k :api/test {:x 1 ::roles #{:user}})
+        => (throws? {:roles #{:user}, :required #{:admin}})
 
-          (k/invoke k :api/test {:x 1 ::roles #{:admin}})
-          => 1)))
+        (k/invoke k :api/test {:x 1 ::roles #{:admin}})
+        => 1)))
 
-    (fact "nested rules on namespaces"
-      (let [api-ns (k/namespace {:name :api, ::roles #{:anyone}})
-            admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
-            handler (k/handler {:name :test, ::roles #{:superadmin}} (p/fn-> :x))
-            k (k/create
-                {:handlers {api-ns {admin-ns handler}}
-                 :user {::roles role-enforcer}})]
+  (fact "nested rules on namespaces"
+    (let [api-ns (k/namespace {:name :api, ::roles #{:anyone}})
+          admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
+          handler (k/handler {:name :test, ::roles #{:superadmin}} (p/fn-> :x))
+          k (k/create
+              {:handlers {api-ns {admin-ns handler}}
+               :user {::roles role-enforcer}})]
 
-        (fact "user-meta is populated correctly"
-          (k/all-handlers k) => (just [(contains {:user {::roles #{:superadmin}}
-                                                  :ns-user [{::roles #{:anyone}}
-                                                            {::roles #{:admin}}]
-                                                  :all-user [{::roles #{:anyone}}
-                                                             {::roles #{:admin}}
-                                                             {::roles #{:superadmin}}]})]))
+      (fact "user-meta is populated correctly"
+        (k/all-handlers k) => (just [(contains {:user {::roles #{:superadmin}}
+                                                :ns-user [{::roles #{:anyone}}
+                                                          {::roles #{:admin}}]
+                                                :all-user [{::roles #{:anyone}}
+                                                           {::roles #{:admin}}
+                                                           {::roles #{:superadmin}}]})]))
 
-        (fact "invoking api enforces rules"
+      (fact "invoking api enforces rules"
 
-          (k/invoke k :api.admin/test {:x 1})
-          => (throws? {:roles nil, :required #{:anyone}})
+        (k/invoke k :api.admin/test {:x 1})
+        => (throws? {:roles nil, :required #{:anyone}})
 
-          (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone}})
-          => (throws? {:roles #{:anyone}, :required #{:admin}})
+        (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone}})
+        => (throws? {:roles #{:anyone}, :required #{:admin}})
 
-          (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone, :admin}})
-          => (throws? {:roles #{:anyone :admin}, :required #{:superadmin}})
+        (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone, :admin}})
+        => (throws? {:roles #{:anyone :admin}, :required #{:superadmin}})
 
-          (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
-          => 1)))))
+        (k/invoke k :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
+        => 1))))
+
+(facts "availability"
+  (let [admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
+        handler1 (k/handler {:name :handler1} (p/fnk [] true))
+        handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
+        k (k/create {:user {::roles role-enforcer}
+                     :handlers {:api {admin-ns [handler1 handler2]
+                                      :public [handler1 handler2]}}})]
+
+    (fact "4 handlers exist"
+      (k/all-handlers k) => (n-of k/handler? 4))
+
+    (fact "4 handlers exist under :api"
+      (k/all-handlers k :api) => (n-of k/handler? 4))
+
+    (fact "2 handlers exist under :api.admin"
+      (k/all-handlers k :api.admin) => (n-of k/handler? 2))
+
+    (fact "allow only exact matches on the namespace"
+      (k/all-handlers k :api.adm) => nil)
+
+    (fact "only 2 are available"
+      (k/available-handlers k {}) => (n-of k/handler? 2))
+
+    (fact "0 are available under :api.admin"
+      (k/available-handlers k {} :api.admin) => (n-of k/handler? 0))
+
+    (fact "4 are available when all the rules apply"
+      (k/available-handlers k {::roles #{:admin}}) => (n-of k/handler? 4)
+
+      (fact "2 are available under :api.admin when all the rules apply"
+        (k/available-handlers k {::roles #{:admin}} :api.admin) => (n-of k/handler? 2))
+
+      (fact "WOOT: parameters don't have to valid"
+        (k/validate k :api.admin/handler2 {::roles #{:admin}}) => nil
+        (k/invoke k :api.admin/handler2 {::roles #{:admin}}) => throws?))))
 
 (fact "context transformations"
   (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
