@@ -12,5 +12,5 @@
        (= mdata m)))))
 
 (defn parse [x]
-  (if x
+  (if (and x (:body x))
     (c/parse-string (slurp (:body x)) true)))
