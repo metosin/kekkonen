@@ -15,11 +15,11 @@ elegantly. The library should be named after a Finnish president.
 # Idea
 
 - Simple **library** to create and consume apis
-- Expose simple Clojure **functions** as message handlers
-- Manage handlers in virtual **namespaces** to enable refactoring
-- **Schema** for data descriptions and coercion
+- Expose simple Clojure **functions** as **message handlers**
+- Manage handlers in **virtual namespaces** to enable refactoring
+- **Schema** to describe messages and do coercion
 - Data-driven, no macros, **no magic**
-- Declarative dependencies and state management
+- Declarative dependencies, **security** and state management
 - Explicit **extensions** via protocols, options and **meta-data**
 - **Transports** abstracted away
   - http via ring, websockets or use the queues, Luke.
@@ -214,7 +214,8 @@ to any anything (sub-namespaces or handler) under that, regardless of their acce
 ## HTTP is awesome, why hide it?
 
 Yes, it is awesome, and is used as a transport. But do you really want to handcraft you domain into `POST`s, `PUT`s
-and `PATCH`es do reverse-engineer back in the client? Is it easy to consume APIs that return [451](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073b04b855dcff18a0ce8d07190/dev/user.clj#L57)
+and `PATCH`es do reverse-engineer back in the client? Is it easy to consume APIs that return status codes 
+[451](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073b04b855dcff18a0ce8d07190/dev/user.clj#L57)
 or the [226](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073b04b855dcff18a0ce8d07190/dev/user.clj#L19)?
 
 Kekkonen tries to keep things simple. By abstracting the HTTP we can use plain clojure, websockets or queues without
