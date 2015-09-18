@@ -372,8 +372,8 @@
   [handler :- Handler]
   (some-> handler
           (select-keys [:input :name :ns :output :source-map :type :action])
-          (update :input stringify-schema)
-          (update :output stringify-schema)))
+          (update-in [:input] stringify-schema)
+          (update-in [:output] stringify-schema)))
 
 ;;
 ;; Working with contexts

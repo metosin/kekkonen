@@ -25,8 +25,7 @@ elegantly. The library should be named after a Finnish president.
   - http via ring, websockets or use the queues, Luke.
 - **Clients** as first-class citizens
   - Ability to **validate** requests against handlers
-  - Remote **api documentation** as plain clojure/json data
-    - client helpers for both ClojureScript & Javascript
+  - Remote **api documentation** as clojure/json data
   - Public http api documentation via **Swagger**
   
 # A Simple example
@@ -157,7 +156,7 @@ Server: http-kit
 
 There are also few special endpoints mounted in the `kekkonen` namespace:
 
-* `kekkonen/get-all` list all handlers in the api
+* `kekkonen/get-all` list all handlers in the given namespace.
 * `kekkonen/get-available` all handlers that are available for the current context (handler rules applied, no body)
 * `kekkonen/get-handler` info of a single handler.
 

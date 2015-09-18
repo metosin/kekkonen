@@ -18,5 +18,7 @@
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.7.0"]
                                   [http-kit "2.1.18"]
-                                  [midje "1.7.0"]]}}
-  :aliases {"test-ancient" ["midje"]})
+                                  [midje "1.7.0"]]}
+             :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}}
+  :aliases {"all" ["with-profile" "dev:dev,1.6"]
+            "test-ancient" ["midje"]})

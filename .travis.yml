@@ -1,0 +1,14 @@
+sudo: false
+language: clojure
+lein: lein2
+script: lein2 with-profile $PROFILE do clean, midje, check
+jdk:
+  - openjdk6
+  - openjdk7
+  - oraclejdk8
+env:
+  - PROFILE=dev
+  - PROFILE=dev,1.6
+cache:
+  directories:
+  - $HOME/.m2

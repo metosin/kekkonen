@@ -43,7 +43,7 @@
 
 (defn coerce-error-handler [f]
   (fn [_ data _]
-    (f (-> data (dissoc :schema) (update :error #(stringify (su/error-val %)))))))
+    (f (-> data (dissoc :schema) (update-in [:error] #(stringify (su/error-val %)))))))
 
 (def ^:private request-validation-handler (coerce-error-handler r/bad-request))
 (def ^:private response-validation-handler (coerce-error-handler r/internal-server-error))

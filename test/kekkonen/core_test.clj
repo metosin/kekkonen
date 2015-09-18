@@ -477,7 +477,7 @@
       (k/invoke k :api/handler) => (contains {:description "magic"}))
 
     (fact "going meta boing boing"
-      (k/invoke k :api/names) => [:registry :handler :names])))
+      (k/invoke k :api/names) => (just [:registry :handler :names] :in-any-order))))
 
 ; TODO: will override paths as we do merge
 (fact "handlers can be injected into existing registry"
