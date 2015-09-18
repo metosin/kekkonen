@@ -205,17 +205,17 @@ There will be both a Clojure(Script) and JavaScript client library to wotk with 
 
 Clojure multimethods introduce mutable implicit state. With multimethods, by requiring a namespace X you
 could get an extra methods for a multimethod as a [side-effect](https://github.com/clojure/clojure/blob/bc186508ab98514780efbbddb002bf6fd2938aee/src/jvm/clojure/lang/MultiFn.java#L58-L68).
-For closed functionality (like in the cljs frontends), it's totally awesome and polymorfic.
+For internal functionality (like in the cljs frontends), it's totally awesome and polymorfic.
 
 For remoting, things should be explicit and secure. With Kekkonen, handler registration is explicit and security
-works like the UNIX directory structure: by not having access to namespace `:api/admin`, you can't have access
-to any sub-namespaces or handlers under that.
+works like the UNIX directory structure: by not having access to namespace `:api.admin`, you can't have access
+to any anything (sub-namespaces or handler) under that, regardless of their access policies.
 
 ## HTTP is awesome, why hide it?
 
 Yes, it is awesome, and is used as a transport. But do you really want to handcraft you domain into `POST`s, `PUT`s
 and `PATCH`es do reverse-engineer back in the client? Is it easy to consume APIs that return [451](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073b04b855dcff18a0ce8d07190/dev/user.clj#L57)
-or the [226](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073b04b855dcff18a0ce8d07190/dev/user.clj#L57)?
+or the [226](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073b04b855dcff18a0ce8d07190/dev/user.clj#L19)?
 
 Kekkonen tries to keep things simple. By abstracting the HTTP we can use plain clojure, websockets or queues without
 change in the interaction semantics.
