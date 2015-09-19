@@ -323,6 +323,7 @@
                                  ::k/handler (k/some-handler k :api/echo)})))
 
 (defn defn-plus
+  "defn-plus description"
   {:type ::input-output-schemas
    :input {:data {:x s/Int, :y s/Int}}
    :output {:result s/Int}}
@@ -330,6 +331,7 @@
   {:result (+ x y)})
 
 (p/defnk defnk-plus :- {:result s/Int}
+  "defnk-plus description"
   {:type ::input-output-schemas}
   [[:data x :- s/Int, y :- s/Int]]
   {:result (+ x y)})
@@ -358,10 +360,12 @@
 
     (fact "handler input & output schemas are ok"
       (k/some-handler k :vars/defn-plus) => (contains
-                                              {:input {:data {:x s/Int, :y s/Int}}
+                                              {:description "defn-plus description"
+                                               :input {:data {:x s/Int, :y s/Int}}
                                                :output {:result s/Int}})
       (k/some-handler k :vars/defnk-plus) => (contains
-                                               {:input {:data {:x s/Int, :y s/Int, s/Keyword s/Any}, s/Keyword s/Any}
+                                               {:description "defnk-plus description"
+                                                :input {:data {:x s/Int, :y s/Int, s/Keyword s/Any}, s/Keyword s/Any}
                                                 :output {:result s/Int}})
       (k/some-handler k :fns/fn-plus) => (contains
                                            {:input {:data {:x s/Int, :y s/Int}}
