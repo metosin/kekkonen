@@ -314,6 +314,14 @@
           (k/validate k :api/plus {:data {:y 2}}) => nil
           (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
 
+(fact "special keys in context"
+  (let [k (k/create {:handlers {:api (k/handler
+                                       {:name :echo}
+                                       identity)}})]
+    (k/invoke k :api/echo) => (contains
+                                {::k/dispatcher k
+                                 ::k/handler (k/some-handler k :api/echo)})))
+
 (defn role-enforcer [context required-roles]
   (let [roles (::roles context)]
     (if (seq (set/intersection roles required-roles))
