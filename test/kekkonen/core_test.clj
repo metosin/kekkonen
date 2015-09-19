@@ -322,6 +322,54 @@
                                 {::k/dispatcher k
                                  ::k/handler (k/some-handler k :api/echo)})))
 
+(defn defn-plus
+  {:type ::input-output-schemas
+   :input {:data {:x s/Int, :y s/Int}}
+   :output {:result s/Int}}
+  [{{:keys [x y]} :data}]
+  {:result (+ x y)})
+
+(p/defnk defnk-plus :- {:result s/Int}
+  {:type ::input-output-schemas}
+  [[:data x :- s/Int, y :- s/Int]]
+  {:result (+ x y)})
+
+(facts "handler input & output schemas"
+  (let [k (k/create {:handlers {:vars [#'defn-plus #'defnk-plus]
+                                :fns [(k/handler
+                                        {:name :fn-plus
+                                         :type ::input-output-schemas
+                                         :input {:data {:x s/Int, :y s/Int}}
+                                         :output {:result s/Int}}
+                                        (fn [{{:keys [x y]} :data}]
+                                          {:result (+ x y)}))
+                                      (k/handler
+                                        {:name :fnk-plus
+                                         :type ::input-output-schemas}
+                                        (p/fnk f :- {:result s/Int} [[:data x :- s/Int, y :- s/Int]]
+                                          {:result (+ x y)}))]}
+                     :type-resolver (k/type-resolver ::input-output-schemas)})]
+
+    (fact "handlers are registered ok"
+      (k/invoke k :vars/defn-plus {:data {:x 1 :y 2}}) => {:result 3}
+      (k/invoke k :vars/defnk-plus {:data {:x 1 :y 2}}) => {:result 3}
+      (k/invoke k :fns/fn-plus {:data {:x 1 :y 2}}) => {:result 3}
+      (k/invoke k :fns/fnk-plus {:data {:x 1 :y 2}}) => {:result 3})
+
+    (fact "handler input & output schemas are ok"
+      (k/some-handler k :vars/defn-plus) => (contains
+                                              {:input {:data {:x s/Int, :y s/Int}}
+                                               :output {:result s/Int}})
+      (k/some-handler k :vars/defnk-plus) => (contains
+                                               {:input {:data {:x s/Int, :y s/Int, s/Keyword s/Any}, s/Keyword s/Any}
+                                                :output {:result s/Int}})
+      (k/some-handler k :fns/fn-plus) => (contains
+                                           {:input {:data {:x s/Int, :y s/Int}}
+                                            :output {:result s/Int}})
+      (k/some-handler k :fns/fnk-plus) => (contains
+                                            {:input {:data {:x s/Int, :y s/Int, s/Keyword s/Any}, s/Keyword s/Any}
+                                             :output {:result s/Int}}))))
+
 (defn role-enforcer [context required-roles]
   (let [roles (::roles context)]
     (if (seq (set/intersection roles required-roles))
