@@ -203,7 +203,7 @@ There will be both a Clojure(Script) and JavaScript client library to wotk with 
 
 ## Why not just use multimethods for dispatch?
 
-Clojure multimethods introduce mutable implicit state. With multimethods, by requiring a namespace X you
+Clojure multimethods introduce mutable implicit state. With multimethods, by requiring a namespace `x` you
 could get an extra methods for a multimethod as a [side-effect](https://github.com/clojure/clojure/blob/bc186508ab98514780efbbddb002bf6fd2938aee/src/jvm/clojure/lang/MultiFn.java#L58-L68).
 For internal functionality (like in the cljs frontends), it's totally awesome and polymorfic.
 
@@ -220,6 +220,10 @@ or the [226](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073
 
 Kekkonen tries to keep things simple. By abstracting the HTTP we can use plain clojure, websockets or queues without
 change in the interaction semantics.
+
+## Is this an actor lib?
+
+No.
 
 # Special thanks
 
