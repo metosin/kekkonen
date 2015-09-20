@@ -27,7 +27,7 @@
   (s/with-fn-validation
     (let [options (kc/deep-merge +default-options+ options)
           info (merge (:info options) (mw/api-info (:mw options)))
-          dispatcher (-> (k/create (:core options))
+          dispatcher (-> (k/dispatcher (:core options))
                          (k/inject (ks/swagger-handler info options)))]
       (mw/api-middleware
         (r/routes

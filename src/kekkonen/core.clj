@@ -236,7 +236,7 @@
                                  (traverse v (conj m k)))))]
     (traverse (collect handlers type-resolver) [])))
 
-(s/defn create :- Dispatcher
+(s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher."
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)

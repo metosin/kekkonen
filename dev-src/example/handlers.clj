@@ -19,7 +19,7 @@
 (def app
   (mw/api-middleware
     (r/ring-handler
-      (k/create
+      (k/dispatcher
         {:handlers {:api 'example.handlers}}))))
 
 (defn start []

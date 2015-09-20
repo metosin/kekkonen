@@ -21,7 +21,7 @@
 (facts "wrap-exceptions"
   (let [app (mw/wrap-exceptions
               (r/ring-handler
-                (k/create {:handlers {:api [#'plus #'responsez]}}))
+                (k/dispatcher {:handlers {:api [#'plus #'responsez]}}))
               (:exceptions mw/+default-options+))]
 
     (fact "request coercion errors"

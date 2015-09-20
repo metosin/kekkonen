@@ -204,17 +204,17 @@
   (s/with-fn-validation
 
     (fact "can't be created without handlers"
-      (k/create {}) => throws?)
+      (k/dispatcher {}) => throws?)
 
     (fact "can't be created with root level handlers"
-      (k/create {:handlers 'kekkonen.core-test}) => throws?)
+      (k/dispatcher {:handlers 'kekkonen.core-test}) => throws?)
 
     (fact "can be created with namespaced handlers"
-      (k/create {:handlers {:test 'kekkonen.core-test}}) => truthy)
+      (k/dispatcher {:handlers {:test 'kekkonen.core-test}}) => truthy)
 
     (fact "with handlers and context"
-      (let [k (k/create {:context {:components {:db (atom #{})}}
-                         :handlers {:test 'kekkonen.core-test}})]
+      (let [k (k/dispatcher {:context {:components {:db (atom #{})}}
+                             :handlers {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
           (count (k/all-handlers k)) => 6)
@@ -255,17 +255,17 @@
             (k/invoke k :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
     (fact "lots of handlers"
-      (let [k (k/create {:handlers
-                         {:admin
-                          {:kikka 'kekkonen.core-test
-                           :kukka 'kekkonen.core-test}
-                          :public 'kekkonen.core-test
-                          :kiss #'ping
-                          :abba [#'ping #'echo]
-                          :wasp ['kekkonen.core-test]
-                          :bon (k/handler
-                                 {:name :jovi}
-                                 (constantly :runaway))}})]
+      (let [k (k/dispatcher {:handlers
+                             {:admin
+                              {:kikka 'kekkonen.core-test
+                               :kukka 'kekkonen.core-test}
+                              :public 'kekkonen.core-test
+                              :kiss #'ping
+                              :abba [#'ping #'echo]
+                              :wasp ['kekkonen.core-test]
+                              :bon (k/handler
+                                     {:name :jovi}
+                                     (constantly :runaway))}})]
 
         (fact "deeply nested"
           (fact "namespaces can be joined with ."
@@ -292,7 +292,7 @@
           (k/invoke k :bon/jovi) => :runaway)))
 
     (fact "sub-context"
-      (let [k (k/create {:handlers {:api #'plus}})]
+      (let [k (k/dispatcher {:handlers {:api #'plus}})]
 
         (k/validate k :api/plus {}) => throws?
         (k/invoke k :api/plus {}) => throws?
@@ -315,9 +315,9 @@
           (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
 
 (fact "special keys in context"
-  (let [k (k/create {:handlers {:api (k/handler
-                                       {:name :echo}
-                                       identity)}})]
+  (let [k (k/dispatcher {:handlers {:api (k/handler
+                                           {:name :echo}
+                                           identity)}})]
     (k/invoke k :api/echo) => (contains
                                 {::k/dispatcher k
                                  ::k/handler (k/some-handler k :api/echo)})))
@@ -337,20 +337,20 @@
   {:result (+ x y)})
 
 (facts "handler input & output schemas"
-  (let [k (k/create {:handlers {:vars [#'defn-plus #'defnk-plus]
-                                :fns [(k/handler
-                                        {:name :fn-plus
-                                         :type ::input-output-schemas
-                                         :input {:data {:x s/Int, :y s/Int}}
-                                         :output {:result s/Int}}
-                                        (fn [{{:keys [x y]} :data}]
-                                          {:result (+ x y)}))
-                                      (k/handler
-                                        {:name :fnk-plus
-                                         :type ::input-output-schemas}
-                                        (p/fnk f :- {:result s/Int} [[:data x :- s/Int, y :- s/Int]]
-                                          {:result (+ x y)}))]}
-                     :type-resolver (k/type-resolver ::input-output-schemas)})]
+  (let [k (k/dispatcher {:handlers {:vars [#'defn-plus #'defnk-plus]
+                                    :fns [(k/handler
+                                            {:name :fn-plus
+                                             :type ::input-output-schemas
+                                             :input {:data {:x s/Int, :y s/Int}}
+                                             :output {:result s/Int}}
+                                            (fn [{{:keys [x y]} :data}]
+                                              {:result (+ x y)}))
+                                          (k/handler
+                                            {:name :fnk-plus
+                                             :type ::input-output-schemas}
+                                            (p/fnk f :- {:result s/Int} [[:data x :- s/Int, y :- s/Int]]
+                                              {:result (+ x y)}))]}
+                         :type-resolver (k/type-resolver ::input-output-schemas)})]
 
     (fact "handlers are registered ok"
       (k/invoke k :vars/defn-plus {:data {:x 1 :y 2}}) => {:result 3}
@@ -385,7 +385,7 @@
 
 (facts "user-meta"
   (fact "on handler"
-    (let [k (k/create
+    (let [k (k/dispatcher
               {:handlers {:api (k/handler
                                  {:name :test
                                   ::roles #{:admin}}
@@ -412,7 +412,7 @@
     (let [api-ns (k/namespace {:name :api, ::roles #{:anyone}})
           admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
           handler (k/handler {:name :test, ::roles #{:superadmin}} (p/fn-> :x))
-          k (k/create
+          k (k/dispatcher
               {:handlers {api-ns {admin-ns handler}}
                :user {::roles role-enforcer}})]
 
@@ -442,9 +442,9 @@
   (let [admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
         handler1 (k/handler {:name :handler1} (p/fnk [] true))
         handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
-        k (k/create {:user {::roles role-enforcer}
-                     :handlers {:api {admin-ns [handler1 handler2]
-                                      :public [handler1 handler2]}}})]
+        k (k/dispatcher {:user {::roles role-enforcer}
+                         :handlers {:api {admin-ns [handler1 handler2]
+                                          :public [handler1 handler2]}}})]
 
     (fact "4 handlers exist"
       (k/all-handlers k) => (n-of k/handler? 4))
@@ -484,9 +484,9 @@
 
 (fact "transforming"
   (s/with-fn-validation
-    (let [k (k/create {:handlers {:api (k/handler {:name :test} #(:y %))}
-                       :transformers [(k/context-copy [:x] [:y])
-                                      (k/context-dissoc [:x])]})]
+    (let [k (k/dispatcher {:handlers {:api (k/handler {:name :test} #(:y %))}
+                           :transformers [(k/context-copy [:x] [:y])
+                                          (k/context-dissoc [:x])]})]
 
       (fact "transformers are executed"
         (k/invoke k :api/test {:x 1}) => 1))))
@@ -494,7 +494,7 @@
 (fact "transforming handlers"
   (fact "enriching handlers"
     (k/transform-handlers
-      (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+      (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
       (fn [handler]
         (assoc handler :kikka :kukka)))
 
@@ -509,26 +509,26 @@
 
   (fact "stripping handlers"
     (k/transform-handlers
-      (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+      (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
       (constantly nil)) => (contains {:handlers {}})))
 
 (fact "invoke-time extra data"
-  (let [k (k/create {:handlers
-                     {:api
-                      [(k/handler
-                         {:name :dispatcher}
-                         (partial k/get-dispatcher))
-                       (k/handler
-                         {:name :handler
-                          :description "magic"}
-                         (partial k/get-handler))
-                       (k/handler
-                         {:name :names}
-                         (fn [context]
-                           (->> context
-                                k/get-dispatcher
-                                k/all-handlers
-                                (map :name))))]}})]
+  (let [k (k/dispatcher {:handlers
+                         {:api
+                          [(k/handler
+                             {:name :dispatcher}
+                             (partial k/get-dispatcher))
+                           (k/handler
+                             {:name :handler
+                              :description "magic"}
+                             (partial k/get-handler))
+                           (k/handler
+                             {:name :names}
+                             (fn [context]
+                               (->> context
+                                    k/get-dispatcher
+                                    k/all-handlers
+                                    (map :name))))]}})]
 
     (fact "::dispatcher"
       (s/validate k/Dispatcher (k/invoke k :api/dispatcher)) => truthy)
@@ -541,7 +541,7 @@
 
 ; TODO: will override paths as we do merge
 (fact "handlers can be injected into existing dispatcher"
-  (let [k (-> (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+  (let [k (-> (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
               (k/inject (k/handler {:name :ping} identity)))]
     k => (contains
            {:handlers

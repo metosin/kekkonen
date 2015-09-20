@@ -61,7 +61,7 @@
 ;;
 
 ; create
-(def k (k/create
+(def k (k/dispatcher
          {:handlers {:api {:calculator [#'multiply #'plus]
                            :stateful #'inc!
                            :others [echo

@@ -26,7 +26,7 @@
 
 (facts "request routing"
   (let [app (r/ring-handler
-              (k/create {:handlers {:api [#'ping #'snoop]}}))]
+              (k/dispatcher {:handlers {:api [#'ping #'snoop]}}))]
 
     (fact "non matching route returns nil"
       (app {:uri "/" :request-method :post}) => nil)
@@ -64,7 +64,7 @@
 
 (facts "coercion"
   (let [app (r/ring-handler
-              (k/create {:handlers {:api [#'plus #'divide #'power #'echo #'response]}}))]
+              (k/dispatcher {:handlers {:api [#'plus #'divide #'power #'echo #'response]}}))]
 
     (fact "query-params"
 
@@ -148,7 +148,7 @@
 (facts "mapping"
   (facts "default body-params -> data"
     (let [app (r/ring-handler
-                (k/create {:handlers {:api (k/handler {:name :test} identity)}}))]
+                (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}}))]
 
       (app {:uri "/api/test"
             :request-method :post
@@ -156,7 +156,7 @@
 
   (fact "custom query-params -> query via transformer"
     (let [app (r/ring-handler
-                (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+                (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
                 {:types {:handler {:transformers [(k/context-copy [:request :query-params]
                                                                   [:query])]}}})]
 
@@ -166,7 +166,7 @@
 
   (fact "custom query-params -> query via parameters"
     (let [app (r/ring-handler
-                (k/create {:handlers {:api (k/handler {:name :test} identity)}})
+                (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
                 {:types {:handler {:parameters [[[:request :query-params] [:query]]]}}})]
 
       (app {:uri "/api/test"
@@ -184,11 +184,12 @@
 
 (fact "enriched handlers"
   (let [app (r/ring-handler
-              (k/create {:handlers
-                         {:api
-                          (k/handler
-                            {:name :test}
-                            (partial k/get-handler))}}))]
+              (k/dispatcher
+                {:handlers
+                 {:api
+                  (k/handler
+                    {:name :test}
+                    (partial k/get-handler))}}))]
 
     (app {:uri "/api/test" :request-method :post}) => (contains
                                                         {:ring
@@ -199,12 +200,13 @@
 
 (fact "global transformers"
   (let [app (r/ring-handler
-              (k/create {:handlers
-                         {:api
-                          (k/handler
-                            {:name :test}
-                            (fn [context]
-                              {:user (-> context ::user)}))}})
+              (k/dispatcher
+                {:handlers
+                 {:api
+                  (k/handler
+                    {:name :test}
+                    (fn [context]
+                      {:user (-> context ::user)}))}})
               {:transformers [(fn [context]
                                 (let [user (get-in context [:request :header-params "user"])]
                                   (assoc context ::user user)))]})]
