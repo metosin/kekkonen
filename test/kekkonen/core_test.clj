@@ -599,13 +599,25 @@
                 :value {:result -9}
                 :schema {:result PositiveInt}})))
 
-      (facts "with coercion turned off"
+      (facts "with input coercion turned off"
         (let [k (k/dispatcher {:handlers handlers
-                               :coercion-matcher nil})]
+                               :coercion {:input nil}})]
 
           (fact "input is not validated"
             (k/invoke k :api/plus {:data {:x 1, :y 1}})
             => {:result 2}
 
-            (k/invoke k :api/plus {:data {:x 1, :y -10}})
-            => {:result -9}))))))
+            (k/invoke k :api/plus {:data {:x 20, :y -10}})
+            => {:result 10})))
+
+      (facts "with input & output coercion turned off"
+        (let [k (k/dispatcher {:handlers handlers
+                               :coercion {:input nil
+                                          :output nil}})]
+
+          (fact "input is not validated"
+            (k/invoke k :api/plus {:data {:x 1, :y 1}})
+            => {:result 2}
+
+            (k/invoke k :api/plus {:data {:x 0, :y -10}})
+            => {:result -10}))))))

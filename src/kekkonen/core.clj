@@ -48,7 +48,8 @@
 (s/defschema Dispatcher
   {:handlers KeywordMap
    :context KeywordMap
-   :coercion-matcher s/Any
+   :coercion {:input s/Any
+              :output s/Any}
    :transformers [Function]
    :user KeywordMap
    s/Keyword s/Any})
@@ -205,7 +206,8 @@
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
    (s/optional-key :transformers) [Function]
-   (s/optional-key :coercion-matcher) s/Any
+   (s/optional-key :coercion) {(s/optional-key :input) s/Any
+                               (s/optional-key :output) s/Any}
    (s/optional-key :user) KeywordMap
    s/Keyword s/Any})
 
@@ -213,7 +215,8 @@
   {:handlers {}
    :context {}
    :transformers []
-   :coercion-matcher (constantly nil)
+   :coercion {:input (constantly nil)
+              :output (constantly nil)}
    :type-resolver default-type-resolver
    :user {}})
 
@@ -247,7 +250,7 @@
   (let [options (kc/deep-merge +default-options+ options)
         handlers (collect-and-enrich (:handlers options) (:type-resolver options) false)]
     (merge
-      (select-keys options [:context :transformers :coercion-matcher :user])
+      (select-keys options [:context :transformers :coercion :user])
       {:handlers handlers})))
 
 (s/defn action-kws [action :- s/Keyword]
@@ -313,9 +316,9 @@
 
                         ;; run coercion in invoke? and if coercion-matcher is set
                         ;; TODO: compile coercers forehand, getting x10 performace
-                        (cond-> context (and invoke? (:coercion-matcher dispatcher))
+                        (cond-> context (and invoke? (-> dispatcher :coercion :input))
                                 ((fn [context]
-                                   (coerce! input (:coercion-matcher dispatcher) context nil ::request))))
+                                   (coerce! input (-> dispatcher :coercion :input) context nil ::request))))
 
                         ;; run all the transformers
                         (reduce
@@ -342,8 +345,8 @@
         (let [response (function context)]
           ;; TODO: change all transformers into interceptors and run response pipeline here?
           ;; response coercion
-          (if (:coercion-matcher dispatcher)
-            (coerce! output (:coercion-matcher dispatcher) response nil ::response)
+          (if-let [matcher (-> dispatcher :coercion :output)]
+            (coerce! output matcher response nil ::response)
             response))))
     (throw (ex-info (str "Invalid action " action) {}))))
 

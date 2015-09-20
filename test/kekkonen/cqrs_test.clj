@@ -20,18 +20,18 @@
                  :required required}))))
 
 
-(p/defnk ^:query get-items :- #{s/Str}
+(p/defnk ^:query get-items
   "Retrieves all"
   [[:components db]]
   (success @db))
 
-(p/defnk ^:command add-item! :- #{s/Str}
+(p/defnk ^:command add-item!
   "Adds an item to database"
   [[:data item :- String]
    [:components db]]
   (success (swap! db conj item)))
 
-(p/defnk ^:command reset-items! :- #{s/Str}
+(p/defnk ^:command reset-items!
   "Resets the database"
   {::roles #{:admin}}
   [[:components db]]
