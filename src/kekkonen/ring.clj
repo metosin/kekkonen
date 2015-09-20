@@ -41,20 +41,6 @@
   [{:keys [ns name]} :- k/Handler]
   (str/replace (str ns name) #"[:|\.]" "/"))
 
-(defn coerce! [schema matcher value in type]
-  (let [coercer (sc/coercer schema matcher)
-        coerced (coercer value)]
-    (if-not (su/error? coerced)
-      coerced
-      (throw
-        (ex-info
-          "Coercion error"
-          {:type type
-           :in in
-           :value value
-           :schema schema
-           :error coerced})))))
-
 (defn coerce-request!
   "Coerces a request against a handler ring input schema based on :coercion options."
   [request handler {:keys [coercion]}]
@@ -62,7 +48,7 @@
     (fn [request [k matcher]]
       (if-let [schema (get-in handler [:ring :input :request k])]
         (let [value (get request k {})
-              coerced (coerce! schema matcher value k ::request)]
+              coerced (k/coerce! schema matcher value k ::request)]
           (if-not (empty? value)
             (assoc request k coerced)
             request))
@@ -122,7 +108,7 @@
                               matcher (get-in options [:coercion :body-params])
                               value (:body response)]
                           (if schema
-                            (let [coerced (coerce! schema matcher value :response ::response)]
+                            (let [coerced (k/coerce! schema matcher value :response ::response)]
                               (assoc response :body coerced))
                             response))
                         response))))))))))))

@@ -51,6 +51,8 @@
   (k/action-kws :api.user/user.api) => [:api :user :user.api]
   (k/action-kws :swagger.json) => [:swagger.json])
 
+(future-fact "coerce!")
+
 (fact "using services directly"
 
   (fact "simple query works"
@@ -510,7 +512,10 @@
   (fact "stripping handlers"
     (k/transform-handlers
       (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
-      (constantly nil)) => (contains {:handlers {}})))
+      (constantly nil))
+
+    => (contains
+         {:handlers {}})))
 
 (fact "invoke-time extra data"
   (let [k (k/dispatcher {:handlers
@@ -549,3 +554,5 @@
               {:api (just
                       {:test anything})
                :ping anything})})))
+
+(future-fact "coercion-matcher")

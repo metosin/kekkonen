@@ -5,7 +5,9 @@
             [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk]
             [kekkonen.common :as kc]
-            [clojure.walk :as walk])
+            [clojure.walk :as walk]
+            [schema.coerce :as sc]
+            [schema.utils :as su])
   (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction Keyword])
   (:refer-clojure :exclude [namespace]))
 
@@ -46,6 +48,7 @@
 (s/defschema Dispatcher
   {:handlers KeywordMap
    :context KeywordMap
+   :coercion-matcher s/Any
    :transformers [Function]
    :user KeywordMap
    s/Keyword s/Any})
@@ -202,6 +205,7 @@
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
    (s/optional-key :transformers) [Function]
+   (s/optional-key :coercion-matcher) s/Any
    (s/optional-key :user) KeywordMap
    s/Keyword s/Any})
 
@@ -209,6 +213,7 @@
   {:handlers {}
    :context {}
    :transformers []
+   :coercion-matcher (constantly nil)
    :type-resolver default-type-resolver
    :user {}})
 
@@ -241,10 +246,9 @@
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
         handlers (collect-and-enrich (:handlers options) (:type-resolver options) false)]
-    {:context (:context options)
-     :handlers handlers
-     :transformers (:transformers options)
-     :user (:user options)}))
+    (merge
+      (select-keys options [:context :transformers :coercion-matcher :user])
+      {:handlers handlers})))
 
 (s/defn action-kws [action :- s/Keyword]
   (let [tokens (str/split (subs (str action) 1) #"/")
@@ -283,15 +287,35 @@
 ;; Calling handlers
 ;;
 
+(defn coerce! [schema matcher value in type]
+  (let [coercer (sc/coercer schema matcher)
+        coerced (coercer value)]
+    (if-not (su/error? coerced)
+      coerced
+      (throw
+        (ex-info
+          "Coercion error"
+          {:type type
+           :in in
+           :value value
+           :schema schema
+           :error coerced})))))
+
 (s/defn ^:private prepare
   "Prepares a context for invocation or validation. Returns an 0-arity function
   or throws exception."
-  [dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-  (if-let [{:keys [function all-user] :as handler} (some-handler dispatcher action)]
+  [dispatcher :- Dispatcher, action :- s/Keyword, context :- Context, invoke? :- s/Bool]
+  (if-let [{:keys [function all-user input] :as handler} (some-handler dispatcher action)]
     (let [context (as-> context context
 
                         ;; base-context from Dispatcher
                         (kc/deep-merge (:context dispatcher) context)
+
+                        ;; run coercion in invoke? and if coercion-matcher is set
+                        ;; TODO: compile coercers forehand, getting x10 performace
+                        (cond-> context (and invoke? (:coercion-matcher dispatcher))
+                                ((fn [context]
+                                   (coerce! input (:coercion-matcher dispatcher) context ::context ::request))))
 
                         ;; run all the transformers
                         (reduce
@@ -312,9 +336,10 @@
                         ;; inject in stuff the context
                         (merge context {::dispatcher dispatcher
                                         ::handler handler}))]
-      (fn [invoke?]
-        (if invoke?
-          (function context))))
+
+      ;; all good, ready to invoke (or not)
+      (if invoke?
+        (function context)))
     (throw (ex-info (str "Invalid action " action) {}))))
 
 (s/defn invoke
@@ -322,7 +347,7 @@
   ([dispatcher :- Dispatcher, action :- s/Keyword]
     (invoke dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    ((prepare dispatcher action context) true)))
+    (prepare dispatcher action context true)))
 
 (s/defn validate
   "Checks if context is valid for the handler (without calling the body).
@@ -330,7 +355,7 @@
   ([dispatcher :- Dispatcher, action :- s/Keyword]
     (validate dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    ((prepare dispatcher action context) false)))
+    (prepare dispatcher action context false)))
 
 ;;
 ;; Listing handlers
