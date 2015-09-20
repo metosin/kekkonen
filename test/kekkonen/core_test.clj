@@ -51,7 +51,19 @@
   (k/action-kws :api.user/user.api) => [:api :user :user.api]
   (k/action-kws :swagger.json) => [:swagger.json])
 
-(future-fact "coerce!")
+(facts "coerce!"
+  (let [schema {:data {:x s/Int, :y s/Int}}
+        matcher (constantly nil)]
+
+    (k/coerce! schema matcher {:data {:x 1, :y 2}} ..in.. ..type..)
+    => {:data {:x 1, :y 2}}
+
+    (k/coerce! schema matcher {:data {:x "1", :y "2"}} ..in.. ..type..)
+    => (throws?
+         {:in ..in..
+          :type ..type..
+          :value {:data {:x "1", :y "2"}}
+          :schema schema})))
 
 (fact "using services directly"
 
