@@ -61,7 +61,7 @@
 ;;
 
 ; create
-(def k (k/dispatcher
+(def d (k/dispatcher
          {:handlers {:api {:calculator [#'multiply #'plus]
                            :stateful #'inc!
                            :others [echo
@@ -73,14 +73,14 @@
           :context {:components {:counter (atom 0)}}}))
 
 ; get a handler
-(k/some-handler k :api/nill)
-(k/some-handler k :api/stateful/inc!)
+(k/some-handler d :api/nill)
+(k/some-handler d :api/stateful/inc!)
 
 ; invoke a handler
-(k/invoke k :api/stateful/inc!)
+(k/invoke d :api/stateful/inc!)
 
 ; multi-tenant SAAS ftw?
-(k/invoke k :api/stateful/inc! {:components {:counter (atom 99)}})
+(k/invoke d :api/stateful/inc! {:components {:counter (atom 99)}})
 
 ; can i call it?
-(k/validate k :api/stateful/inc!)
+(k/validate d :api/stateful/inc!)
