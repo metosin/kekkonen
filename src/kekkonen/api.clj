@@ -16,7 +16,7 @@
    (s/optional-key :swagger-ui) k/KeywordMap})
 
 (s/def +default-options+ :- Options
-  {:core k/+default-options+
+  {:core (assoc k/+default-options+ :coercion {:input nil, :output nil}) ; disable double-coercion
    :ring r/+default-options+
    :mw mw/+default-options+
    :info {}
