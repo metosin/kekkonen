@@ -193,8 +193,8 @@
                                                     s/Keyword s/Any}
                                             :output User
                                             :source-map (just
-                                                          {:line 39
-                                                           :column 1
+                                                          {:line irrelevant
+                                                           :column irrelevant
                                                            :file string?
                                                            :ns 'kekkonen.core-test
                                                            :name 'echo})})}))
@@ -537,7 +537,7 @@
                              (partial k/get-dispatcher))
                            (k/handler
                              {:name :handler
-                              :description "magic"}
+                              :description "metameta"}
                              (partial k/get-handler))
                            (k/handler
                              {:name :names}
@@ -545,16 +545,17 @@
                                (->> context
                                     k/get-dispatcher
                                     k/all-handlers
-                                    (map :name))))]}})]
+                                    (map :name)
+                                    set)))]}})]
 
     (fact "::dispatcher"
       (s/validate k/Dispatcher (k/invoke k :api/dispatcher)) => truthy)
 
     (fact "::handler"
-      (k/invoke k :api/handler) => (contains {:description "magic"}))
+      (k/invoke k :api/handler) => (contains {:description "metameta"}))
 
     (fact "going meta boing boing"
-      (k/invoke k :api/names) => (just [:dispatcher :handler :names] :in-any-order))))
+      (k/invoke k :api/names) => #{:dispatcher :handler :names})))
 
 ; TODO: will override paths as we do merge
 (fact "handlers can be injected into existing dispatcher"
@@ -567,4 +568,44 @@
                       {:test anything})
                :ping anything})})))
 
-(future-fact "coercion-matcher")
+(facts "coercion-matcher"
+  (let [PositiveInt (s/both s/Int (s/pred pos? 'positive))
+        handlers {:api [(k/handler
+                          {:name :plus}
+                          (p/fnk plus :- {:result PositiveInt} [[:data x :- s/Int, y :- PositiveInt]]
+                            {:result (+ x y)}))]}]
+
+    (facts "with default settings"
+      (let [k (k/dispatcher {:handlers handlers})]
+
+        (fact "input is validated"
+
+          (k/invoke k :api/plus {:data {:x 1, :y 1}})
+          => {:result 2}
+
+          (k/invoke k :api/plus {:data {:x 1, :y -10}})
+          => (throws?
+               {:type :kekkonen.core/request
+                :in nil
+                :value {:data {:x 1, :y -10}}
+                :schema {:data {:x s/Int, :y PositiveInt, s/Keyword s/Any}, s/Keyword s/Any}}))
+
+        (fact "return is validated"
+
+          (k/invoke k :api/plus {:data {:x -10, :y 1}})
+          => (throws?
+               {:type :kekkonen.core/response
+                :in nil
+                :value {:result -9}
+                :schema {:result PositiveInt}})))
+
+      (facts "with coercion turned off"
+        (let [k (k/dispatcher {:handlers handlers
+                               :coercion-matcher nil})]
+
+          (fact "input is not validated"
+            (k/invoke k :api/plus {:data {:x 1, :y 1}})
+            => {:result 2}
+
+            (k/invoke k :api/plus {:data {:x 1, :y -10}})
+            => {:result -9}))))))

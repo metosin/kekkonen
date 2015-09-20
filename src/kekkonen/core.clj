@@ -305,7 +305,7 @@
   "Prepares a context for invocation or validation. Returns an 0-arity function
   or throws exception."
   [dispatcher :- Dispatcher, action :- s/Keyword, context :- Context, invoke? :- s/Bool]
-  (if-let [{:keys [function all-user input] :as handler} (some-handler dispatcher action)]
+  (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
     (let [context (as-> context context
 
                         ;; base-context from Dispatcher
@@ -315,7 +315,7 @@
                         ;; TODO: compile coercers forehand, getting x10 performace
                         (cond-> context (and invoke? (:coercion-matcher dispatcher))
                                 ((fn [context]
-                                   (coerce! input (:coercion-matcher dispatcher) context ::context ::request))))
+                                   (coerce! input (:coercion-matcher dispatcher) context nil ::request))))
 
                         ;; run all the transformers
                         (reduce
@@ -337,9 +337,14 @@
                         (merge context {::dispatcher dispatcher
                                         ::handler handler}))]
 
-      ;; all good, ready to invoke (or not)
+      ;; all good, let's invoke?
       (if invoke?
-        (function context)))
+        (let [response (function context)]
+          ;; TODO: change all transformers into interceptors and run response pipeline here?
+          ;; response coercion
+          (if (:coercion-matcher dispatcher)
+            (coerce! output (:coercion-matcher dispatcher) response nil ::response)
+            response))))
     (throw (ex-info (str "Invalid action " action) {}))))
 
 (s/defn invoke
