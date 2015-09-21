@@ -50,6 +50,30 @@
 
   (println))
 
-(comment
-  (bench))
+;;
+;; ring-handlers
+;;
 
+(require '[kekkonen.ring :as kr])
+
+(def r1 (kr/ring-handler d1))
+(def r2 (kr/ring-handler d2))
+
+(defn ring-bench []
+
+  (title "ring & dispatcher coercion")
+  (cc/quick-bench (r1 {:uri "/api/plus1"
+                       :request-method :post
+                       :body-params {:x 10, :y 20}}))
+  ; 20.7µs
+
+  (title "ring coercion")
+  (cc/quick-bench (r2 {:uri "/api/plus1"
+                       :request-method :post
+                       :body-params {:x 10, :y 20}}))
+  ; 15.7µs
+
+  (println))
+
+(comment
+  (core-bench))
