@@ -316,7 +316,7 @@
 
                         ;; run coercion in invoke? and if coercion-matcher is set
                         ;; TODO: compile coercers forehand, getting x10 performace
-                        (cond-> context (and invoke? (-> dispatcher :coercion :input))
+                        (cond-> context (and invoke? input (-> dispatcher :coercion :input))
                                 ((fn [context]
                                    (coerce! input (-> dispatcher :coercion :input) context nil ::request))))
 
@@ -345,8 +345,8 @@
         (let [response (function context)]
           ;; TODO: change all transformers into interceptors and run response pipeline here?
           ;; response coercion
-          (if-let [matcher (-> dispatcher :coercion :output)]
-            (coerce! output matcher response nil ::response)
+          (if (and output (-> dispatcher :coercion :output))
+            (coerce! output (-> dispatcher :coercion :output) response nil ::response)
             response))))
     (throw (ex-info (str "Invalid action " action) {}))))
 
