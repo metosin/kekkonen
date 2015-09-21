@@ -290,8 +290,10 @@
 ;; Calling handlers
 ;;
 
+(def memoized-coercer (memoize sc/coercer))
+
 (defn coerce! [schema matcher value in type]
-  (let [coercer (sc/coercer schema matcher)
+  (let [coercer (memoized-coercer schema matcher)
         coerced (coercer value)]
     (if-not (su/error? coerced)
       coerced
