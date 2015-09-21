@@ -5,7 +5,7 @@
             [kekkonen.cqrs :refer :all]
             [schema.core :as s]))
 
-(p/defnk ^:handler plus1 #_#_:- {:body {:result s/Int}, s/Keyword s/Any}
+(p/defnk ^:handler plus1 :- {:body {:result s/Int}, s/Keyword s/Any}
   "adds numbers together"
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
@@ -13,7 +13,7 @@
 (defn ^:handler plus2
   "adds numbers together"
   {:input {:data {:x s/Int, :y s/Int}}
-   #_#_:output {:body {:result s/Int}, s/Keyword s/Any}}
+   :output {:body {:result s/Int}, s/Keyword s/Any}}
   [{{:keys [x y]} :data}]
   (success {:result (+ x y)}))
 
@@ -30,11 +30,11 @@
 
   (title "with coercion")
   (cc/quick-bench (k/invoke d1 :api/plus1 {:data {:x 10, :y 20}}))
-  ; 19.9µs -> 5.6µs (compiled) -> 7.6µs (memoied)
+  ; 30.9µs µs (memoied)
 
   (title "without coercion")
   (cc/quick-bench (k/invoke d2 :api/plus1 {:data {:x 10, :y 20}}))
-  ; 3.9µs -> 4.0µs (memoized)
+  ; 4.7µs -> µs (memoized)
 
   (println))
 
