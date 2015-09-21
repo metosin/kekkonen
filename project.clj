@@ -19,8 +19,11 @@
   :profiles {:dev {:plugins [[lein-midje "3.1.3"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.7.0"]
+                                  [criterium "0.4.3"]
                                   [http-kit "2.1.19"]
                                   [midje "1.7.0"]]}
+             :perf {:jvm-opts ^:replace []}
              :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}}
   :aliases {"all" ["with-profile" "dev:dev,1.6"]
+            "perf" ["with-profile" "default,dev,perf"]
             "test-ancient" ["midje"]})
