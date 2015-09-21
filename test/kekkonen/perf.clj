@@ -30,11 +30,11 @@
 
   (title "with coercion")
   (cc/quick-bench (k/invoke d1 :api/plus1 {:data {:x 10, :y 20}}))
-  ; 30.9µs µs (memoied)
+  ; 28.0µs => 8.2µs (memoized)
 
   (title "without coercion")
   (cc/quick-bench (k/invoke d2 :api/plus1 {:data {:x 10, :y 20}}))
-  ; 4.7µs -> µs (memoized)
+  ; 3.7µs -> 3.7µs (memoized)
 
   (println))
 
