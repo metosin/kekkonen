@@ -34,7 +34,9 @@
 (s/defn uri->action :- s/Keyword
   "Converts an action keyword from a uri string."
   [path :- s/Str]
-  (-> path (subs 1) keyword))
+  (let [i (.lastIndexOf path "/")]
+    (if-not (= (count path) 1)
+      (keyword (subs (str (str/replace (subs path 0 i) #"/" ".") (subs path i)) 1)))))
 
 (s/defn handler-uri :- s/Str
   "Creates a uri for the handler"

@@ -46,7 +46,7 @@
    s/Keyword s/Any})
 
 (s/defschema Dispatcher
-  {:handlers KeywordMap
+  {:handlers {s/Keyword Handler}
    :context KeywordMap
    :coercion {:input s/Any
               :output s/Any}
@@ -220,7 +220,6 @@
    :type-resolver default-type-resolver
    :user {}})
 
-;; TODO: just collect handlers into a list?
 (defn- collect-and-enrich
   [handlers type-resolver allow-empty-namespaces?]
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
@@ -238,53 +237,42 @@
                                :action (handler-action (:name h) ns)}))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
-                   (p/for-map [[k v] x]
-                     (:name k) (if (handler? v)
-                                 (enrich v m)
-                                 (traverse v (conj m k)))))]
-    (traverse (collect handlers type-resolver) [])))
+                   (flatten
+                     (for [[k v] x]
+                       (if (handler? v)
+                         (enrich v m)
+                         (traverse v (conj m k))))))]
+    (-> handlers
+        (collect type-resolver)
+        (traverse [])
+        (->> (group-by :action)
+             (p/map-vals first)))))
 
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher."
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
-        handlers (collect-and-enrich (:handlers options) (:type-resolver options) false)]
+        handlers (->> (collect-and-enrich (:handlers options) (:type-resolver options) false))]
     (merge
       (select-keys options [:context :transformers :coercion :user])
       {:handlers handlers})))
 
-(s/defn action-kws [action :- s/Keyword]
-  (let [tokens (str/split (subs (str action) 1) #"/")
-        nss (vec (apply concat (map #(str/split % #"\.") (butlast tokens))))
-        name (last tokens)]
-    (map keyword (conj nss name))))
-
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
   [dispatcher :- Dispatcher, action :- s/Keyword]
-  (get-in (:handlers dispatcher) (action-kws action)))
+  (get-in dispatcher [:handlers action]))
 
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,
   the handler is removed."
   [dispatcher :- Dispatcher, f :- Function]
-  (merge
-    dispatcher
-    {:handlers
-     (kc/strip-nil-values
-       (w/prewalk
-         (fn [x]
-           (if (handler? x)
-             (f x)
-             x))
-         (:handlers dispatcher)))}))
+  (update-in dispatcher [:handlers] (comp kc/strip-nil-values (partial p/map-vals f))))
 
-; TODO: we should give separate root-handlers?
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
   [dispatcher :- Dispatcher, handler]
   (let [handler (collect-and-enrich handler any-type-resolver true)]
-    (update-in dispatcher (into [:handlers] (:ns handler)) merge handler)))
+    (update-in dispatcher [:handlers] merge handler)))
 
 ;;
 ;; Calling handlers
@@ -317,7 +305,6 @@
                         (kc/deep-merge (:context dispatcher) context)
 
                         ;; run coercion in invoke? and if coercion-matcher is set
-                        ;; TODO: compile coercers forehand, getting x10 performace
                         (cond-> context (and invoke? input (-> dispatcher :coercion :input))
                                 ((fn [context]
                                    (coerce! input (-> dispatcher :coercion :input) context nil ::request))))

@@ -46,11 +46,6 @@
 ;; facts
 ;;
 
-(fact "action-kws"
-  (k/action-kws :api.user/add-user!) => [:api :user :add-user!]
-  (k/action-kws :api.user/user.api) => [:api :user :user.api]
-  (k/action-kws :swagger.json) => [:swagger.json])
-
 (facts "coerce!"
   (let [schema {:data {:x s/Int, :y s/Int}}
         matcher (constantly nil)]
@@ -285,8 +280,6 @@
           (fact "namespaces can be joined with ."
             (k/some-handler d :admin.kikka/ping) => (contains {:action :admin.kikka/ping})
             (k/invoke d :admin.kikka/ping) => "pong")
-          (fact "namespaces can be joined with /"
-            (k/invoke d :admin/kukka/ping) => "pong")
           (fact "ns is set to handler with ."
             (k/some-handler d :admin.kukka/ping) => (contains {:ns :admin.kukka})))
 
@@ -515,11 +508,9 @@
     => (contains
          {:handlers
           (just
-            {:api
-             (just
-               {:test
-                (contains
-                  {:kikka :kukka})})})}))
+            {:api/test
+             (contains
+               {:kikka :kukka})})}))
 
   (fact "stripping handlers"
     (k/transform-handlers
@@ -564,8 +555,7 @@
     d => (contains
            {:handlers
             (just
-              {:api (just
-                      {:test anything})
+              {:api/test anything
                :ping anything})})))
 
 (facts "coercion-matcher"

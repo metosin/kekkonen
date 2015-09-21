@@ -8,7 +8,9 @@
             [plumbing.core :as p]))
 
 (facts "uris, actions, handlers"
-  (r/uri->action "/api/user/add-user!") => :api/user/add-user!
+  (r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
+  (r/uri->action "/api") => :api
+  (r/uri->action "/") => nil
   (r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!")
 
 (fact "ring-input-schema"
