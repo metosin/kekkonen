@@ -10,15 +10,8 @@
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
 
-(defn ^:handler plus2
-  "adds numbers together"
-  {:input {:data {:x s/Int, :y s/Int}}
-   :output {:body {:result s/Int}, s/Keyword s/Any}}
-  [{{:keys [x y]} :data}]
-  (success {:result (+ x y)}))
-
-(def d1 (k/dispatcher {:handlers {:api [#'plus1 #'plus2]}}))
-(def d2 (k/dispatcher {:handlers {:api [#'plus1 #'plus2]}
+(def d1 (k/dispatcher {:handlers {:api #'plus1}}))
+(def d2 (k/dispatcher {:handlers {:api #'plus1}
                        :coercion {:input nil, :output nil}}))
 
 (defn title [s]
