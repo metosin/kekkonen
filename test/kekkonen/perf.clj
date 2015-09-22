@@ -75,7 +75,6 @@
 
   (println))
 
-  (println))
-
 (comment
-  (core-bench))
+  (core-bench)
+  (ring-bench))
