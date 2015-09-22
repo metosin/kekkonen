@@ -1,7 +1,5 @@
 (ns kekkonen.ring
   (:require [schema.core :as s]
-            [schema.coerce :as sc]
-            [schema.utils :as su]
             [ring.swagger.coerce :as rsc]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
