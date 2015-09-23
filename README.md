@@ -8,8 +8,8 @@ Status: **Alpha**, `0.1.0` will be released soon.
 
 We are building complex UIs and need great remote api libraries to support that. APIs should be easy to
 create, compose and consume. They should be interaction- & domain-driven, not spec-driven (like the REST).
-Security should be inbuilt. One should be able to validate business rules both on the client and on the server
-without duplicating the code and logic. Data should flow both ways. State and dependencies should be managed
+Security should be inbuilt. Clients should be able to browze the apis, validate inputs and business rules
+both on the server & on the client. Data should flow both ways. State and dependencies should be managed
 elegantly. The library should be named after a Finnish president.
 
 # Idea
@@ -17,17 +17,21 @@ elegantly. The library should be named after a Finnish president.
 - Simple **library** to create and consume apis
 - Expose simple Clojure **functions** as **message handlers**
 - Manage handlers in **virtual namespaces** to enable refactoring
+- Invoke or validate input to handlers via a **dispatcher**
 - **Schema** to describe messages and do coercion
 - Data-driven, no macros, **no magic**
 - Declarative dependencies, **security** and state management
 - Explicit **extensions** via protocols, options and **meta-data**
 - **Transports** abstracted away
   - http via ring, websockets or use the queues, Luke.
+- Support different style of **apis**: messages, commands & queries, http
 - **Clients** as first-class citizens
   - Ability to **validate** requests against handlers
   - Remote **api documentation** as clojure/json data
   - Public http api documentation via **Swagger**
-  
+
+More on the [Wiki](https://github.com/metosin/kekkonen/wiki/Concepts).
+
 # A Simple example
 
 ## Creating an API
