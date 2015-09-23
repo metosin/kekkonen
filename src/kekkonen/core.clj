@@ -266,7 +266,9 @@
   "Applies f to all handlers. If the call returns nil,
   the handler is removed."
   [dispatcher :- Dispatcher, f :- Function]
-  (update-in dispatcher [:handlers] (comp kc/strip-nil-values (partial p/map-vals f))))
+  (update-in dispatcher [:handlers] (p/fn->> (p/map-vals f)
+                                             (filter (p/fn-> second))
+                                             (into {}))))
 
 (s/defn inject
   "Injects handlers into an existing Dispatcher"

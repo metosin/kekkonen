@@ -7,11 +7,15 @@
             [ring.util.http-response :refer [ok]]
             [plumbing.core :as p]))
 
-(facts "uris, actions, handlers"
+(facts "uri->action"
   (r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
   (r/uri->action "/api") => :api
-  (r/uri->action "/") => nil
-  (r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!")
+  (r/uri->action "/") => nil)
+
+(fact "handler-uri"
+  (r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!"
+  (r/handler-uri {:ns :api.user, :name :swagger.json}) => "/api/user/swagger.json"
+  (r/handler-uri {:ns nil, :name :swagger.json}) => "/swagger.json")
 
 (fact "ring-input-schema"
   (@#'r/ring-input-schema
@@ -146,6 +150,44 @@
               :request-method :post
               :query-params {:x "1" :y "2"}
               :headers {"kekkonen.mode" "validate"}}) => (ok nil)))))
+
+(facts "no coercion"
+
+  (fact "any ring coercion can be changed"
+    (let [app (r/ring-handler
+                (k/dispatcher {:handlers {:api [#'plus]}})
+                {:coercion {:query-params (get-in r/+default-options+ [:coercion :body-params])}})]
+
+      (app {:uri "/api/plus"
+            :request-method :post
+            :query-params {:x "1", :y "2"}}) => (throws? {:type :kekkonen.ring/request})))
+
+  (fact "any ring coercion can be disabled"
+    (let [app (r/ring-handler
+                (k/dispatcher {:handlers {:api [#'plus]}})
+                {:coercion {:query-params nil}})]
+
+      (app {:uri "/api/plus"
+            :request-method :post
+            :query-params {:x "1", :y "2"}}) => (throws? {:type :kekkonen.core/request})))
+
+  (fact "all ring coercions can be disabled"
+    (let [app (r/ring-handler
+                (k/dispatcher {:handlers {:api [#'plus]}})
+                {:coercion nil})]
+
+      (app {:uri "/api/plus"
+            :request-method :post
+            :query-params {:x "1", :y "2"}}) => (throws? {:type :kekkonen.core/request})))
+
+  (fact "all ring & core coercions can be disabled"
+    (let [app (r/ring-handler
+                (k/dispatcher {:handlers {:api [#'plus]}, :coercion nil})
+                {:coercion nil})]
+
+      (app {:uri "/api/plus"
+            :request-method :post
+            :query-params {:x "1", :y "2"}}) => (throws ClassCastException))))
 
 (facts "mapping"
   (facts "default body-params -> data"

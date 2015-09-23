@@ -5,8 +5,7 @@
             [ring.swagger.ui :as ui]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
-            [plumbing.core :as p]
-            [kekkonen.ring :as r]))
+            [plumbing.core :as p]))
 
 (def +default-swagger-ui-options+
   {:path "/"})
@@ -15,27 +14,26 @@
   "Transforms a handler into ring-swagger path->method->operation map."
   [handler]
   (let [{:keys [description ns ring] {:keys [summary responses no-doc]} :user} handler
-        {:keys [parameters input type-config]} ring
+        {:keys [parameters input type-config uri]} ring
         ;; deep-merge back the mappings to get right request requirements
         input (reduce kc/deep-merge-to-from input parameters)
         {:keys [body-params query-params path-params header-params]} (:request input)
-        methods (-> type-config :methods sort)
-        path (r/handler-uri handler)]
+        methods (-> type-config :methods sort)]
 
     ;; discard handlers with :no-doc or without :ring metadata
     (if (and (not no-doc) ring)
-      {path (p/for-map [method methods]
-              method (merge
-                       (if ns {:tags [ns]})
-                       (if description {:description description
-                                        :summary description})
-                       (if summary {:summary summary})
-                       (if responses {:responses responses})
-                       {:parameters (kc/strip-nil-values
-                                      {:body body-params
-                                       :query query-params
-                                       :path path-params
-                                       :header header-params})}))})))
+      {uri (p/for-map [method methods]
+             method (merge
+                      (if ns {:tags [ns]})
+                      (if description {:description description
+                                       :summary description})
+                      (if summary {:summary summary})
+                      (if responses {:responses responses})
+                      {:parameters (kc/strip-nil-values
+                                     {:body body-params
+                                      :query query-params
+                                      :path path-params
+                                      :header header-params})}))})))
 
 (s/defn ring-swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Dispatcher and extra info"

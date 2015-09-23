@@ -5,7 +5,8 @@
             [kekkonen.common :as kc]
             [clojure.string :as str]
             [ring.swagger.json-schema :as rsjs]
-            [clojure.walk :as walk]))
+            [clojure.walk :as walk]
+            [plumbing.core :as p]))
 
 (def ^:private mode-parameter "kekkonen.mode")
 
@@ -38,20 +39,25 @@
 
 (s/defn handler-uri :- s/Str
   "Creates a uri for the handler"
-  [{:keys [ns name]} :- k/Handler]
-  (str/replace (str ns name) #"[:|\.]" "/"))
+  [handler :- k/Handler]
+  (str
+    (if-let [ns (some-> handler :ns name)]
+      (str "/" (str/replace ns #"\." "/")))
+    "/" (name (:name handler))))
 
 (defn coerce-request!
   "Coerces a request against a handler ring input schema based on :coercion options."
   [request handler {:keys [coercion]}]
   (reduce
     (fn [request [k matcher]]
-      (if-let [schema (get-in handler [:ring :input :request k])]
-        (let [value (get request k {})
-              coerced (k/coerce! schema matcher value k ::request)]
-          (if-not (empty? value)
-            (assoc request k coerced)
-            request))
+      (if matcher
+        (if-let [schema (get-in handler [:ring :input :request k])]
+          (let [value (get request k {})
+                coerced (k/coerce! schema matcher value k ::request)]
+            (if-not (empty? value)
+              (assoc request k coerced)
+              request))
+          request)
         request))
     request
     coercion))
@@ -77,6 +83,7 @@
                          (ring-input-schema (:parameters type-config))
                          attach-mode-parameter)]
     (assoc handler :ring {:type-config type-config
+                          :uri (handler-uri handler)
                           :input input-schema})))
 
 (s/defn ring-handler
@@ -85,33 +92,34 @@
     (ring-handler dispatcher {}))
   ([dispatcher :- k/Dispatcher, options :- k/KeywordMap]
     (let [options (kc/deep-merge +default-options+ options)
-          dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))]
+          dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
+          router (p/for-map [handler (k/all-handlers dispatcher)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method uri] :as request}]
-        (let [action (uri->action uri)]
-          (if-let [handler (k/some-handler dispatcher action)]
-            (if-let [type-config (-> handler :ring :type-config)]
-              (if (get (:methods type-config) request-method)
-                (let [request (coerce-request! request handler options)
-                      context (as-> {:request request} context
-                                    ;; global transformers first
-                                    (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
-                                    ;; type-level transformers
-                                    (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config))
-                                    ;; map parameters from ring-request into common keys
-                                    (reduce kc/deep-merge-from-to context (:parameters type-config)))]
-                  (if (is-validate-request? request)
-                    {:status 200, :headers {}, :body (k/validate dispatcher action context)}
-                    (let [response (k/invoke dispatcher action context)]
-                      (if-let [responses (-> handler :user :responses)]
-                        (let [status (or (:status response) 200)
-                              schema (get-in responses [status :schema])
-                              matcher (get-in options [:coercion :body-params])
-                              value (:body response)]
-                          (if schema
-                            (let [coerced (k/coerce! schema matcher value :response ::response)]
-                              (assoc response :body coerced))
-                            response))
-                        response))))))))))))
+        (if-let [handler (router uri)]
+          (if-let [type-config (-> handler :ring :type-config)]
+            (if (get (:methods type-config) request-method)
+              (let [action (:action handler)
+                    request (coerce-request! request handler options)
+                    context (as-> {:request request} context
+                                  ;; global transformers first
+                                  (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
+                                  ;; type-level transformers
+                                  (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config))
+                                  ;; map parameters from ring-request into common keys
+                                  (reduce kc/deep-merge-from-to context (:parameters type-config)))]
+                (if (is-validate-request? request)
+                  {:status 200, :headers {}, :body (k/validate dispatcher action context)}
+                  (let [response (k/invoke dispatcher action context)]
+                    (if-let [responses (-> handler :user :responses)]
+                      (let [status (or (:status response) 200)
+                            schema (get-in responses [status :schema])
+                            matcher (get-in options [:coercion :body-params])
+                            value (:body response)]
+                        (if schema
+                          (let [coerced (k/coerce! schema matcher value :response ::response)]
+                            (assoc response :body coerced))
+                          response))
+                      response)))))))))))
 
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in orcer."
