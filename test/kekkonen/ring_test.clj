@@ -68,6 +68,11 @@
   [[:request body-params :- {:value (s/either s/Str s/Int)}]]
   (ok body-params))
 
+(fact "internal schemas"
+  (s/with-fn-validation
+    (r/ring-handler
+      (k/dispatcher {:handlers {:api #'plus}}))))
+
 (facts "coercion"
   (let [app (r/ring-handler
               (k/dispatcher {:handlers {:api [#'plus #'divide #'power #'echo #'response]}}))]

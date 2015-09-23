@@ -4,8 +4,7 @@
             [ring.util.http-response :refer [ok]]
             [ring.util.http-predicates :refer [ok?]]
             [plumbing.core :as p]
-            [kekkonen.api :refer [api]]
-            [schema.core :as s]))
+            [kekkonen.api :refer [api]]))
 
 (p/defnk ^:handler ping []
   (ok {:ping "pong"}))
