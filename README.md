@@ -16,7 +16,7 @@ elegantly. The library should be named after a Finnish president.
 
 - Simple **library** to create and consume apis
 - Expose simple Clojure **functions** as **message handlers**
-- Manage handlers in **virtual namespaces** to enable refactoring
+- Manage handlers in **virtual namespaces**
 - Invoke or validate input to handlers via a **dispatcher**
 - **Schema** to describe messages and do coercion
 - Data-driven, no macros, **no magic**
@@ -30,7 +30,7 @@ elegantly. The library should be named after a Finnish president.
   - Remote **api documentation** as clojure/json data
   - Public http api documentation via **Swagger**
 
-More on the [Wiki](https://github.com/metosin/kekkonen/wiki/Concepts).
+More on the [Wiki](https://github.com/metosin/kekkonen/wiki).
 
 # A Simple example
 
