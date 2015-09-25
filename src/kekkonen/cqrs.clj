@@ -56,7 +56,7 @@
                                                (filter (p/fn-> :ring))
                                                (remove (p/fn-> :ns (= :kekkonen)))
                                                (remove (p/fn-> :user :no-doc))
-                                               (map k/public-meta)))))
+                                               (map k/public-handler)))))
                                     (k/handler
                                       {:type :query
                                        :name "get-available"
@@ -69,14 +69,14 @@
                                                (filter (p/fn-> :ring))
                                                (remove (p/fn-> :ns (= :kekkonen)))
                                                (remove (p/fn-> :user :no-doc))
-                                               (map k/public-meta)))))
+                                               (map k/public-handler)))))
                                     (k/handler
                                       {:type :query
                                        :name "get-handler"
                                        :description "Returns a handler info or nil."}
                                       (p/fnk [[:data action :- s/Keyword] :as context]
                                         (success
-                                          (k/public-meta
+                                          (k/public-handler
                                             (k/some-handler
                                               (k/get-dispatcher context)
                                               action)))))]}}

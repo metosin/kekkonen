@@ -72,6 +72,25 @@
 (def default-type-resolver (type-resolver :handler))
 
 ;;
+;; Exposing handler meta-data
+;;
+
+(defn- stringify-schema [schema]
+  (walk/prewalk
+    (fn [x]
+      (if-not (or (and (map? x) (not (record? x))) (vector? x) (string? x) (keyword? x))
+        (pr-str x) x))
+    schema))
+
+; TODO: pass Schemas as-is -> implement https://github.com/metosin/web-schemas
+(s/defn public-handler
+  [handler :- Handler]
+  (some-> handler
+          (select-keys [:input :name :ns :output :source-map :type :action])
+          (update-in [:input] stringify-schema)
+          (update-in [:output] stringify-schema)))
+
+;;
 ;; Collecting
 ;;
 
@@ -152,19 +171,19 @@
   Collector
   (-collect [this type-resolver]
     (if-let [{:keys [line column file ns name doc type] :as meta} (type-resolver (meta this))]
-        {(namespace
-           {:name (keyword name)})
-         {:function @this
-          :type type
-          :name (keyword name)
-          :user (user-meta meta)
-          :description doc
-          :input (extract-var-schema :input this)
-          :output (extract-var-schema :output this)
-          :source-map {:line line
-                       :column column
-                       :file file
-                       :ns (ns-name ns)
+      {(namespace
+         {:name (keyword name)})
+       {:function @this
+        :type type
+        :name (keyword name)
+        :user (user-meta meta)
+        :description doc
+        :input (extract-var-schema :input this)
+        :output (extract-var-schema :output this)
+        :source-map {:line line
+                     :column column
+                     :file file
+                     :ns (ns-name ns)
                      :name name}}}
       (throw (ex-info (format "Var %s can't be type-resolved" this) {:target this})))))
 
@@ -312,11 +331,7 @@
                                    (coerce! input (-> dispatcher :coercion :input) context nil ::request))))
 
                         ;; run all the transformers
-                        (reduce
-                          (fn [context mapper]
-                            (mapper context))
-                          context
-                          (:transformers dispatcher))
+                        (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers dispatcher))
 
                         ;; run all the user transformers per namespace/handler, start from the root
                         (reduce
@@ -328,13 +343,11 @@
                           (apply concat all-user))
 
                         ;; inject in stuff the context
-                        (merge context {::dispatcher dispatcher
-                                        ::handler handler}))]
+                        (merge context {::dispatcher dispatcher, ::handler handler}))]
 
       ;; all good, let's invoke?
       (if invoke?
         (let [response (function context)]
-          ;; TODO: change all transformers into interceptors and run response pipeline here?
           ;; response coercion
           (if (and output (-> dispatcher :coercion :output))
             (coerce! output (-> dispatcher :coercion :output) response nil ::response)
@@ -394,21 +407,6 @@
           true
           (catch Exception _)))
       (all-handlers dispatcher prefix))))
-
-(defn stringify-schema [schema]
-  (walk/prewalk
-    (fn [x]
-      (if-not (or (and (map? x) (not (record? x))) (vector? x) (string? x) (keyword? x))
-        (pr-str x) x))
-    schema))
-
-; TODO: pass Schemas as-is -> implement https://github.com/metosin/web-schemas
-(s/defn public-meta
-  [handler :- Handler]
-  (some-> handler
-          (select-keys [:input :name :ns :output :source-map :type :action])
-          (update-in [:input] stringify-schema)
-          (update-in [:output] stringify-schema)))
 
 ;;
 ;; Working with contexts
