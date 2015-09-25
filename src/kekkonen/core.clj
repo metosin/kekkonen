@@ -141,9 +141,9 @@
                       :input pfnk/input-schema
                       :output pfnk/output-schema)
         pfnk? (fn [x]
-                (and (satisfies? pfnk/PFnk x)
-                     ;; TODO: better way to figure out is this ok
-                     (-> x meta :plumbing.fnk.impl/positional-info)))]
+                (and
+                  (satisfies? pfnk/PFnk x)
+                  (:schema (meta x))))]
     (cond
       (pfnk? @v) (pfnk-schema @v)
       :else (or (schema-key (meta v))))))
@@ -152,19 +152,19 @@
   Collector
   (-collect [this type-resolver]
     (if-let [{:keys [line column file ns name doc type] :as meta} (type-resolver (meta this))]
-      {(namespace
-         {:name (keyword name)})
-       {:function @this
-        :type type
-        :name (keyword name)
-        :user (user-meta meta)
-        :description doc
-        :input (extract-var-schema :input this)
-        :output (extract-var-schema :output this)
-        :source-map {:line line
-                     :column column
-                     :file file
-                     :ns (ns-name ns)
+        {(namespace
+           {:name (keyword name)})
+         {:function @this
+          :type type
+          :name (keyword name)
+          :user (user-meta meta)
+          :description doc
+          :input (extract-var-schema :input this)
+          :output (extract-var-schema :output this)
+          :source-map {:line line
+                       :column column
+                       :file file
+                       :ns (ns-name ns)
                      :name name}}}
       (throw (ex-info (format "Var %s can't be type-resolved" this) {:target this})))))
 

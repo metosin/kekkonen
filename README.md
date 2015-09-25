@@ -30,7 +30,7 @@ elegantly. The library should be named after a Finnish president.
   - Remote **api documentation** as clojure/json data
   - Public http api documentation via **Swagger**
 
-More on the [Wiki](https://github.com/metosin/kekkonen/wiki).
+More on the [Wiki](https://github.com/metosin/kekkonen/wiki/Basics).
 
 # A Simple example
 
