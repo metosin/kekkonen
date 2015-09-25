@@ -1,4 +1,4 @@
-# Kekkonen [![Build Status](https://travis-ci.org/metosin/kekkonen.svg?branch=master)](https://travis-ci.org/metosin/kekkonen)
+# Kekkonen [![Build Status](https://travis-ci.org/metosin/kekkonen.svg?branch=master)](https://travis-ci.org/metosin/kekkonen) [![Dependencies Status](http://jarkeeper.com/metosin/kekkonen/status.svg)](http://jarkeeper.com/metosin/kekkonen)
 
 A library for creating and consuming remote APIs for Clojure(Script). http://kekkonen.io/
 
@@ -242,14 +242,10 @@ No.
 
 # TODO
 
-- [ ] Finalize things
-- [ ] Wiki tutorial, describing internals
 - [ ] ClojureScript client
 - [ ] JavaScript client
 - [ ] re-kekkonen, a Reagent template
-- [ ] Emitting Events / Websockets, towards Event Sourcing?
-- [ ] Ring -> Async
-- [ ] Web-schemas
+- [ ] Emitting Events from commands & Websockets, towards Event Sourcing?
 
 ## License
 
