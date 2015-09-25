@@ -2,7 +2,9 @@
 
 A library for creating and consuming remote APIs for Clojure(Script). http://kekkonen.io/
 
-Status: **Alpha**, `0.1.0` will be released soon.
+## Latest version
+
+[![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
 
 # Mission statement
 
