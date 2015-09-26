@@ -364,7 +364,7 @@
   ([dispatcher :- Dispatcher, action :- s/Keyword]
     (check dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (dispatch dispatcher :check action context )))
+    (dispatch dispatcher :check action context)))
 
 (s/defn validate
   "Checks if context is valid for the handler (without calling the body).
@@ -385,49 +385,61 @@
 ;; Listing handlers
 ;;
 
+(s/defn get-handlers :- [Handler]
+  "Returns handlers based on mode, namespace and context"
+  ([dispatcher :- Dispatcher
+    mode :- (s/enum :all :check :validate)]
+    (get-handlers dispatcher mode nil))
+  ([dispatcher :- Dispatcher
+    mode :- (s/enum :all :check :validate)
+    prefix :- (s/maybe s/Keyword)]
+    (get-handlers dispatcher mode prefix {}))
+  ([dispatcher :- Dispatcher
+    mode :- (s/enum :all :check :validate)
+    prefix :- (s/maybe s/Keyword)
+    context :- Context]
+    (let [all-handlers (-> dispatcher :handlers vals)
+          handlers (if-not prefix
+                     all-handlers
+                     (seq
+                       (filter
+                         (fn [{:keys [ns]}]
+                           (if ns
+                             (let [prefix-seq (str/split (subs (str prefix) 1) #"[\.]")
+                                   action-seq (str/split (subs (str ns) 1) #"[\.]")]
+                               (= prefix-seq (take (count prefix-seq) action-seq)))
+                             true))
+                         all-handlers)))]
+      (if (= :all mode)
+        handlers
+        (filter
+          (fn [handler]
+            (try
+              (dispatch dispatcher mode (:action handler) context)
+              true
+              (catch Exception _)))
+          handlers)))))
+
 (s/defn all-handlers :- [Handler]
   "Returns all handlers."
   ([dispatcher :- Dispatcher]
     (all-handlers dispatcher nil))
   ([dispatcher :- Dispatcher, prefix :- (s/maybe s/Keyword)]
-    (let [handlers (-> dispatcher :handlers vals)]
-      (if-not prefix
-        handlers
-        (seq
-          (filter
-            (fn [{:keys [ns]}]
-              (if ns
-                (let [prefix-seq (str/split (subs (str prefix) 1) #"[\.]")
-                      action-seq (str/split (subs (str ns) 1) #"[\.]")]
-                  (= prefix-seq (take (count prefix-seq) action-seq)))
-                true))
-            handlers))))))
+    (get-handlers dispatcher :all prefix)))
 
 (s/defn available-handlers :- [Handler]
   "Returns all handlers which are available under a given context"
   ([dispatcher :- Dispatcher, context :- Context]
     (available-handlers dispatcher context nil))
   ([dispatcher :- Dispatcher, context :- Context, prefix :- (s/maybe s/Keyword)]
-    (filter
-      (fn [handler]
-        (try
-          (check dispatcher (:action handler) context)
-          true
-          (catch Exception _)))
-      (all-handlers dispatcher prefix))))
+    (get-handlers dispatcher :check prefix context)))
 
 (s/defn validated-handlers :- [Handler]
   "Returns all handlers wheere input is valid under a given context"
   ([dispatcher :- Dispatcher, context :- Context]
     (available-handlers dispatcher context nil))
   ([dispatcher :- Dispatcher, context :- Context, prefix :- (s/maybe s/Keyword)]
-    (filter
-      (fn [handler]
-        (try
-          (validate dispatcher (:action handler) context)
-          true
-          (catch Exception _)))
-      (all-handlers dispatcher prefix))))
+    (get-handlers dispatcher :validate prefix context)))
 
 ;;
 ;; Working with contexts

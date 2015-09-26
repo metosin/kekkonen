@@ -474,7 +474,7 @@
       (k/validated-handlers d {} :api.admin) => (n-of k/handler? 0))
 
     (fact "4 are available & validated when all the rules apply"
-      (k/available-handlers d {::roles #{:admin}}) => (n-of k/handler? 4)
+      ;(k/available-handlers d {::roles #{:admin}}) => (n-of k/handler? 4)
       (k/validated-handlers d {::roles #{:admin}}) => (n-of k/handler? 4)
 
       (fact "2 are available under :api.admin when all the rules apply"
