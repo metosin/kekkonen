@@ -226,7 +226,7 @@
                              :handlers {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
-          (count (k/all-handlers d)) => 6)
+          (count (k/get-handlers d :all nil)) => 6)
 
         (fact "non-existing action"
 
@@ -400,9 +400,10 @@
                :user {::roles role-enforcer}})]
 
       (fact "user-meta is populated correctly"
-        (k/all-handlers d) => (just [(contains {:user {::roles #{:admin}}
-                                                :ns-user []
-                                                :all-user [{::roles #{:admin}}]})]))
+        (k/get-handlers d :all nil)
+        => (just [(contains {:user {::roles #{:admin}}
+                             :ns-user []
+                             :all-user [{::roles #{:admin}}]})]))
 
       (fact "invoking api enforces rules"
 
@@ -424,12 +425,13 @@
                :user {::roles role-enforcer}})]
 
       (fact "user-meta is populated correctly"
-        (k/all-handlers d) => (just [(contains {:user {::roles #{:superadmin}}
-                                                :ns-user [{::roles #{:anyone}}
-                                                          {::roles #{:admin}}]
-                                                :all-user [{::roles #{:anyone}}
-                                                           {::roles #{:admin}}
-                                                           {::roles #{:superadmin}}]})]))
+        (k/get-handlers d :all nil)
+        => (just [(contains {:user {::roles #{:superadmin}}
+                             :ns-user [{::roles #{:anyone}}
+                                       {::roles #{:admin}}]
+                             :all-user [{::roles #{:anyone}}
+                                        {::roles #{:admin}}
+                                        {::roles #{:superadmin}}]})]))
 
       (fact "invoking api enforces rules"
 
@@ -454,34 +456,34 @@
                                           :public [handler1 handler2]}}})]
 
     (fact "4 handlers exist"
-      (k/all-handlers d) => (n-of k/handler? 4))
+      (k/get-handlers d :all nil) => (n-of k/handler? 4))
 
     (fact "4 handlers exist under :api"
-      (k/all-handlers d :api) => (n-of k/handler? 4))
+      (k/get-handlers d :all :api) => (n-of k/handler? 4))
 
     (fact "2 handlers exist under :api.admin"
-      (k/all-handlers d :api.admin) => (n-of k/handler? 2))
+      (k/get-handlers d :all :api.admin) => (n-of k/handler? 2))
 
     (fact "allow only exact matches on the namespace"
-      (k/all-handlers d :api.adm) => nil)
+      (k/get-handlers d :all :api.adm) => nil)
 
-    (fact "only 2 are available & validated"
-      (k/available-handlers d {}) => (n-of k/handler? 2)
-      (k/validated-handlers d {}) => (n-of k/handler? 2))
+    (fact "2 is available and 1 can be invoked"
+      (k/get-handlers d :check nil {}) => (n-of k/handler? 2)
+      (k/get-handlers d :validate nil {}) => (n-of k/handler? 1))
 
     (fact "0 are available & validated under :api.admin"
-      (k/available-handlers d {} :api.admin) => (n-of k/handler? 0)
-      (k/validated-handlers d {} :api.admin) => (n-of k/handler? 0))
+      (k/get-handlers d :check :api.admin {}) => (n-of k/handler? 0)
+      (k/get-handlers d :validate :api.admin {}) => (n-of k/handler? 0))
 
-    (fact "4 are available & validated when all the rules apply"
-      ;(k/available-handlers d {::roles #{:admin}}) => (n-of k/handler? 4)
-      (k/validated-handlers d {::roles #{:admin}}) => (n-of k/handler? 4)
+    (fact "4 are available and 2 can be invoked"
+      (k/get-handlers d :check nil {::roles #{:admin}}) => (n-of k/handler? 4)
+      (k/get-handlers d :validate nil {::roles #{:admin}}) => (n-of k/handler? 2)
 
       (fact "2 are available under :api.admin when all the rules apply"
-        (k/available-handlers d {::roles #{:admin}} :api.admin) => (n-of k/handler? 2))
+        (k/get-handlers d :check :api.admin {::roles #{:admin}}) => (n-of k/handler? 2))
 
       (fact "1 is validated"
-        (k/validated-handlers d {::roles #{:admin}} :api.admin) => (n-of k/handler? 1))
+        (k/get-handlers d :validate :api.admin {::roles #{:admin}}) => (n-of k/handler? 1))
 
       (fact "interacting with a spesific handler"
         (fact "with missing parameters"
@@ -550,7 +552,7 @@
                              (fn [context]
                                (->> context
                                     k/get-dispatcher
-                                    k/all-handlers
+                                    (p/<- (k/get-handlers :all nil))
                                     (map :name)
                                     set)))]}})]
 

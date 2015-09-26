@@ -18,7 +18,7 @@
       (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
         (ok (->> context
                  k/get-dispatcher
-                 (p/<- (k/all-handlers ns))
+                 (p/<- (k/get-handlers :all ns context))
                  (filter (p/fn-> :ring))
                  (remove (p/fn-> :ns (= :kekkonen)))
                  (remove (p/fn-> :user :no-doc))
@@ -30,7 +30,7 @@
       (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
         (ok (->> context
                  k/get-dispatcher
-                 (p/<- (k/available-handlers context ns))
+                 (p/<- (k/get-handlers :check ns context))
                  (filter (p/fn-> :ring))
                  (remove (p/fn-> :ns (= :kekkonen)))
                  (remove (p/fn-> :user :no-doc))

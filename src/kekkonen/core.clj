@@ -420,27 +420,6 @@
               (catch Exception _)))
           handlers)))))
 
-(s/defn all-handlers :- [Handler]
-  "Returns all handlers."
-  ([dispatcher :- Dispatcher]
-    (all-handlers dispatcher nil))
-  ([dispatcher :- Dispatcher, prefix :- (s/maybe s/Keyword)]
-    (get-handlers dispatcher :all prefix)))
-
-(s/defn available-handlers :- [Handler]
-  "Returns all handlers which are available under a given context"
-  ([dispatcher :- Dispatcher, context :- Context]
-    (available-handlers dispatcher context nil))
-  ([dispatcher :- Dispatcher, context :- Context, prefix :- (s/maybe s/Keyword)]
-    (get-handlers dispatcher :check prefix context)))
-
-(s/defn validated-handlers :- [Handler]
-  "Returns all handlers wheere input is valid under a given context"
-  ([dispatcher :- Dispatcher, context :- Context]
-    (available-handlers dispatcher context nil))
-  ([dispatcher :- Dispatcher, context :- Context, prefix :- (s/maybe s/Keyword)]
-    (get-handlers dispatcher :validate prefix context)))
-
 ;;
 ;; Working with contexts
 ;;
