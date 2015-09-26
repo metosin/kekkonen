@@ -6,6 +6,8 @@ A library for creating and consuming remote APIs for Clojure(Script). http://kek
 
 [![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
 
+Quickstart: `lein new kekkonen kakkonen --snapshot`
+
 # Mission statement
 
 We are building complex UIs and need great remote api libraries to support that. APIs should be easy to
@@ -33,6 +35,8 @@ elegantly. The library should be named after a Finnish president.
   - Public http api documentation via **Swagger**
 
 More on the [Wiki](https://github.com/metosin/kekkonen/wiki/Basics).
+
+Examples projects under [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples).
 
 # A Simple example
 
