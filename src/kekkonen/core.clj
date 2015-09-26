@@ -317,9 +317,11 @@
            :error coerced})))))
 
 (s/defn ^:private dispatch
-  "Prepares a context for invocation or validation. Returns an 0-arity function
-  or throws exception."
-  [dispatcher :- Dispatcher, action :- s/Keyword, context :- Context, mode :- (s/enum :check :validate :invoke)]
+  "Dispatch can be run in the following modes: :check, :validate or :invoke"
+  [dispatcher :- Dispatcher
+   mode :- (s/enum :check :validate :invoke)
+   action :- s/Keyword
+   context :- Context]
   (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
     (let [context (as-> context context
 
@@ -362,7 +364,7 @@
   ([dispatcher :- Dispatcher, action :- s/Keyword]
     (check dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (dispatch dispatcher action context :check)))
+    (dispatch dispatcher :check action context )))
 
 (s/defn validate
   "Checks if context is valid for the handler (without calling the body).
@@ -370,14 +372,14 @@
   ([dispatcher :- Dispatcher, action :- s/Keyword]
     (validate dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (dispatch dispatcher action context :validate)))
+    (dispatch dispatcher :validate action context)))
 
 (s/defn invoke
   "Invokes an action handler with the given context."
   ([dispatcher :- Dispatcher, action :- s/Keyword]
     (invoke dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (dispatch dispatcher action context :invoke)))
+    (dispatch dispatcher :invoke action context)))
 
 ;;
 ;; Listing handlers
