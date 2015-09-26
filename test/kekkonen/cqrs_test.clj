@@ -2,8 +2,8 @@
   (:require [kekkonen.cqrs :refer :all]
             [kekkonen.midje :refer :all]
             [midje.sweet :refer :all]
-            [schema.core :as s]
             [ring.util.http-response :refer [ok]]
+            [ring.util.http-predicates :as http-predicates]
             [plumbing.core :as p]
             [clojure.set :as set]))
 
@@ -36,6 +36,15 @@
   {::roles #{:admin}}
   [[:components db]]
   (success (swap! db empty)))
+
+(facts "response codes"
+  (success) => http-predicates/ok?
+  (failure) => http-predicates/bad-request?
+  (error) => http-predicates/internal-server-error?)
+
+(facts "commands & queries"
+  (meta (command {:name 'kikka} identity)) => (contains {:type :command})
+  (meta (query {:name 'kikka} identity)) => (contains {:type :query}))
 
 (facts "cqrs-api"
   (let [app (cqrs-api
