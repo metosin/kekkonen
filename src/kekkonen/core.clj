@@ -291,9 +291,10 @@
 
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
-  [dispatcher :- Dispatcher, handler]
-  (let [handler (collect-and-enrich handler any-type-resolver true)]
-    (update-in dispatcher [:handlers] merge handler)))
+  [dispatcher :- Dispatcher, handlers]
+  (if handlers
+    (let [handler (collect-and-enrich handlers any-type-resolver true)]
+      (update-in dispatcher [:handlers] merge handler))))
 
 ;;
 ;; Calling handlers

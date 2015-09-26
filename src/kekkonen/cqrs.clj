@@ -8,9 +8,9 @@
             [schema.core :as s]
             [plumbing.core :as p]))
 
-;;;
-;;; statuses
-;;;
+;;
+;; response wrappers
+;;
 
 (def success hr/ok)
 (def failure hr/bad-request)
@@ -27,6 +27,10 @@
 (def failure? hp/bad-request?)
 (def error? hp/internal-server-error?)
 
+;;
+;; Actions
+;;
+
 (s/defn command
   [meta :- k/KeywordMap, f :- k/Function]
   (vary-meta f merge {:type :command} meta))
@@ -39,47 +43,11 @@
 ;; api
 ;;
 
-; TODO: test the special :kekkonen -handlers
 (defn cqrs-api [options]
   (ka/api
     (kc/deep-merge
-      {:core {:type-resolver (k/type-resolver :command :query)
-              :handlers {:kekkonen [(k/handler
-                                      {:type :query
-                                       :name "get-all"
-                                       :description "Returns a list of all handlers in a given namespace."}
-                                      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
-                                        (success
-                                          (->> context
-                                               k/get-dispatcher
-                                               (p/<- (k/all-handlers ns))
-                                               (filter (p/fn-> :ring))
-                                               (remove (p/fn-> :ns (= :kekkonen)))
-                                               (remove (p/fn-> :user :no-doc))
-                                               (map k/public-handler)))))
-                                    (k/handler
-                                      {:type :query
-                                       :name "get-available"
-                                       :description "Returns a list of all available handlers in a given namespace."}
-                                      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
-                                        (success
-                                          (->> context
-                                               k/get-dispatcher
-                                               (p/<- (k/available-handlers context ns))
-                                               (filter (p/fn-> :ring))
-                                               (remove (p/fn-> :ns (= :kekkonen)))
-                                               (remove (p/fn-> :user :no-doc))
-                                               (map k/public-handler)))))
-                                    (k/handler
-                                      {:type :query
-                                       :name "get-handler"
-                                       :description "Returns a handler info or nil."}
-                                      (p/fnk [[:data action :- s/Keyword] :as context]
-                                        (success
-                                          (k/public-handler
-                                            (k/some-handler
-                                              (k/get-dispatcher context)
-                                              action)))))]}}
+      {:core {:type-resolver (k/type-resolver :command :query)}
+       :api {:handlers (ka/kekkonen-handlers :query)}
        :ring {:types {:query {:methods #{:get}
                               :parameters [[[:request :query-params] [:data]]]}
                       :command {:methods #{:post}

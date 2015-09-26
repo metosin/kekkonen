@@ -35,8 +35,8 @@
                               "application/edn"
                               "application/transit+json"
                               "application/transit+msgpack"]
-                   :definitions {}
-                   :paths (just
+                   :definitions anything
+                   :paths (contains
                             {:/api/ping
                              {:post
                               {:parameters [{:in "header"
@@ -49,7 +49,10 @@
                                :responses
                                {:default
                                 {:description ""}}
-                               :tags ["api"]}}})})))
+                               :tags ["api"]}}})})
+
+        (fact "there are 3 extra (kekkonen) endpoints"
+          body => (contains {:paths (n-of anything 4)}))))
 
     (fact "swagger-ui"
       (let [response (app {:uri "/" :request-method :get})]
