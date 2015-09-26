@@ -316,7 +316,7 @@
            :schema schema
            :error coerced})))))
 
-(s/defn ^:private dispatch
+(s/defn dispatch
   "Dispatch can be run in the following modes: :check, :validate or :invoke"
   [dispatcher :- Dispatcher
    mode :- (s/enum :check :validate :invoke)
