@@ -445,7 +445,7 @@
         (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
         => 1))))
 
-(facts "availability"
+(facts "mass availability & validation"
   (let [admin-ns (k/namespace {:name :admin, ::roles #{:admin}})
         handler1 (k/handler {:name :handler1} (p/fnk [] true))
         handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
@@ -465,21 +465,36 @@
     (fact "allow only exact matches on the namespace"
       (k/all-handlers d :api.adm) => nil)
 
-    (fact "only 2 are available"
-      (k/available-handlers d {}) => (n-of k/handler? 2))
+    (fact "only 2 are available & validated"
+      (k/available-handlers d {}) => (n-of k/handler? 2)
+      (k/validated-handlers d {}) => (n-of k/handler? 2))
 
-    (fact "0 are available under :api.admin"
-      (k/available-handlers d {} :api.admin) => (n-of k/handler? 0))
+    (fact "0 are available & validated under :api.admin"
+      (k/available-handlers d {} :api.admin) => (n-of k/handler? 0)
+      (k/validated-handlers d {} :api.admin) => (n-of k/handler? 0))
 
-    (fact "4 are available when all the rules apply"
+    (fact "4 are available & validated when all the rules apply"
       (k/available-handlers d {::roles #{:admin}}) => (n-of k/handler? 4)
+      (k/validated-handlers d {::roles #{:admin}}) => (n-of k/handler? 4)
 
       (fact "2 are available under :api.admin when all the rules apply"
         (k/available-handlers d {::roles #{:admin}} :api.admin) => (n-of k/handler? 2))
 
-      (fact "WOOT: parameters don't have to valid"
-        (k/validate d :api.admin/handler2 {::roles #{:admin}}) => nil
-        (k/invoke d :api.admin/handler2 {::roles #{:admin}}) => throws?))))
+      (fact "1 is validated"
+        (k/validated-handlers d {::roles #{:admin}} :api.admin) => (n-of k/handler? 1))
+
+      (fact "interacting with a spesific handler"
+        (fact "with missing parameters"
+          (let [ctx {::roles #{:admin}}]
+            (k/check d :api.admin/handler2 ctx) => nil
+            (k/validate d :api.admin/handler2 ctx) => throws?
+            (k/invoke d :api.admin/handler2 ctx) => throws?
+
+            (fact "with all parameters"
+              (let [ctx (merge ctx {:data {:x true}})]
+                (k/check d :api.admin/handler2 ctx) => nil
+                (k/validate d :api.admin/handler2 ctx) => throws?
+                (k/invoke d :api.admin/handler2 ctx) => throws?))))))))
 
 (fact "context transformations"
   (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])

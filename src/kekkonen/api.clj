@@ -8,6 +8,7 @@
             [kekkonen.common :as kc]
             [plumbing.core :as p]))
 
+;; TODO: add check
 (defn kekkonen-handlers [type]
   {:kekkonen
    [(k/handler

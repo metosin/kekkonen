@@ -316,18 +316,20 @@
            :schema schema
            :error coerced})))))
 
-(s/defn ^:private prepare
+(s/defn ^:private dispatch
   "Prepares a context for invocation or validation. Returns an 0-arity function
   or throws exception."
-  [dispatcher :- Dispatcher, action :- s/Keyword, context :- Context, invoke? :- s/Bool]
+  [dispatcher :- Dispatcher, action :- s/Keyword, context :- Context, mode :- (s/enum :check :validate :invoke)]
   (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
     (let [context (as-> context context
+
+                        ;; TODO: in what order are these run? -> back to namespaces...
 
                         ;; base-context from Dispatcher
                         (kc/deep-merge (:context dispatcher) context)
 
-                        ;; run coercion in invoke? and if coercion-matcher is set
-                        (cond-> context (and invoke? input (-> dispatcher :coercion :input))
+                        ;; run coercion for :validate|:invoke and if coercion-matcher is set
+                        (cond-> context (and (#{:validate :invoke} mode) input (-> dispatcher :coercion :input))
                                 ((fn [context]
                                    (coerce! input (-> dispatcher :coercion :input) context nil ::request))))
 
@@ -347,7 +349,7 @@
                         (merge context {::dispatcher dispatcher, ::handler handler}))]
 
       ;; all good, let's invoke?
-      (if invoke?
+      (if (#{:invoke} mode)
         (let [response (function context)]
           ;; response coercion
           (if (and output (-> dispatcher :coercion :output))
@@ -355,12 +357,12 @@
             response))))
     (throw (ex-info (str "Invalid action " action) {}))))
 
-(s/defn invoke
-  "Invokes an action handler with the given context."
+(s/defn check
+  "Checks an action handler with the given context."
   ([dispatcher :- Dispatcher, action :- s/Keyword]
-    (invoke dispatcher action {}))
+    (check dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (prepare dispatcher action context true)))
+    (dispatch dispatcher action context :check)))
 
 (s/defn validate
   "Checks if context is valid for the handler (without calling the body).
@@ -368,7 +370,14 @@
   ([dispatcher :- Dispatcher, action :- s/Keyword]
     (validate dispatcher action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (prepare dispatcher action context false)))
+    (dispatch dispatcher action context :validate)))
+
+(s/defn invoke
+  "Invokes an action handler with the given context."
+  ([dispatcher :- Dispatcher, action :- s/Keyword]
+    (invoke dispatcher action {}))
+  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
+    (dispatch dispatcher action context :invoke)))
 
 ;;
 ;; Listing handlers
@@ -379,13 +388,9 @@
   ([dispatcher :- Dispatcher]
     (all-handlers dispatcher nil))
   ([dispatcher :- Dispatcher, prefix :- (s/maybe s/Keyword)]
-    (let [handlers (atom [])]
-      (transform-handlers
-        dispatcher
-        (fn [handler]
-          (swap! handlers conj handler) nil))
+    (let [handlers (-> dispatcher :handlers vals)]
       (if-not prefix
-        @handlers
+        handlers
         (seq
           (filter
             (fn [{:keys [ns]}]
@@ -394,10 +399,23 @@
                       action-seq (str/split (subs (str ns) 1) #"[\.]")]
                   (= prefix-seq (take (count prefix-seq) action-seq)))
                 true))
-            @handlers))))))
+            handlers))))))
 
 (s/defn available-handlers :- [Handler]
   "Returns all handlers which are available under a given context"
+  ([dispatcher :- Dispatcher, context :- Context]
+    (available-handlers dispatcher context nil))
+  ([dispatcher :- Dispatcher, context :- Context, prefix :- (s/maybe s/Keyword)]
+    (filter
+      (fn [handler]
+        (try
+          (check dispatcher (:action handler) context)
+          true
+          (catch Exception _)))
+      (all-handlers dispatcher prefix))))
+
+(s/defn validated-handlers :- [Handler]
+  "Returns all handlers wheere input is valid under a given context"
   ([dispatcher :- Dispatcher, context :- Context]
     (available-handlers dispatcher context nil))
   ([dispatcher :- Dispatcher, context :- Context, prefix :- (s/maybe s/Keyword)]
