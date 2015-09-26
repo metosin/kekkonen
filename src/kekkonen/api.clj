@@ -8,29 +8,20 @@
             [kekkonen.common :as kc]
             [plumbing.core :as p]))
 
-;; TODO: add check
 (defn kekkonen-handlers [type]
   {:kekkonen
    [(k/handler
       {:type type
-       :name "get-all"
-       :description "Returns a list of all handlers in a given namespace."}
-      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
+       :name "get-handlers"
+       :description "Return a list of list of handlers"}
+      (p/fnk [[:data
+               {ns :- s/Keyword nil}
+               {mode :- (with-meta
+                          k/GetHandlersMode
+                          {:json-schema {:default :all}}) :all}] :as context]
         (ok (->> context
                  k/get-dispatcher
-                 (p/<- (k/get-handlers :all ns context))
-                 (filter (p/fn-> :ring))
-                 (remove (p/fn-> :ns (= :kekkonen)))
-                 (remove (p/fn-> :user :no-doc))
-                 (map k/public-handler)))))
-    (k/handler
-      {:type type
-       :name "get-available"
-       :description "Returns a list of all available handlers in a given namespace."}
-      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
-        (ok (->> context
-                 k/get-dispatcher
-                 (p/<- (k/get-handlers :check ns context))
+                 (p/<- (k/get-handlers mode ns context))
                  (filter (p/fn-> :ring))
                  (remove (p/fn-> :ns (= :kekkonen)))
                  (remove (p/fn-> :user :no-doc))

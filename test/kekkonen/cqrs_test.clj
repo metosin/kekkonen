@@ -71,42 +71,45 @@
     (fact "kekkonen endpoints"
 
       (fact "get-all returns info of all handlers"
-        (let [response (app {:uri "/kekkonen/get-all"
+        (let [response (app {:uri "/kekkonen/get-handlers"
                              :request-method :get})]
           response => success?
           (parse response) => (n-of map? 3)))
 
       (fact "get-all with ns returns all handlers in that ns"
-        (let [response (app {:uri "/kekkonen/get-all"
+        (let [response (app {:uri "/kekkonen/get-handlers"
                              :request-method :get
                              :query-params {:ns "api.items"}})]
           response => success?
           (parse response) => (n-of map? 2)))
 
       (fact "get-all with invalid ns returns nothing"
-        (let [response (app {:uri "/kekkonen/get-all"
+        (let [response (app {:uri "/kekkonen/get-handlers"
                              :request-method :get
                              :query-params {:ns "api.item"}})]
           response => success?
           (parse response) => (n-of map? 0)))
 
       (fact "get-available returns all handlers with rules ok"
-        (let [response (app {:uri "/kekkonen/get-available"
-                             :request-method :get})]
+        (let [response (app {:uri "/kekkonen/get-handlers"
+                             :request-method :get
+                             :query-params {:mode :check}})]
           response => success?
           (parse response) => (n-of map? 2)))
 
       (fact "get-available with ns returns all handlers with rules ok"
-        (let [response (app {:uri "/kekkonen/get-available"
+        (let [response (app {:uri "/kekkonen/get-handlers"
                              :request-method :get
-                             :query-params {:ns "api.items"}})]
+                             :query-params {:ns "api.items"
+                                            :mode :check}})]
           response => success?
           (parse response) => (n-of map? 2)))
 
       (fact "get-available with invalid ns returns nothing"
-        (let [response (app {:uri "/kekkonen/get-available"
+        (let [response (app {:uri "/kekkonen/get-handlers"
                              :request-method :get
-                             :query-params {:ns "api.item"}})]
+                             :query-params {:ns "api.item"
+                                            :mode :check}})]
           response => success?
           (parse response) => (n-of map? 0)))
 

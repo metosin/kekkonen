@@ -2,7 +2,6 @@
   (:require [schema.core :as s]
             [plumbing.core :as p]
             [clojure.string :as str]
-            [clojure.walk :as w]
             [plumbing.fnk.pfnk :as pfnk]
             [kekkonen.common :as kc]
             [clojure.walk :as walk]
@@ -385,17 +384,19 @@
 ;; Listing handlers
 ;;
 
+(def GetHandlersMode (s/enum :all :check :validate))
+
 (s/defn get-handlers :- [Handler]
   "Returns handlers based on mode, namespace and context"
   ([dispatcher :- Dispatcher
-    mode :- (s/enum :all :check :validate)]
+    mode :- GetHandlersMode]
     (get-handlers dispatcher mode nil))
   ([dispatcher :- Dispatcher
-    mode :- (s/enum :all :check :validate)
+    mode :- GetHandlersMode
     prefix :- (s/maybe s/Keyword)]
     (get-handlers dispatcher mode prefix {}))
   ([dispatcher :- Dispatcher
-    mode :- (s/enum :all :check :validate)
+    mode :- GetHandlersMode
     prefix :- (s/maybe s/Keyword)
     context :- Context]
     (let [all-handlers (-> dispatcher :handlers vals)

@@ -52,7 +52,7 @@
                                :tags ["api"]}}})})
 
         (fact "there are 3 extra (kekkonen) endpoints"
-          body => (contains {:paths (n-of anything 4)}))))
+          body => (contains {:paths (n-of anything 3)}))))
 
     (fact "swagger-ui"
       (let [response (app {:uri "/" :request-method :get})]
