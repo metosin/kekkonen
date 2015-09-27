@@ -405,22 +405,17 @@
             true))
         handlers))))
 
-(defn- map-handlers [dispatcher handlers, mode, prefix, context, map-success, map-failure]
-  (->> (filter-by-path handlers prefix)
+(defn- map-handlers [dispatcher mode prefix context map-success map-failure]
+  (->> (filter-by-path (-> dispatcher :handlers vals) prefix)
        (map (fn [handler]
               (try
                 (when-not (= mode :all)
                   (dispatch dispatcher mode (:action handler) context))
-                #_(println "success:" mode (:action handler) context)
                 [handler (map-success handler)]
                 (catch Exception e
                   (if (-> e ex-data :type (= ::dispatch))
-                    (do
-                      #_(println "missing:" mode (:action handler) context "-" (.getMessage e))
-                      [nil nil])
-                    (do
-                      #_(println "failure:" mode (:action handler) context "-" (.getMessage e))
-                      [handler (map-failure e)]))))))
+                    [nil nil]
+                    [handler (map-failure e)])))))
        (filter first)
        (into {})))
 
@@ -435,7 +430,7 @@
     prefix :- (s/maybe s/Keyword)
     context :- Context]
     (let [handlers (-> dispatcher :handlers vals)
-          mapped (map-handlers dispatcher handlers mode prefix context identity (constantly nil))]
+          mapped (map-handlers dispatcher mode prefix context identity (constantly nil))]
       (keep second mapped))))
 
 (s/defn dispatch-handlers :- [Handler]
@@ -445,7 +440,7 @@
    prefix :- (s/maybe s/Keyword)
    context :- Context]
   (let [handlers (-> dispatcher :handlers vals) #_(get-handlers dispatcher mode prefix context)
-        mapped (map-handlers dispatcher handlers mode prefix context (constantly nil) ex-data)]
+        mapped (map-handlers dispatcher mode prefix context (constantly nil) ex-data)]
     (p/for-map [[k v] mapped]
       (:action k) v)))
 
