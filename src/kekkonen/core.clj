@@ -389,9 +389,6 @@
 (s/defn get-handlers :- [Handler]
   "Returns handlers based on mode, namespace and context"
   ([dispatcher :- Dispatcher
-    mode :- GetHandlersMode]
-    (get-handlers dispatcher mode nil))
-  ([dispatcher :- Dispatcher
     mode :- GetHandlersMode
     prefix :- (s/maybe s/Keyword)]
     (get-handlers dispatcher mode prefix {}))

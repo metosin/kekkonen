@@ -31,8 +31,7 @@
 
 (p/defnk ^:query get-user
   {:responses {success-status {:schema (s/maybe User)}}}
-  [user]
-  (success user))
+  [user] (success user))
 
 ;;
 ;; Schemas
