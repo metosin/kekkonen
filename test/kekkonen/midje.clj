@@ -9,7 +9,9 @@
    (fn [x]
      (let [data (ex-data (e/throwable x))
            mdata (if data (select-keys data (vec (keys m))))]
-       (= mdata m)))))
+       (and
+         (not (nil? x))
+         (= mdata m))))))
 
 (defn parse [x]
   (if (and x (:body x))

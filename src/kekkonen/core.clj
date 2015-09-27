@@ -331,23 +331,29 @@
 
                         ;; run coercion for :validate|:invoke and if coercion-matcher is set
                         (cond-> context (and (#{:validate :invoke} mode) input (-> dispatcher :coercion :input))
-                                ((fn [context]
-                                   (coerce! input (-> dispatcher :coercion :input) context nil ::request))))
+                                ((fn [ctx] (coerce! input (-> dispatcher :coercion :input) ctx nil ::request))))
 
                         ;; run all the transformers
-                        (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers dispatcher))
+                        ;; short-circuit execution if a transformer returns nil
+                        (reduce (fn [ctx mapper] (or (mapper ctx) (reduced nil))) context (:transformers dispatcher))
 
-                        ;; run all the user transformers per namespace/handler, start from the root
+                        ;; run all the user transformers per namespace/handler
+                        ;; start from the root. a returned nil context short-circuits
+                        ;; the run an causes ::dispatch error
                         (reduce
                           (fn [context [k v]]
                             (if-let [mapper (get-in dispatcher [:user k])]
-                              (mapper context v)
+                              (or (mapper context v) (reduced nil))
                               context))
                           context
                           (apply concat all-user))
 
-                        ;; inject in stuff the context
-                        (merge context {::dispatcher dispatcher, ::handler handler}))]
+                        ;; inject in stuff the context if not nil
+                        (cond-> context context (merge context {::dispatcher dispatcher
+                                                                ::handler handler})))]
+
+      (when-not context
+        (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
 
       ;; all good, let's invoke?
       (if (#{:invoke} mode)
@@ -356,7 +362,7 @@
           (if (and output (-> dispatcher :coercion :output))
             (coerce! output (-> dispatcher :coercion :output) response nil ::response)
             response))))
-    (throw (ex-info (str "Invalid action " action) {}))))
+    (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action}))))
 
 (s/defn check
   "Checks an action handler with the given context."
@@ -386,6 +392,38 @@
 
 (def GetHandlersMode (s/enum :all :check :validate))
 
+(defn- filter-by-path [handlers path]
+  (if-not path
+    handlers
+    (seq
+      (filter
+        (fn [{:keys [ns]}]
+          (if ns
+            (let [path-seq (str/split (subs (str path) 1) #"[\.]")
+                  action-seq (str/split (subs (str ns) 1) #"[\.]")]
+              (= path-seq (take (count path-seq) action-seq)))
+            true))
+        handlers))))
+
+(defn- map-handlers [dispatcher handlers, mode, prefix, context, map-success, map-failure]
+  (->> (filter-by-path handlers prefix)
+       (map (fn [handler]
+              (try
+                (when-not (= mode :all)
+                  (dispatch dispatcher mode (:action handler) context))
+                #_(println "success:" mode (:action handler) context)
+                [handler (map-success handler)]
+                (catch Exception e
+                  (if (-> e ex-data :type (= ::dispatch))
+                    (do
+                      #_(println "missing:" mode (:action handler) context "-" (.getMessage e))
+                      [nil nil])
+                    (do
+                      #_(println "failure:" mode (:action handler) context "-" (.getMessage e))
+                      [handler (map-failure e)]))))))
+       (filter first)
+       (into {})))
+
 (s/defn get-handlers :- [Handler]
   "Returns handlers based on mode, namespace and context"
   ([dispatcher :- Dispatcher
@@ -396,27 +434,20 @@
     mode :- GetHandlersMode
     prefix :- (s/maybe s/Keyword)
     context :- Context]
-    (let [all-handlers (-> dispatcher :handlers vals)
-          handlers (if-not prefix
-                     all-handlers
-                     (seq
-                       (filter
-                         (fn [{:keys [ns]}]
-                           (if ns
-                             (let [prefix-seq (str/split (subs (str prefix) 1) #"[\.]")
-                                   action-seq (str/split (subs (str ns) 1) #"[\.]")]
-                               (= prefix-seq (take (count prefix-seq) action-seq)))
-                             true))
-                         all-handlers)))]
-      (if (= :all mode)
-        handlers
-        (filter
-          (fn [handler]
-            (try
-              (dispatch dispatcher mode (:action handler) context)
-              true
-              (catch Exception _)))
-          handlers)))))
+    (let [handlers (-> dispatcher :handlers vals)
+          mapped (map-handlers dispatcher handlers mode prefix context identity (constantly nil))]
+      (keep second mapped))))
+
+(s/defn dispatch-handlers :- [Handler]
+  "Returns "
+  [dispatcher :- Dispatcher
+   mode :- GetHandlersMode
+   prefix :- (s/maybe s/Keyword)
+   context :- Context]
+  (let [handlers (-> dispatcher :handlers vals) #_(get-handlers dispatcher mode prefix context)
+        mapped (map-handlers dispatcher handlers mode prefix context (constantly nil) ex-data)]
+    (p/for-map [[k v] mapped]
+      (:action k) v)))
 
 ;;
 ;; Working with contexts
