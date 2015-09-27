@@ -93,7 +93,7 @@
   ([dispatcher :- k/Dispatcher, options :- k/KeywordMap]
     (let [options (kc/deep-merge +default-options+ options)
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
-          router (p/for-map [handler (k/get-handlers dispatcher :all nil)] (-> handler :ring :uri) handler)]
+          router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method uri] :as request}]
         (if-let [handler (router uri)]
           (if-let [type-config (-> handler :ring :type-config)]

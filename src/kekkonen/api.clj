@@ -12,16 +12,24 @@
   {:kekkonen
    [(k/handler
       {:type type
-       :name "get-handlers"
-       :description "Return a list of list of handlers"}
-      (p/fnk [[:data
-               {ns :- s/Keyword nil}
-               {mode :- (with-meta
-                          k/GetHandlersMode
-                          {:json-schema {:default :all}}) :all}] :as context]
+       :name "all-handlers"
+       :description "Return a list of handlers"}
+      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
         (ok (->> context
                  k/get-dispatcher
-                 (p/<- (k/get-handlers mode ns context))
+                 (p/<- (k/all-handlers ns))
+                 (filter (p/fn-> :ring))
+                 (remove (p/fn-> :ns (= :kekkonen)))
+                 (remove (p/fn-> :user :no-doc))
+                 (map k/public-handler)))))
+    (k/handler
+      {:type type
+       :name "available-handlers"
+       :description "Return a list of available handlers"}
+      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
+        (ok (->> context
+                 k/get-dispatcher
+                 (p/<- (k/available-handlers ns {}))
                  (filter (p/fn-> :ring))
                  (remove (p/fn-> :ns (= :kekkonen)))
                  (remove (p/fn-> :user :no-doc))

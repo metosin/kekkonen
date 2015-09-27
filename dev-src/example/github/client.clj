@@ -41,4 +41,4 @@
     (map (juxt :action :type) (:body (k/query context3 :/kekkonen/get-all))))
 
   (./pprint
-    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/get-available)))))
+    (map (juxt :action :type) (:body (k/query context3 :/kekkonen/available-handlers)))))

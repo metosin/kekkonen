@@ -166,8 +166,8 @@ Server: http-kit
 
 There are also few special endpoints mounted in the `kekkonen` namespace:
 
-* `kekkonen/get-all` list all handlers in the given namespace.
-* `kekkonen/get-available` all handlers that are available for the current context (handler rules applied, no body)
+* `kekkonen/all-handlers` list all handlers in the given namespace.
+* `kekkonen/available-handlers` all handlers that are available in the given namespace
 * `kekkonen/get-handler` info of a single handler.
 
 Example call to the get-handler:

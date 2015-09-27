@@ -14,11 +14,7 @@
 (defn require-roles [context required]
   (let [roles (-> context :user :roles)]
     (if (seq (set/intersection roles required))
-      context
-      (failure! {:code "Missing role"
-                 :roles roles
-                 :required required}))))
-
+      context)))
 
 (p/defnk ^:query get-items
   "Retrieves all"
@@ -70,46 +66,43 @@
 
     (fact "kekkonen endpoints"
 
-      (fact "get-all returns info of all handlers"
-        (let [response (app {:uri "/kekkonen/get-handlers"
+      (fact "all-handlers returns info of all handlers"
+        (let [response (app {:uri "/kekkonen/all-handlers"
                              :request-method :get})]
           response => success?
           (parse response) => (n-of map? 3)))
 
-      (fact "get-all with ns returns all handlers in that ns"
-        (let [response (app {:uri "/kekkonen/get-handlers"
+      (fact "all-handlers with ns returns all handlers in that ns"
+        (let [response (app {:uri "/kekkonen/all-handlers"
                              :request-method :get
                              :query-params {:ns "api.items"}})]
           response => success?
           (parse response) => (n-of map? 2)))
 
-      (fact "get-all with invalid ns returns nothing"
-        (let [response (app {:uri "/kekkonen/get-handlers"
+      (fact "all-handlers with invalid ns returns nothing"
+        (let [response (app {:uri "/kekkonen/all-handlers"
                              :request-method :get
                              :query-params {:ns "api.item"}})]
           response => success?
           (parse response) => (n-of map? 0)))
 
-      (fact "get-available returns all handlers with rules ok"
-        (let [response (app {:uri "/kekkonen/get-handlers"
-                             :request-method :get
-                             :query-params {:mode :check}})]
+      (fact "available-handlers returns all handlers with rules ok"
+        (let [response (app {:uri "/kekkonen/available-handlers"
+                             :request-method :get})]
           response => success?
           (parse response) => (n-of map? 2)))
 
-      (fact "get-available with ns returns all handlers with rules ok"
-        (let [response (app {:uri "/kekkonen/get-handlers"
+      (fact "available-handlers with ns returns all handlers with rules ok"
+        (let [response (app {:uri "/kekkonen/available-handlers"
                              :request-method :get
-                             :query-params {:ns "api.items"
-                                            :mode :check}})]
+                             :query-params {:ns "api.items"}})]
           response => success?
           (parse response) => (n-of map? 2)))
 
-      (fact "get-available with invalid ns returns nothing"
-        (let [response (app {:uri "/kekkonen/get-handlers"
+      (fact "available-handlers with invalid ns returns nothing"
+        (let [response (app {:uri "/kekkonen/available-handlers"
                              :request-method :get
-                             :query-params {:ns "api.item"
-                                            :mode :check}})]
+                             :query-params {:ns "api.item"}})]
           response => success?
           (parse response) => (n-of map? 0)))
 

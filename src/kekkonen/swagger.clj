@@ -38,7 +38,7 @@
 (s/defn ring-swagger :- rs2/Swagger
   "Creates a ring-swagger object out of Dispatcher and extra info"
   [dispatcher info]
-  (let [handlers (k/get-handlers dispatcher :all nil)]
+  (let [handlers (k/all-handlers dispatcher nil)]
     (merge
       info
       {:paths (apply merge (map transform-handler handlers))})))

@@ -10,7 +10,8 @@
 ;; test handlers
 ;;
 
-(p/defnk ^:handler ping [] "pong")
+(p/defnk ^:handler ping
+  [] "pong")
 
 (p/defnk ^:handler get-items :- #{s/Str}
   [[:components db]] @db)
@@ -226,7 +227,7 @@
                              :handlers {:test 'kekkonen.core-test}})]
 
         (fact "all handlers"
-          (count (k/get-handlers d :all nil)) => 6)
+          (count (k/all-handlers d nil)) => 6)
 
         (fact "non-existing action"
 
@@ -407,7 +408,7 @@
                  :user {::roles require-role-or-fail}})]
 
         (fact "user-meta is populated correctly"
-          (k/get-handlers d :all nil)
+          (k/all-handlers d nil)
           => (just [(contains {:user {::roles #{:admin}}
                                :ns-user []
                                :all-user [{::roles #{:admin}}]})]))
@@ -432,7 +433,7 @@
                  :user {::roles require-role-or-fail}})]
 
         (fact "user-meta is populated correctly"
-          (k/get-handlers d :all nil)
+          (k/all-handlers d nil)
           => (just [(contains {:user {::roles #{:superadmin}}
                                :ns-user [{::roles #{:anyone}}
                                          {::roles #{:admin}}]
@@ -465,7 +466,7 @@
                  :user {::roles require-role}})]
 
         (fact "user-meta is populated correctly"
-          (k/get-handlers d :all nil)
+          (k/all-handlers d nil)
           => (just [(contains {:user {::roles #{:superadmin}}
                                :ns-user [{::roles #{:anyone}}
                                          {::roles #{:admin}}]
@@ -487,88 +488,130 @@
           (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
           => 1)))))
 
-(facts "get-handlers & dispatch-handlers"
-  (let [admin-ns (k/namespace {:name :admin, ::roles! #{:admin}})
-        secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
-        handler1 (k/handler {:name :handler1} (p/fnk [] true))
-        handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
-        d (k/dispatcher {:user {::roles! require-role-or-fail
-                                ::roles require-role}
-                         :handlers {:api {admin-ns [handler1 handler2]
-                                          secret-ns [handler1]
-                                          :public [handler1 handler2]}}})]
+(facts "all-handlers, available-handlers & dispatch-handlers"
+  (s/with-fn-validation
+    (let [admin-ns (k/namespace {:name :admin, ::roles! #{:admin}})
+          secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
+          handler1 (k/handler {:name :handler1} (p/fnk [] true))
+          handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
+          d (k/dispatcher {:user {::roles! require-role-or-fail
+                                  ::roles require-role}
+                           :handlers {:api {admin-ns [handler1 handler2]
+                                            secret-ns [handler1]
+                                            :public [handler1 handler2]}}})]
 
-    (fact "there are 5 handlers"
-      (k/get-handlers d :all nil) => (n-of k/handler? 5)
-      (k/dispatch-handlers d :all nil {}) => (just
-                                               {:api.admin/handler1 nil
-                                                :api.admin/handler2 nil
-                                                :api.public/handler1 nil
-                                                :api.public/handler2 nil
-                                                :api.secret/handler1 nil}))
+      (fact "there are 5 handlers"
+        (k/all-handlers d nil) => (n-of k/handler? 5)
+        (k/dispatch-handlers d :all nil {}) => (just
+                                                 {:api.admin/handler1 nil
+                                                  :api.admin/handler2 nil
+                                                  :api.public/handler1 nil
+                                                  :api.public/handler2 nil
+                                                  :api.secret/handler1 nil}))
 
-    (fact "there are 5 handlers under api"
-      (k/get-handlers d :all :api) => (n-of k/handler? 5)
-      (k/dispatch-handlers d :all :api {}) => (just
-                                                {:api.admin/handler1 nil
-                                                 :api.admin/handler2 nil
-                                                 :api.public/handler1 nil
-                                                 :api.public/handler2 nil
-                                                 :api.secret/handler1 nil}))
+      (fact "there are 5 handlers under api"
+        (k/all-handlers d :api) => (n-of k/handler? 5)
+        (k/dispatch-handlers d :all :api {}) => (just
+                                                  {:api.admin/handler1 nil
+                                                   :api.admin/handler2 nil
+                                                   :api.public/handler1 nil
+                                                   :api.public/handler2 nil
+                                                   :api.secret/handler1 nil}))
 
-    (fact "there are 2 handlers under :api.admin"
-      (k/get-handlers d :all :api.admin) => (n-of k/handler? 2)
-      (k/dispatch-handlers d :all :api.admin {}) => (just
-                                                      {:api.admin/handler1 nil
-                                                       :api.admin/handler2 nil}))
+      (fact "there are 2 handlers under :api.admin"
+        (k/all-handlers d :api.admin) => (n-of k/handler? 2)
+        (k/dispatch-handlers d :all :api.admin {}) => (just
+                                                        {:api.admin/handler1 nil
+                                                         :api.admin/handler2 nil}))
 
-    (fact "with invalid ns nothing is returned"
-      (k/get-handlers d :all :api.adm) => []
-      (k/dispatch-handlers d :all :api.adm {}) => (just {}))
+      (fact "with invalid ns nothing is returned"
+        (k/all-handlers d :api.adm) => []
+        (k/dispatch-handlers d :all :api.adm {}) => (just {}))
 
-    (fact "for anonymous user"
-      (fact "check"
-        ; TODO: is this right?
-        (k/get-handlers d :check nil {}) => (n-of k/handler? 2)
-        (k/dispatch-handlers d :check nil {}) => (just
-                                                   {:api.admin/handler1 map?
-                                                    :api.admin/handler2 map?
-                                                    :api.public/handler1 nil
-                                                    :api.public/handler2 nil}))
+      (fact "for anonymous user"
+        (fact "all apis"
 
-      (fact "validate"
-        ; TODO: is this right?
-        (k/get-handlers d :validate nil {}) => (n-of k/handler? 1)
-        (k/dispatch-handlers d :validate nil {}) => (just
-                                                      {:api.admin/handler1 map?
-                                                       :api.admin/handler2 map?
-                                                       :api.public/handler1 nil
-                                                       :api.public/handler2 map?}))
+          (k/available-handlers d nil {})
+          => (n-of k/handler? 4)
 
-      (fact "admin-api, check & validate"
-        (k/get-handlers d :check :api.admin {}) => (n-of k/handler? 0)
-        (k/get-handlers d :validate :api.admin {}) => (n-of k/handler? 0)))
+          (k/dispatch-handlers d :check nil {})
+          => (just
+               {:api.admin/handler1 map?
+                :api.admin/handler2 map?
+                :api.public/handler1 nil
+                :api.public/handler2 nil})
 
-    (fact "for admin-user"
-      (k/get-handlers d :check nil {::roles #{:admin}}) => (n-of k/handler? 5)
-      (k/get-handlers d :validate nil {::roles #{:admin}}) => (n-of k/handler? 3)
+          (k/dispatch-handlers d :validate nil {})
+          => (just
+               {:api.admin/handler1 map?
+                :api.admin/handler2 map?
+                :api.public/handler1 nil
+                :api.public/handler2 map?}))
 
-      (fact "in admin ns"
-        (k/get-handlers d :check :api.admin {::roles #{:admin}}) => (n-of k/handler? 2)
-        (k/get-handlers d :validate :api.admin {::roles #{:admin}}) => (n-of k/handler? 1))
+        (fact "admin-apis"
 
-      (fact "interacting with a spesific handler"
-        (fact "with missing parameters"
-          (let [ctx {::roles #{:admin}}]
-            (k/check d :api.admin/handler2 ctx) => nil
-            (k/validate d :api.admin/handler2 ctx) => (throws?)
-            (k/invoke d :api.admin/handler2 ctx) => (throws?)
+          (k/available-handlers d :api.admin {})
+          => (n-of k/handler? 2)
 
-            (fact "with all parameters"
-              (let [ctx (merge ctx {:data {:x true}})]
-                (k/check d :api.admin/handler2 ctx) => nil
-                (k/validate d :api.admin/handler2 ctx) => nil
-                (k/invoke d :api.admin/handler2 ctx) => true))))))))
+          (k/dispatch-handlers d :check :api.admin {})
+          => (just
+               {:api.admin/handler1 map?
+                :api.admin/handler2 map?})
+
+          (k/dispatch-handlers d :validate :api.admin {})
+          => (just {:api.admin/handler1 map?
+                    :api.admin/handler2 map?})))
+
+      (fact "for admin-user"
+
+        (fact "all apis"
+
+          (k/available-handlers d nil {::roles #{:admin}})
+          => (n-of k/handler? 5)
+
+          (k/dispatch-handlers d :check nil {::roles #{:admin}})
+          => (just
+               {:api.admin/handler1 nil
+                :api.admin/handler2 nil
+                :api.public/handler1 nil
+                :api.public/handler2 nil
+                :api.secret/handler1 nil})
+
+          (k/dispatch-handlers d :validate nil {::roles #{:admin}})
+          => (just
+               {:api.admin/handler1 nil
+                :api.admin/handler2 map?
+                :api.public/handler1 nil
+                :api.public/handler2 map?
+                :api.secret/handler1 nil}))
+
+        (fact "admin apis"
+
+          (k/available-handlers d :api.admin {::roles #{:admin}})
+          => (n-of k/handler? 2)
+
+          (k/dispatch-handlers d :check :api.admin {::roles #{:admin}})
+          => (just
+               {:api.admin/handler1 nil
+                :api.admin/handler2 nil})
+
+          (k/dispatch-handlers d :validate :api.admin {::roles #{:admin}})
+          => (just
+               {:api.admin/handler1 nil
+                :api.admin/handler2 map?}))
+
+        (fact "interacting with a spesific handler"
+          (fact "with missing parameters"
+            (let [ctx {::roles #{:admin}}]
+              (k/check d :api.admin/handler2 ctx) => nil
+              (k/validate d :api.admin/handler2 ctx) => (throws?)
+              (k/invoke d :api.admin/handler2 ctx) => (throws?)
+
+              (fact "with all parameters"
+                (let [ctx (merge ctx {:data {:x true}})]
+                  (k/check d :api.admin/handler2 ctx) => nil
+                  (k/validate d :api.admin/handler2 ctx) => nil
+                  (k/invoke d :api.admin/handler2 ctx) => true)))))))))
 
 (fact "context transformations"
   (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
@@ -633,7 +676,7 @@
                              (fn [context]
                                (->> context
                                     k/get-dispatcher
-                                    (p/<- (k/get-handlers :all nil))
+                                    (p/<- (k/all-handlers nil))
                                     (map :name)
                                     set)))]}})]
 
@@ -646,7 +689,6 @@
     (fact "going meta boing boing"
       (k/invoke d :api/names) => #{:dispatcher :handler :names})))
 
-; TODO: will override paths as we do merge
 (fact "handlers can be injected into existing dispatcher"
   (let [d (-> (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
               (k/inject (k/handler {:name :ping} identity)))]

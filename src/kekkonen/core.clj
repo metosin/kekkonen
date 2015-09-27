@@ -419,21 +419,23 @@
        (filter first)
        (into {})))
 
-(s/defn get-handlers :- [Handler]
-  "Returns handlers based on mode, namespace and context"
-  ([dispatcher :- Dispatcher
-    mode :- GetHandlersMode
-    prefix :- (s/maybe s/Keyword)]
-    (get-handlers dispatcher mode prefix {}))
-  ([dispatcher :- Dispatcher
-    mode :- GetHandlersMode
-    prefix :- (s/maybe s/Keyword)
-    context :- Context]
-    (let [mapped (map-handlers dispatcher mode prefix context identity (constantly nil))]
-      (keep second mapped))))
+(s/defn all-handlers :- [Handler]
+  "Returns all handlers filtered by namespace"
+  [dispatcher :- Dispatcher
+   prefix :- (s/maybe s/Keyword)]
+  (let [mapped (map-handlers dispatcher :all prefix {} identity (constantly nil))]
+    (keep second mapped)))
 
-(s/defn dispatch-handlers :- [Handler]
-  "Returns "
+(s/defn available-handlers :- [Handler]
+  "Returns all available handlers based on namespace and context"
+  [dispatcher :- Dispatcher
+   prefix :- (s/maybe s/Keyword)
+   context :- Context]
+  (let [mapped (map-handlers dispatcher :check prefix context identity (constantly nil))]
+    (keep first mapped)))
+
+(s/defn dispatch-handlers :- {s/Keyword s/Any}
+  "Returns a map of action -> errors based on mode, namespace and context"
   [dispatcher :- Dispatcher
    mode :- GetHandlersMode
    prefix :- (s/maybe s/Keyword)
