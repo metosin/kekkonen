@@ -429,8 +429,7 @@
     mode :- GetHandlersMode
     prefix :- (s/maybe s/Keyword)
     context :- Context]
-    (let [handlers (-> dispatcher :handlers vals)
-          mapped (map-handlers dispatcher mode prefix context identity (constantly nil))]
+    (let [mapped (map-handlers dispatcher mode prefix context identity (constantly nil))]
       (keep second mapped))))
 
 (s/defn dispatch-handlers :- [Handler]
@@ -439,8 +438,7 @@
    mode :- GetHandlersMode
    prefix :- (s/maybe s/Keyword)
    context :- Context]
-  (let [handlers (-> dispatcher :handlers vals) #_(get-handlers dispatcher mode prefix context)
-        mapped (map-handlers dispatcher mode prefix context (constantly nil) ex-data)]
+  (let [mapped (map-handlers dispatcher mode prefix context (constantly nil) ex-data)]
     (p/for-map [[k v] mapped]
       (:action k) v)))
 
