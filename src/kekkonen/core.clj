@@ -216,6 +216,26 @@
       (-collect k type-resolver) (-collect v type-resolver))))
 
 ;;
+;; coercion
+;;
+
+(def memoized-coercer (memoize sc/coercer))
+
+(defn coerce! [schema matcher value in type]
+  (let [coercer (memoized-coercer schema matcher)
+        coerced (coercer value)]
+    (if-not (su/error? coerced)
+      coerced
+      (throw
+        (ex-info
+          "Coercion error"
+          {:type type
+           :in in
+           :value value
+           :schema schema
+           :error coerced})))))
+
+;;
 ;; Dispatcher
 ;;
 
@@ -298,22 +318,6 @@
 ;;
 ;; Calling handlers
 ;;
-
-(def memoized-coercer (memoize sc/coercer))
-
-(defn coerce! [schema matcher value in type]
-  (let [coercer (memoized-coercer schema matcher)
-        coerced (coercer value)]
-    (if-not (su/error? coerced)
-      coerced
-      (throw
-        (ex-info
-          "Coercion error"
-          {:type type
-           :in in
-           :value value
-           :schema schema
-           :error coerced})))))
 
 (s/defn dispatch
   "Dispatch can be run in the following modes: :check, :validate or :invoke"
