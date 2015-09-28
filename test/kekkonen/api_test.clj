@@ -4,27 +4,15 @@
             [ring.util.http-response :refer [ok]]
             [ring.util.http-predicates :refer [ok? not-found?]]
             [plumbing.core :as p]
-            [kekkonen.api :refer [api]]
-            [kekkonen.core :as k]))
-
-;;
-;; handlers
-;;
+            [kekkonen.core :as k]
+            [kekkonen.api :refer [api]]))
 
 (p/defnk ^:handler ping []
   (ok {:ping "pong"}))
 
-;;
-;; security
-;;
-
 (defn require-role [context role]
   (if (= (-> context :request :query-params ::role) role)
     context))
-
-;;
-;; facts
-;;
 
 (facts "api-test"
   (let [secret (k/namespace {:name :secret ::role :admin})
