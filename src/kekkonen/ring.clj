@@ -134,9 +134,3 @@
       (if (and (= match-uri uri)
                (match-request-method request-method))
         (ring-handler request)))))
-
-(s/defn keywordize-keys
-  "Returns a function, that keywordizes keys in a given path in context"
-  [in :- [s/Any]]
-  (fn [context]
-    (update-in context in walk/keywordize-keys)))
