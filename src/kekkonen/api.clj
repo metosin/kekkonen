@@ -8,7 +8,6 @@
             [kekkonen.common :as kc]
             [plumbing.core :as p]))
 
-;; FIXME: should use the ring-dispatcher!
 (defn kekkonen-handlers [type]
   {:kekkonen
    [(k/handler
@@ -35,7 +34,8 @@
                  (remove (p/fn-> :ns (= :kekkonen)))
                  (remove (p/fn-> :user :no-doc))
                  (map k/public-handler)))))
-    (k/handler
+    ;; FIXME: should use the ring-dispatcher!
+    #_(k/handler
       {:type type
        :name "actions"
        :description "Return a map of action -> error of all available handlers"}

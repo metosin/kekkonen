@@ -55,7 +55,7 @@
           body => (contains
                     {:paths (just
                               {:/api/ping anything
-                               :/kekkonen/actions anything
+                               ;:/kekkonen/actions anything
                                :/kekkonen/get-handler anything
                                :/kekkonen/all-handlers anything
                                :/kekkonen/available-handlers anything})}))))
