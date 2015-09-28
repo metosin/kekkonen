@@ -434,6 +434,10 @@
   (let [mapped (map-handlers dispatcher :check prefix context identity (constantly nil))]
     (keep first mapped)))
 
+; TODO: :all -> :available
+; TODO: dispatch-handlers to ring
+; TODO: test via ring
+; TODO: update docs
 (s/defn dispatch-handlers :- {s/Keyword s/Any}
   "Returns a map of action -> errors based on mode, namespace and context"
   [dispatcher :- Dispatcher
