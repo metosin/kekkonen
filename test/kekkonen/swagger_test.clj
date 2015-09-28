@@ -23,9 +23,10 @@
   (let [dispatcher (k/transform-handlers
                      (k/dispatcher {:handlers {:api {:admin #'echo}}})
                      (partial r/attach-ring-meta r/+default-options+))
+        handlers (k/available-handlers dispatcher nil {})
 
         swagger (ks/ring-swagger
-                  dispatcher
+                  handlers
                   {:info {:version "1.0.0"
                           :title "Kekkonen"
                           :description "Kekkonen Swagger API"}})]

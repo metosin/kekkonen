@@ -45,6 +45,7 @@
   (fn [_ data _]
     (f (-> data (dissoc :schema) (update-in [:error] #(stringify (su/error-val %)))))))
 
+(def ^:private missing-route-handler (constantly (r/not-found)))
 (def ^:private request-validation-handler (coerce-error-handler r/bad-request))
 (def ^:private response-validation-handler (coerce-error-handler r/internal-server-error))
 
@@ -122,7 +123,8 @@
             :params-opts {}
             :response-opts {}}
    :exceptions {:default safe-handler
-                :handlers {:kekkonen.ring/request request-validation-handler
+                :handlers {:kekkonen.core/dispatch missing-route-handler
+                           :kekkonen.ring/request request-validation-handler
                            :kekkonen.ring/parsing request-parsing-handler
                            :kekkonen.ring/response response-validation-handler}}})
 
