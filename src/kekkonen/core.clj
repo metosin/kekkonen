@@ -390,7 +390,7 @@
 ;; Listing handlers
 ;;
 
-(def DispatchHandlersMode (s/enum :all :check :validate))
+(def DispatchHandlersMode (s/enum :available :check :validate))
 
 (defn- filter-by-path [handlers path]
   (if-not path
@@ -434,17 +434,19 @@
   (let [mapped (map-handlers dispatcher :check prefix context identity (constantly nil))]
     (keep first mapped)))
 
-; TODO: :all -> :available
 ; TODO: dispatch-handlers to ring
 ; TODO: test via ring
 ; TODO: update docs
 (s/defn dispatch-handlers :- {s/Keyword s/Any}
-  "Returns a map of action -> errors based on mode, namespace and context"
+  "Returns a map of action -> errors based on mode, namespace and context."
   [dispatcher :- Dispatcher
    mode :- DispatchHandlersMode
    prefix :- (s/maybe s/Keyword)
    context :- Context]
-  (let [mapped (map-handlers dispatcher mode prefix context (constantly nil) ex-data)]
+  (let [[mode map-failure] (if (= mode :available)
+                             [:check (constantly nil)]
+                             [mode ex-data])
+        mapped (map-handlers dispatcher mode prefix context (constantly nil) map-failure)]
     (p/for-map [[k v] mapped]
       (:action k) v)))
 
