@@ -8,6 +8,7 @@
             [kekkonen.common :as kc]
             [plumbing.core :as p]))
 
+;; FIXME: should use the ring-dispatcher!
 (defn kekkonen-handlers [type]
   {:kekkonen
    [(k/handler
@@ -34,6 +35,24 @@
                  (remove (p/fn-> :ns (= :kekkonen)))
                  (remove (p/fn-> :user :no-doc))
                  (map k/public-handler)))))
+    (k/handler
+      {:type type
+       :name "actions"
+       :description "Return a map of action -> error of all available handlers"}
+      (p/fnk [[:data
+               {ns :- s/Keyword nil}
+               {mode :- (with-meta
+                          k/DispatchHandlersMode
+                          {:json-schema {:default :available}}) :available}]
+              :as context]
+        (ok (->> context
+                 k/get-dispatcher
+                 (p/<- (k/dispatch-handlers mode ns {}))
+                 (filter (p/fn-> first :ring))
+                 (remove (p/fn-> first :ns (= :kekkonen)))
+                 (remove (p/fn-> first :user :no-doc))
+                 (map (fn [[k v]] [(:action k) v]))
+                 (into {})))))
     (k/handler
       {:type type
        :name "get-handler"

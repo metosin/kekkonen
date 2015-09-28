@@ -405,17 +405,17 @@
             true))
         handlers))))
 
-(defn- map-handlers [dispatcher mode prefix context map-success map-failure]
+(defn- map-handlers [dispatcher mode prefix context success failure]
   (->> (filter-by-path (-> dispatcher :handlers vals) prefix)
        (map (fn [handler]
               (try
                 (when-not (= mode :all)
                   (dispatch dispatcher mode (:action handler) context))
-                [handler (map-success handler)]
+                [handler (success handler)]
                 (catch Exception e
                   (if (-> e ex-data :type (= ::dispatch))
                     [nil nil]
-                    [handler (map-failure e)])))))
+                    [handler (failure e)])))))
        (filter first)
        (into {})))
 
@@ -423,32 +423,26 @@
   "Returns all handlers filtered by namespace"
   [dispatcher :- Dispatcher
    prefix :- (s/maybe s/Keyword)]
-  (let [mapped (map-handlers dispatcher :all prefix {} identity (constantly nil))]
-    (keep second mapped)))
+  (keep second (map-handlers dispatcher :all prefix {} identity (constantly nil))))
 
 (s/defn available-handlers :- [Handler]
   "Returns all available handlers based on namespace and context"
   [dispatcher :- Dispatcher
    prefix :- (s/maybe s/Keyword)
    context :- Context]
-  (let [mapped (map-handlers dispatcher :check prefix context identity (constantly nil))]
-    (keep first mapped)))
+  (keep first (map-handlers dispatcher :check prefix context identity (constantly nil))))
 
-; TODO: dispatch-handlers to ring
+; TODO: ring should be a dispatcher to get the coercions right, also :ring -filtering there
 ; TODO: test via ring
 ; TODO: update docs
-(s/defn dispatch-handlers :- {s/Keyword s/Any}
+(s/defn dispatch-handlers :- {Handler s/Any}
   "Returns a map of action -> errors based on mode, namespace and context."
   [dispatcher :- Dispatcher
    mode :- DispatchHandlersMode
    prefix :- (s/maybe s/Keyword)
    context :- Context]
-  (let [[mode map-failure] (if (= mode :available)
-                             [:check (constantly nil)]
-                             [mode ex-data])
-        mapped (map-handlers dispatcher mode prefix context (constantly nil) map-failure)]
-    (p/for-map [[k v] mapped]
-      (:action k) v)))
+  (let [[mode failure] (if (= mode :available) [:check (constantly nil)] [mode ex-data])]
+    (map-handlers dispatcher mode prefix context (constantly nil) failure)))
 
 ;;
 ;; Working with contexts

@@ -51,13 +51,14 @@
                                 {:description ""}}
                                :tags ["api"]}}})})
 
-        (fact "there are 3 extra (kekkonen) endpoints"
+        (fact "there are extra (kekkonen) endpoints"
           body => (contains
                     {:paths (just
                               {:/api/ping anything
+                               :/kekkonen/actions anything
+                               :/kekkonen/get-handler anything
                                :/kekkonen/all-handlers anything
-                               :/kekkonen/available-handlers anything
-                               :/kekkonen/get-handler anything})}))))
+                               :/kekkonen/available-handlers anything})}))))
 
     (fact "swagger-ui"
       (let [response (app {:uri "/" :request-method :get})]
