@@ -44,15 +44,6 @@
                                  :name s/Symbol}
    s/Keyword s/Any})
 
-(s/defschema Dispatcher
-  {:handlers {s/Keyword Handler}
-   :context KeywordMap
-   :coercion {:input s/Any
-              :output s/Any}
-   :transformers [Function]
-   :user KeywordMap
-   s/Keyword s/Any})
-
 ;;
 ;; Type Resolution
 ;;
@@ -239,6 +230,77 @@
 ;; Dispatcher
 ;;
 
+(defprotocol IDispatcher
+  (get-handlers [this])
+  (dispatch [this mode action context]))
+
+(s/defschema Dispatcher (s/protocol IDispatcher))
+
+(s/defn some-handler :- (s/maybe Handler)
+  "Returns a handler or nil"
+  [dispatcher, action :- s/Keyword]
+  (get-in dispatcher [:handlers action]))
+
+;;
+;; CoreDispatcher
+;;
+
+(s/defrecord CoreDispatcher
+  [handlers :- {s/Keyword Handler}
+   context :- KeywordMap
+   coercion :- {:input s/Any
+                :output s/Any}
+   transformers :- [Function]
+   user :- KeywordMap]
+
+  IDispatcher
+  (get-handlers [_]
+    (vals handlers))
+
+  (dispatch [dispatcher mode action context]
+    (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
+      (let [context (as-> context context
+
+                          ;; TODO: in what order are these run? -> back to namespaces...
+
+                          ;; base-context from Dispatcher
+                          (kc/deep-merge (:context dispatcher) context)
+
+                          ;; run coercion for :validate|:invoke and if coercion-matcher is set
+                          (cond-> context (and (#{:validate :invoke} mode) input (-> dispatcher :coercion :input))
+                                  ((fn [ctx] (coerce! input (-> dispatcher :coercion :input) ctx nil ::request))))
+
+                          ;; run all the transformers
+                          ;; short-circuit execution if a transformer returns nil
+                          (reduce (fn [ctx mapper] (or (mapper ctx) (reduced nil))) context (:transformers dispatcher))
+
+                          ;; run all the user transformers per namespace/handler
+                          ;; start from the root. a returned nil context short-circuits
+                          ;; the run an causes ::dispatch error
+                          (reduce
+                            (fn [context [k v]]
+                              (if-let [mapper (get-in dispatcher [:user k])]
+                                (or (mapper context v) (reduced nil))
+                                context))
+                            context
+                            (apply concat all-user))
+
+                          ;; inject in stuff the context if not nil
+                          (cond-> context context (merge context {::dispatcher dispatcher
+                                                                  ::handler handler})))]
+
+        (when-not context
+          (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
+
+        ;; all good, let's invoke?
+        (if (#{:invoke} mode)
+          (let [response (function context)]
+            ;; response coercion
+            (if (and output (-> dispatcher :coercion :output))
+              (coerce! output (-> dispatcher :coercion :output) response nil ::response)
+              response))))
+      (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))))
+
 (s/defschema Options
   {:handlers KeywordMap
    (s/optional-key :context) KeywordMap
@@ -291,14 +353,10 @@
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
         handlers (->> (collect-and-enrich (:handlers options) (:type-resolver options) false))]
-    (merge
-      (select-keys options [:context :transformers :coercion :user])
-      {:handlers handlers})))
-
-(s/defn some-handler :- (s/maybe Handler)
-  "Returns a handler or nil"
-  [dispatcher :- Dispatcher, action :- s/Keyword]
-  (get-in dispatcher [:handlers action]))
+    (map->CoreDispatcher
+      (merge
+        (select-keys options [:context :transformers :coercion :user])
+        {:handlers handlers}))))
 
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,
@@ -318,55 +376,6 @@
 ;;
 ;; Calling handlers
 ;;
-
-(s/defn dispatch
-  "Dispatch can be run in the following modes: :check, :validate or :invoke"
-  [dispatcher :- Dispatcher
-   mode :- (s/enum :check :validate :invoke)
-   action :- s/Keyword
-   context :- Context]
-  (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
-    (let [context (as-> context context
-
-                        ;; TODO: in what order are these run? -> back to namespaces...
-
-                        ;; base-context from Dispatcher
-                        (kc/deep-merge (:context dispatcher) context)
-
-                        ;; run coercion for :validate|:invoke and if coercion-matcher is set
-                        (cond-> context (and (#{:validate :invoke} mode) input (-> dispatcher :coercion :input))
-                                ((fn [ctx] (coerce! input (-> dispatcher :coercion :input) ctx nil ::request))))
-
-                        ;; run all the transformers
-                        ;; short-circuit execution if a transformer returns nil
-                        (reduce (fn [ctx mapper] (or (mapper ctx) (reduced nil))) context (:transformers dispatcher))
-
-                        ;; run all the user transformers per namespace/handler
-                        ;; start from the root. a returned nil context short-circuits
-                        ;; the run an causes ::dispatch error
-                        (reduce
-                          (fn [context [k v]]
-                            (if-let [mapper (get-in dispatcher [:user k])]
-                              (or (mapper context v) (reduced nil))
-                              context))
-                          context
-                          (apply concat all-user))
-
-                        ;; inject in stuff the context if not nil
-                        (cond-> context context (merge context {::dispatcher dispatcher
-                                                                ::handler handler})))]
-
-      (when-not context
-        (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
-
-      ;; all good, let's invoke?
-      (if (#{:invoke} mode)
-        (let [response (function context)]
-          ;; response coercion
-          (if (and output (-> dispatcher :coercion :output))
-            (coerce! output (-> dispatcher :coercion :output) response nil ::response)
-            response))))
-    (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action}))))
 
 (s/defn check
   "Checks an action handler with the given context."
