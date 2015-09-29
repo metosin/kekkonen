@@ -6,7 +6,6 @@
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.nested-params :refer [wrap-nested-params]]
             [ring.middleware.params :refer [wrap-params]]
-            [ring.swagger.middleware :as rsm]
             [slingshot.slingshot :as slingshot]
             [kekkonen.common :as kc]
             [clojure.walk :as walk]

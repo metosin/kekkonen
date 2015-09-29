@@ -5,7 +5,6 @@
             [kekkonen.common :as kc]
             [clojure.string :as str]
             [ring.swagger.json-schema :as rsjs]
-            [clojure.walk :as walk]
             [plumbing.core :as p]))
 
 (def ^:private mode-parameter "kekkonen.mode")
