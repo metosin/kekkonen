@@ -242,10 +242,10 @@
   (get-in dispatcher [:handlers action]))
 
 ;;
-;; CoreDispatcher
+;; InMemoryDispatcher
 ;;
 
-(s/defrecord CoreDispatcher
+(s/defrecord InMemoryDispatcher
   [handlers :- {s/Keyword Handler}
    context :- KeywordMap
    coercion :- {:input s/Any
@@ -353,7 +353,7 @@
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
         handlers (->> (collect-and-enrich (:handlers options) (:type-resolver options) false))]
-    (map->CoreDispatcher
+    (map->InMemoryDispatcher
       (merge
         (select-keys options [:context :transformers :coercion :user])
         {:handlers handlers}))))
