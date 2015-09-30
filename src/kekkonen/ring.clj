@@ -85,6 +85,7 @@
                           :uri (handler-uri handler)
                           :input input-schema})))
 
+; TODO: create a Ring-dispatcher
 (s/defn ring-handler
   "Creates a ring handler from Dispatcher and options."
   ([dispatcher :- k/Dispatcher]
