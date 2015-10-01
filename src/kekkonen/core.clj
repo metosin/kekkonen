@@ -362,9 +362,11 @@
   "Applies f to all handlers. If the call returns nil,
   the handler is removed."
   [dispatcher :- Dispatcher, f :- Function]
-  (update-in dispatcher [:handlers] (p/fn->> (p/map-vals f)
-                                             (filter (p/fn-> second))
-                                             (into {}))))
+  (update-in dispatcher [:handlers] (fn [handlers]
+                                      (->> handlers
+                                           (p/map-vals f)
+                                           (filter (p/fn-> second))
+                                           (into {})))))
 
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
