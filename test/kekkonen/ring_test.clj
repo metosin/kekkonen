@@ -13,9 +13,9 @@
   (r/uri->action "/") => nil)
 
 (fact "handler-uri"
-  (r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!"
-  (r/handler-uri {:ns :api.user, :name :swagger.json}) => "/api/user/swagger.json"
-  (r/handler-uri {:ns nil, :name :swagger.json}) => "/swagger.json")
+  (@#'r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!"
+  (@#'r/handler-uri {:ns :api.user, :name :swagger.json}) => "/api/user/swagger.json"
+  (@#'r/handler-uri {:ns nil, :name :swagger.json}) => "/swagger.json")
 
 (fact "ring-input-schema"
   (@#'r/ring-input-schema

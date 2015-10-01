@@ -36,9 +36,7 @@
     (if-not (= (count path) 1)
       (keyword (subs (str (str/replace (subs path 0 i) #"/" ".") (subs path i)) 1)))))
 
-(s/defn handler-uri :- s/Str
-  "Creates a uri for the handler"
-  [handler :- k/Handler]
+(defn- handler-uri [handler]
   (str
     (if-let [ns (some-> handler :ns name)]
       (str "/" (str/replace ns #"\." "/")))
