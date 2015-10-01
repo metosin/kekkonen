@@ -19,6 +19,7 @@
 
 (s/def +default-options+ :- Options
   ; TODO: no types in default bindings?
+  ; TODO: add type-resolver?
   {:types {::handler {:methods #{:get :head :patch :delete :options :post :put}}
            :handler {:methods #{:post}
                      :parameters [[[:request :body-params] [:data]]]}}
@@ -59,6 +60,20 @@
     request
     coercion))
 
+(defn coerce!-response
+  "Coerces a response against a handler ring output schema based on :coercion options."
+  [response handler options]
+  (if-let [responses (-> handler :user :responses)]
+    (let [status (or (:status response) 200)
+          schema (get-in responses [status :schema])
+          matcher (get-in options [:coercion :body-params])
+          value (:body response)]
+      (if schema
+        (let [coerced (k/coerce! schema matcher value :response ::response)]
+          (assoc response :body coerced))
+        response))
+    response))
+
 (defn- ring-input-schema [input parameters]
   (if parameters
     (reduce kc/move-to-from input parameters)
@@ -82,6 +97,10 @@
     (assoc handler :ring {:type-config type-config
                           :uri (handler-uri handler)
                           :input input-schema})))
+
+;;
+;; Ring-handler
+;;
 
 ; TODO: create a Ring-dispatcher
 (s/defn ring-handler
@@ -108,16 +127,7 @@
                 (if (is-validate-request? request)
                   {:status 200, :headers {}, :body (k/validate dispatcher action context)}
                   (let [response (k/invoke dispatcher action context)]
-                    (if-let [responses (-> handler :user :responses)]
-                      (let [status (or (:status response) 200)
-                            schema (get-in responses [status :schema])
-                            matcher (get-in options [:coercion :body-params])
-                            value (:body response)]
-                        (if schema
-                          (let [coerced (k/coerce! schema matcher value :response ::response)]
-                            (assoc response :body coerced))
-                          response))
-                      response)))))))))))
+                    (coerce!-response response handler options)))))))))))
 
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in orcer."
