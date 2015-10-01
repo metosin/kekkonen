@@ -8,9 +8,9 @@
             [plumbing.core :as p]))
 
 (facts "uri->action"
-  (r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
-  (r/uri->action "/api") => :api
-  (r/uri->action "/") => nil)
+  (@#'r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
+  (@#'r/uri->action "/api") => :api
+  (@#'r/uri->action "/") => nil)
 
 (fact "handler-uri"
   (@#'r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!"

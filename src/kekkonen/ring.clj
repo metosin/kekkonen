@@ -30,9 +30,7 @@
               :body-params rsc/json-schema-coercion-matcher}
    :transformers []})
 
-(s/defn uri->action :- s/Keyword
-  "Converts an action keyword from a uri string."
-  [path :- s/Str]
+(defn- uri->action [path]
   (let [i (.lastIndexOf path "/")]
     (if-not (= (count path) 1)
       (keyword (subs (str (str/replace (subs path 0 i) #"/" ".") (subs path i)) 1)))))
@@ -43,9 +41,7 @@
       (str "/" (str/replace ns #"\." "/")))
     "/" (name (:name handler))))
 
-(defn coerce-request!
-  "Coerces a request against a handler ring input schema based on :coercion options."
-  [request handler {:keys [coercion]}]
+(defn- coerce-request! [request handler {:keys [coercion]}]
   (reduce
     (fn [request [k matcher]]
       (if matcher
@@ -60,9 +56,7 @@
     request
     coercion))
 
-(defn coerce!-response
-  "Coerces a response against a handler ring output schema based on :coercion options."
-  [response handler options]
+(defn- coerce!-response [response handler options]
   (if-let [responses (-> handler :user :responses)]
     (let [status (or (:status response) 200)
           schema (get-in responses [status :schema])
@@ -85,11 +79,10 @@
         extra-keys-schema (s/find-extra-keys-schema (get-in schema [:request :header-params]))]
     (update-in schema [:request :header-params] merge {key value} (if-not extra-keys-schema {s/Any s/Any}))))
 
-(defn is-validate-request? [request]
+(defn- is-validate-request? [request]
   (= (get-in request [:headers mode-parameter]) "validate"))
 
-(s/defn attach-ring-meta
-  [options :- Options, handler :- k/Handler]
+(defn- attach-ring-meta [options handler]
   (let [type-config (get (:types options) (:type handler))
         input-schema (-> (:input handler)
                          (ring-input-schema (:parameters type-config))
@@ -129,12 +122,17 @@
                   (let [response (k/invoke dispatcher action context)]
                     (coerce!-response response handler options)))))))))))
 
+;;
+;; Routing
+;;
+
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in orcer."
   [ring-handlers :- [k/Function]]
   (apply some-fn ring-handlers))
 
 (s/defn match
+  "Creates a ring-handler for given uri & request-method"
   ([match-uri ring-handler]
     (match match-uri identity ring-handler))
   ([match-uri match-request-method ring-handler]
