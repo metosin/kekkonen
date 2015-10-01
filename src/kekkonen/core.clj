@@ -239,7 +239,7 @@
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
   [dispatcher, action :- s/Keyword]
-  (get-in dispatcher [:handlers action]))
+  ((get-handlers dispatcher) action))
 
 ;;
 ;; InMemoryDispatcher
@@ -255,7 +255,7 @@
 
   IDispatcher
   (get-handlers [_]
-    (vals handlers))
+    handlers)
 
   (dispatch [dispatcher mode action context]
     (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
@@ -419,19 +419,23 @@
         handlers))))
 
 (defn- map-handlers [dispatcher mode prefix context success failure]
-  (->> (filter-by-path (-> dispatcher :handlers vals) prefix)
-       (map
-         (fn [handler]
-           (try
-             (when-not (= mode :all)
-               (dispatch dispatcher mode (:action handler) context))
-             [handler (success handler)]
-             (catch Exception e
-               (if (-> e ex-data :type (= ::dispatch))
-                 [nil nil]
-                 [handler (failure e)])))))
-       (filter first)
-       (into {})))
+  (-> dispatcher
+      get-handlers
+      vals
+      (filter-by-path prefix)
+      (->>
+        (map
+          (fn [handler]
+            (try
+              (when-not (= mode :all)
+                (dispatch dispatcher mode (:action handler) context))
+              [handler (success handler)]
+              (catch Exception e
+                (if (-> e ex-data :type (= ::dispatch))
+                  [nil nil]
+                  [handler (failure e)])))))
+        (filter first)
+        (into {}))))
 
 (s/defn all-handlers :- [Handler]
   "Returns all handlers filtered by namespace"
