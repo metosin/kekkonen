@@ -266,3 +266,18 @@
     (app {:uri "/api/test"
           :request-method :post
           :header-params {"user" "tommi"}}) => {:user "tommi"}))
+
+(fact "ring-dispatcher"
+  (let [dispatcher (k/dispatcher {:handlers {:api [#'plus (k/handler {:type :internal
+                                                                      :name :identity} identity)]}
+                                  :type-resolver (k/type-resolver :handler :internal)})
+        ring-dispatcher (r/ring-dispatcher dispatcher r/+default-options+)]
+
+    (fact "there are 2 handlers available via the dispatcher"
+      (k/get-handlers dispatcher) => (just
+                                       {:api/plus anything
+                                        :api/identity anything}))
+
+    (fact "there are only 1 handlers available via the ring-dispatcher"
+      (k/get-handlers ring-dispatcher) => (just
+                                            {:api/plus anything}))))

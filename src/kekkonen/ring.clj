@@ -86,27 +86,53 @@
 (defn- is-validate-request? [request]
   (= (get-in request [:headers mode-parameter]) "validate"))
 
-(defn- attach-ring-meta [options handler]
+(defn- ring-meta [handler options]
   (let [type-config (get (:types options) (:type handler))
         input-schema (-> (:input handler)
                          (ring-input-schema (:parameters type-config))
                          attach-mode-parameter)]
-    (assoc handler :ring {:type-config type-config
-                          :uri (handler-uri handler)
-                          :input input-schema})))
+    (if type-config
+      {:type-config type-config
+       :uri (handler-uri handler)
+       :input input-schema})))
+
+(defn- attach-ring-meta [handlers options]
+  (p/for-map [[action handler] handlers
+              :let [rmeta (ring-meta handler options)]
+              :when rmeta]
+    action (assoc handler :ring rmeta)))
+
+;;
+;; RingDispatcher
+;;
+
+(defrecord RingDispatcher [dispatcher handlers]
+  k/IDispatcher
+  (get-handlers [_]
+    handlers)
+
+  (with-handlers [this handlers]
+    (update this :handlers merge handlers))
+
+  (dispatch [_ mode action context]
+    (k/dispatch dispatcher mode action context)))
+
+(defn ring-dispatcher [dispatcher options]
+  (let [handlers (attach-ring-meta (k/get-handlers dispatcher) options)
+        dispatcher (k/with-handlers dispatcher handlers)]
+    (->RingDispatcher dispatcher handlers)))
 
 ;;
 ;; Ring-handler
 ;;
 
-; TODO: create a Ring-dispatcher
 (s/defn ring-handler
   "Creates a ring handler from Dispatcher and options."
   ([dispatcher :- k/Dispatcher]
     (ring-handler dispatcher {}))
   ([dispatcher :- k/Dispatcher, options :- k/KeywordMap]
     (let [options (kc/deep-merge +default-options+ options)
-          dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
+          dispatcher (ring-dispatcher dispatcher options)
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method uri] :as request}]
         (if-let [handler (router uri)]
