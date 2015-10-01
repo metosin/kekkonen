@@ -113,6 +113,9 @@
           (if-let [type-config (-> handler :ring :type-config)]
             (if (get (:methods type-config) request-method)
               (let [action (:action handler)
+                    ;; TODO: create an interceptor chain, validate params later to avoid detail leaking
+                    ;; TODO: example: in example.cqrs, calling http POST :3000/api/item/reset-items!
+                    ;; TODO: will reveal a) the expoint exists b) the input data format. Not ok'ish.
                     request (coerce-request! request handler options)
                     context (as-> {:request request} context
                                   ;; global transformers first

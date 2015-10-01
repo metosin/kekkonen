@@ -68,8 +68,12 @@
 (p/defnk ^:command reset-items!
   "Resets the database"
   {:roles #{:boss}}
-  [[:components db]]
-  (success (swap! db empty)))
+  [[:components db]
+   [:data really :- s/Bool]]
+  (success
+    (if really
+      (swap! db empty)
+      @db)))
 
 (p/defnk ^:query ping [] (success {:ping "pong"}))
 (p/defnk ^:query pong [] (success {:pong "ping"}))
