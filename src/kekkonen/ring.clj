@@ -30,6 +30,10 @@
               :body-params rsc/json-schema-coercion-matcher}
    :transformers []})
 
+;;
+;; Internals
+;;
+
 (defn- uri->action [path]
   (let [i (.lastIndexOf path "/")]
     (if-not (= (count path) 1)
