@@ -349,7 +349,7 @@
              (p/map-vals first)))))
 
 (s/defn dispatcher :- Dispatcher
-  "Creates a Dispatcher."
+  "Creates a InMemoryDispatcher."
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
         handlers (->> (collect-and-enrich (:handlers options) (:type-resolver options) false))]
@@ -420,15 +420,16 @@
 
 (defn- map-handlers [dispatcher mode prefix context success failure]
   (->> (filter-by-path (-> dispatcher :handlers vals) prefix)
-       (map (fn [handler]
-              (try
-                (when-not (= mode :all)
-                  (dispatch dispatcher mode (:action handler) context))
-                [handler (success handler)]
-                (catch Exception e
-                  (if (-> e ex-data :type (= ::dispatch))
-                    [nil nil]
-                    [handler (failure e)])))))
+       (map
+         (fn [handler]
+           (try
+             (when-not (= mode :all)
+               (dispatch dispatcher mode (:action handler) context))
+             [handler (success handler)]
+             (catch Exception e
+               (if (-> e ex-data :type (= ::dispatch))
+                 [nil nil]
+                 [handler (failure e)])))))
        (filter first)
        (into {})))
 
