@@ -259,7 +259,7 @@
     handlers)
 
   (with-handlers [this handlers]
-    (update this :handlers merge handlers))
+    (update-in this [:handlers] merge handlers))
 
   (dispatch [dispatcher mode action context]
     (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
