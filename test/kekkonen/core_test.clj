@@ -577,9 +577,7 @@
                      {:api.admin/handler1 map?
                       :api.admin/handler2 map?
                       :api.public/handler1 nil
-                      :api.public/handler2 map?
-                      ;; FIXME: this should not be visible
-                      :api.secret/handler2 map?}))
+                      :api.public/handler2 map?}))
 
               (fact "admin-apis"
 
@@ -644,14 +642,8 @@
                   (fact "with missing parameters"
                     (fact "with missing parameters"
                       (k/check d :api.secret/handler2 ctx) => missing-route?
-
-                      ; FIXME: too eager parameter validation
-                      (k/validate d :api.secret/handler2 ctx) => input-coercion-error?
-                      #_(k/validate d :api.secret/handler2 ctx) => missing-route?
-
-                      ; FIXME: too eager parameter validation
-                      (k/invoke d :api.secret/handler2 ctx) => input-coercion-error?
-                      #_(k/invoke d :api.secret/handler2 ctx) => missing-route?
+                      (k/validate d :api.secret/handler2 ctx) => missing-route?
+                      (k/invoke d :api.secret/handler2 ctx) => missing-route?
 
                       (fact "with all parameters"
                         (let [ctx (merge ctx {:data {:x true}})]

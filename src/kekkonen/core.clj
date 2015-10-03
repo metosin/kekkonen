@@ -259,16 +259,13 @@
 
   (dispatch [dispatcher mode action context]
     (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
-      (let [context (as-> context context
+      (let [input-matcher (-> dispatcher :coercion :input)
+            context (as-> context context
 
                           ;; TODO: in what order are these run? -> back to namespaces...
 
                           ;; base-context from Dispatcher
                           (kc/deep-merge (:context dispatcher) context)
-
-                          ;; run coercion for :validate|:invoke and if coercion-matcher is set
-                          (cond-> context (and (#{:validate :invoke} mode) input (-> dispatcher :coercion :input))
-                                  ((fn [ctx] (coerce! input (-> dispatcher :coercion :input) ctx nil ::request))))
 
                           ;; run all the transformers
                           ;; short-circuit execution if a transformer returns nil
@@ -284,6 +281,10 @@
                                 context))
                             context
                             (apply concat all-user))
+
+                          ;; run coercion for :validate|:invoke and if coercion-matcher is set
+                          (cond-> context (and context (#{:validate :invoke} mode) input input-matcher)
+                                  ((fn [ctx] (coerce! input input-matcher ctx nil ::request))))
 
                           ;; inject in stuff the context if not nil
                           (cond-> context context (merge context {::dispatcher dispatcher
