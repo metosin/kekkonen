@@ -235,10 +235,10 @@
             (k/some-handler d :test/non-existing) => nil)
 
           (fact "can't be validated (against a context)"
-            (k/validate d :test/non-existing) => (throws? {:type ::k/dispatch}))
+            (k/validate d :test/non-existing) => missing-route?)
 
           (fact "can't be invoked (against a context)"
-            (k/invoke d :test/non-existing) => (throws? {:type ::k/dispatch})))
+            (k/invoke d :test/non-existing) => missing-route?))
 
         (facts "existing action"
 
@@ -302,22 +302,22 @@
     (fact "sub-context"
       (let [d (k/dispatcher {:handlers {:api #'plus}})]
 
-        (k/validate d :api/plus {}) => (throws?)
-        (k/invoke d :api/plus {}) => (throws?)
+        (k/validate d :api/plus {}) => input-coercion-error?
+        (k/invoke d :api/plus {}) => input-coercion-error?
 
-        (k/validate d :api/plus {:data {:x 1}}) => (throws?)
-        (k/invoke d :api/plus {:data {:x 1}}) => (throws?)
+        (k/validate d :api/plus {:data {:x 1}}) => input-coercion-error?
+        (k/invoke d :api/plus {:data {:x 1}}) => input-coercion-error?
 
         (k/validate d :api/plus {:data {:x 1, :y 2}}) => nil
         (k/invoke d :api/plus {:data {:x 1, :y 2}}) => 3
 
         (let [k (k/with-context d {:data {:x 1}})]
 
-          (k/validate k :api/plus {}) => (throws?)
-          (k/invoke k :api/plus {}) => (throws?)
+          (k/validate k :api/plus {}) => input-coercion-error?
+          (k/invoke k :api/plus {}) => input-coercion-error?
 
-          (k/validate k :api/plus {:data {:x 1}}) => (throws?)
-          (k/invoke k :api/plus {:data {:x 1}}) => (throws?)
+          (k/validate k :api/plus {:data {:x 1}}) => input-coercion-error?
+          (k/invoke k :api/plus {:data {:x 1}}) => input-coercion-error?
 
           (k/validate k :api/plus {:data {:y 2}}) => nil
           (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
@@ -474,18 +474,10 @@
                                           {::roles #{:superadmin}}]})]))
 
         (fact "routes can be hidden with rules"
-
-          (k/invoke d :api.admin/test {:x 1})
-          => (throws? {:type ::k/dispatch})
-
-          (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone}})
-          => (throws? {:type ::k/dispatch})
-
-          (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone, :admin}})
-          => (throws? {:type ::k/dispatch})
-
-          (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}})
-          => 1)))))
+          (k/invoke d :api.admin/test {:x 1}) => missing-route?
+          (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone}}) => missing-route?
+          (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone, :admin}}) => missing-route?
+          (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}}) => 1)))))
 
 (facts "all-handlers, available-handlers & dispatch-handlers"
   (let [handler->action (fn [m] (p/for-map [[k v] m] (:action k) v))]
