@@ -489,13 +489,13 @@
             d (k/dispatcher {:user {::roles! require-role-or-fail
                                     ::roles require-role}
                              :handlers {:api {admin-ns [handler1 handler2]
-                                              secret-ns [handler1]
+                                              secret-ns [handler1 handler2]
                                               :public [handler1 handler2]}}})]
 
-        (fact "there are 5 handlers"
-          (k/all-handlers d nil) => (n-of k/handler? 5))
+        (fact "there are 6 handlers"
+          (k/all-handlers d nil) => (n-of k/handler? 6))
 
-        (fact "4 handlers are available (one is secret)"
+        (fact "4 handlers are available (as 2 are secret)"
           (handler->action (k/dispatch-handlers d :available nil {}))
           => (just
                {:api.admin/handler1 nil
@@ -505,10 +505,10 @@
 
         (fact "in namespace api"
 
-          (fact "there are 5 handlers"
-            (k/all-handlers d :api) => (n-of k/handler? 5))
+          (fact "there are 6 handlers"
+            (k/all-handlers d :api) => (n-of k/handler? 6))
 
-          (fact "4 handlers are available (one is secret)"
+          (fact "4 handlers are available (2 are secret)"
 
             (k/available-handlers d nil {}) => (n-of k/handler? 4)
 
@@ -535,8 +535,8 @@
 
         (fact "in namespace api.secret"
 
-          (fact "there is 1 handler"
-            (k/all-handlers d :api.secret) => (n-of k/handler? 1))
+          (fact "there are 2 handlers"
+            (k/all-handlers d :api.secret) => (n-of k/handler? 2))
 
           (fact "0 handlers are available"
 
@@ -577,7 +577,9 @@
                      {:api.admin/handler1 map?
                       :api.admin/handler2 map?
                       :api.public/handler1 nil
-                      :api.public/handler2 map?}))
+                      :api.public/handler2 map?
+                      ;; FIXME: this should not be visible
+                      :api.secret/handler2 map?}))
 
               (fact "admin-apis"
 
@@ -597,10 +599,10 @@
           (fact "for admin-user"
             (let [ctx {::roles #{:admin}}]
 
-              (fact "all apis"
+              (fact "all handlers"
 
                 (k/available-handlers d nil ctx)
-                => (n-of k/handler? 5)
+                => (n-of k/handler? 6)
 
                 (handler->action (k/dispatch-handlers d :check nil ctx))
                 => (just
@@ -608,7 +610,8 @@
                       :api.admin/handler2 nil
                       :api.public/handler1 nil
                       :api.public/handler2 nil
-                      :api.secret/handler1 nil})
+                      :api.secret/handler1 nil
+                      :api.secret/handler2 nil})
 
                 (handler->action (k/dispatch-handlers d :validate nil ctx))
                 => (just
@@ -616,7 +619,8 @@
                       :api.admin/handler2 map?
                       :api.public/handler1 nil
                       :api.public/handler2 map?
-                      :api.secret/handler1 nil}))
+                      :api.secret/handler1 nil
+                      :api.secret/handler2 map?}))
 
               (fact "admin apis"
 
@@ -635,17 +639,38 @@
 
             (fact "interacting with a spesific handler"
 
-              (fact "with missing parameters"
-                (let [ctx {::roles #{:admin}}]
-                  (k/check d :api.admin/handler2 ctx) => nil
-                  (k/validate d :api.admin/handler2 ctx) => (throws?)
-                  (k/invoke d :api.admin/handler2 ctx) => (throws?)
+              (fact "without required role"
+                (let [ctx {}]
+                  (fact "with missing parameters"
+                    (fact "with missing parameters"
+                      (k/check d :api.secret/handler2 ctx) => missing-route?
 
-                  (fact "with all parameters"
-                    (let [ctx (merge ctx {:data {:x true}})]
-                      (k/check d :api.admin/handler2 ctx) => nil
-                      (k/validate d :api.admin/handler2 ctx) => nil
-                      (k/invoke d :api.admin/handler2 ctx) => true)))))))))))
+                      ; FIXME: too eager parameter validation
+                      (k/validate d :api.secret/handler2 ctx) => input-coercion-error?
+                      #_(k/validate d :api.secret/handler2 ctx) => missing-route?
+
+                      ; FIXME: too eager parameter validation
+                      (k/invoke d :api.secret/handler2 ctx) => input-coercion-error?
+                      #_(k/invoke d :api.secret/handler2 ctx) => missing-route?
+
+                      (fact "with all parameters"
+                        (let [ctx (merge ctx {:data {:x true}})]
+                          (k/check d :api.secret/handler2 ctx) => missing-route?
+                          (k/validate d :api.secret/handler2 ctx) => missing-route?
+                          (k/invoke d :api.secret/handler2 ctx) => missing-route?))))))
+
+              (fact "with required role"
+                (let [ctx {::roles #{:admin}}]
+                  (fact "with missing parameters"
+                    (k/check d :api.secret/handler2 ctx) => nil
+                    (k/validate d :api.secret/handler2 ctx) => input-coercion-error?
+                    (k/invoke d :api.secret/handler2 ctx) => input-coercion-error?
+
+                    (fact "with all parameters"
+                      (let [ctx (merge ctx {:data {:x true}})]
+                        (k/check d :api.secret/handler2 ctx) => nil
+                        (k/validate d :api.secret/handler2 ctx) => nil
+                        (k/invoke d :api.secret/handler2 ctx) => true))))))))))))
 
 (fact "context transformations"
   (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
@@ -671,7 +696,7 @@
                  :transformers [(constantly nil)
                                 #(assoc % :x 1)]})]
 
-        (k/invoke d :api/test {}) => (throws? {:type ::k/dispatch})))))
+        (k/invoke d :api/test {}) => missing-route?))))
 
 (fact "transforming handlers"
   (fact "enriching handlers"
