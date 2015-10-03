@@ -21,10 +21,11 @@
                nil)]
     (assoc context :user user)))
 
-(defn require-roles [context required]
-  (let [roles (-> context :user :roles)]
-    (if (seq (set/intersection roles required))
-      context)))
+(defn require-roles [required]
+  (fn [context]
+    (let [roles (-> context :user :roles)]
+      (if (seq (set/intersection roles required))
+        context))))
 
 (p/defnk ^:query get-user
   {:responses {success-status {:schema (s/maybe User)}}}

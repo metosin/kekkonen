@@ -10,9 +10,10 @@
 (p/defnk ^:handler ping []
   (ok {:ping "pong"}))
 
-(defn require-role [context role]
-  (if (= (-> context :request :query-params ::role) role)
-    context))
+(defn require-role [role]
+  (fn [context]
+    (if (= (-> context :request :query-params ::role) role)
+      context)))
 
 (facts "api-test"
   (let [secret (k/namespace {:name :secret ::role :admin})

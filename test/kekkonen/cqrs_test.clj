@@ -11,10 +11,11 @@
 ;; Role interceptor
 ;;
 
-(defn require-roles [context required]
-  (let [roles (-> context :user :roles)]
-    (if (seq (set/intersection roles required))
-      context)))
+(defn require-roles [required]
+  (fn [context]
+    (let [roles (-> context :user :roles)]
+      (if (seq (set/intersection roles required))
+        context))))
 
 (p/defnk ^:query get-items
   "Retrieves all"

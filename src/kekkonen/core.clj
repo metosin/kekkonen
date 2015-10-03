@@ -279,8 +279,8 @@
                           ;; the run an causes ::dispatch error
                           (reduce
                             (fn [context [k v]]
-                              (if-let [mapper (get-in dispatcher [:user k])]
-                                (or (mapper context v) (reduced nil))
+                              (if-let [mapper-gen (get-in dispatcher [:user k])]
+                                (or ((mapper-gen v) context) (reduced nil))
                                 context))
                             context
                             (apply concat all-user))
