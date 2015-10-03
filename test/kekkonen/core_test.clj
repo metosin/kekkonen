@@ -383,22 +383,18 @@
                                             {:input {:data {:x s/Int, :y s/Int, s/Keyword s/Any}, s/Keyword s/Any}
                                              :output {:result s/Int}}))))
 
-(defn require-role-or-fail [required]
-  (fn [context]
-    (let [roles (::roles context)]
-      (if (seq (set/intersection roles required))
-        context
-        (throw
-          (ex-info
-            "invalid role"
-            {:roles roles
-             :required required}))))))
-
 (defn require-role [required]
   (fn [context]
     (let [roles (::roles context)]
       (if (seq (set/intersection roles required))
         context))))
+
+(defn require-role-or-fail [required]
+  (some-fn
+    (require-role required)
+    (fn [context]
+      (throw (ex-info "missing role" {:roles (::roles context)
+                                      :required required})))))
 
 (facts "user-meta"
   (facts "exception throwing"
