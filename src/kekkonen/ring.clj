@@ -118,12 +118,16 @@
                     ;; TODO: will reveal a) the expoint exists b) the input data format. Not ok'ish.
                     request (coerce-request! request handler options)
                     context (as-> {:request request} context
+
+                                  ;; map parameters from ring-request into common keys
+                                  (reduce kc/deep-merge-from-to context (:parameters type-config))
+
                                   ;; global transformers first
                                   (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
+
                                   ;; type-level transformers
-                                  (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config))
-                                  ;; map parameters from ring-request into common keys
-                                  (reduce kc/deep-merge-from-to context (:parameters type-config)))]
+                                  (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config)))]
+
                 (if (is-validate-request? request)
                   {:status 200, :headers {}, :body (k/validate dispatcher action context)}
                   (let [response (k/invoke dispatcher action context)]
