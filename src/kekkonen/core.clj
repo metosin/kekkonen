@@ -129,10 +129,24 @@
 ;; Collection helpers
 ;;
 
+(defn- extract-schema [schema-key x]
+  (let [pfnk-schema (case schema-key
+                      :input pfnk/input-schema
+                      :output pfnk/output-schema)
+        pfnk? (fn [x]
+                (and
+                  (satisfies? pfnk/PFnk x)
+                  (:schema (meta x))))]
+    (if (var? x)
+      (cond
+        (pfnk? @x) (pfnk-schema @x)
+        :else (or (schema-key (meta x))))
+      (or (and (-> x meta :schema) (pfnk-schema x)) (-> x meta schema-key) s/Any))))
+
 (extend-type AFunction
   Collector
   (-collect [this type-resolver]
-    (if-let [{:keys [name description schema type input output] :as meta} (type-resolver (meta this))]
+    (if-let [{:keys [name description type] :as meta} (type-resolver (meta this))]
       (if name
         {(namespace
            {:name (keyword name)})
@@ -141,21 +155,9 @@
           :name (keyword name)
           :user (user-meta meta)
           :description (or description "")
-          :input (or (and schema (pfnk/input-schema this)) input s/Any)
-          :output (or (and schema (pfnk/output-schema this)) output s/Any)}})
+          :input (extract-schema :input this)
+          :output (extract-schema :output this)}})
       (throw (ex-info (format "Function %s can't be type-resolved" this) {:target this})))))
-
-(defn- extract-var-schema [schema-key v]
-  (let [pfnk-schema (case schema-key
-                      :input pfnk/input-schema
-                      :output pfnk/output-schema)
-        pfnk? (fn [x]
-                (and
-                  (satisfies? pfnk/PFnk x)
-                  (:schema (meta x))))]
-    (cond
-      (pfnk? @v) (pfnk-schema @v)
-      :else (or (schema-key (meta v))))))
 
 (extend-type Var
   Collector
@@ -168,8 +170,8 @@
         :name (keyword name)
         :user (user-meta meta)
         :description doc
-        :input (extract-var-schema :input this)
-        :output (extract-var-schema :output this)
+        :input (extract-schema :input this)
+        :output (extract-schema :output this)
         :source-map {:line line
                      :column column
                      :file file
