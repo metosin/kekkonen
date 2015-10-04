@@ -1,6 +1,7 @@
 (ns kekkonen.common-test
   (:require [midje.sweet :refer :all]
-            [kekkonen.common :as kc]))
+            [kekkonen.common :as kc]
+            [schema.core :as s]))
 
 (fact "deep-merge"
   (kc/deep-merge {:a 1 :b {:c [1] :d 2}} {:b {:c [2] :d 3 :e 4}}) => {:a 1 :b {:c [2] :d 3 :e 4}})
@@ -37,3 +38,8 @@
       {:request {:body-params {:x String, :y String}}}
       [[:request :body-params] [:data]])
     => {:request {:body-params {:x String, :y String}}}))
+
+(fact "merge-map-schemas"
+  (kc/merge-map-schemas s/Any {:a s/Str}) => {:a s/Str}
+  (kc/merge-map-schemas s/Any s/Any) => {}
+  (kc/merge-map-schemas {:a s/Str} {:a {:b s/Str}}) => {:a {:b s/Str}})

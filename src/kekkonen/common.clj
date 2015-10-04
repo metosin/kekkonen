@@ -1,5 +1,6 @@
 (ns kekkonen.common
-  (:require [clojure.walk :as walk]))
+  (:require [clojure.walk :as walk]
+            [schema.core :as s]))
 
 (defn- deep-merge* [& maps]
   (let [f (fn [old new]
@@ -54,3 +55,11 @@
 
 (defn move-to-from [data [to from]]
   (move-from-to data [from to]))
+
+(defn merge-map-schemas [& schemas]
+  (reduce
+    (fn [acc schema]
+      (if-not (= schema s/Any)
+        (merge acc schema)
+        acc))
+    {} schemas))
