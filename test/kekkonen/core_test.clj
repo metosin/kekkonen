@@ -716,7 +716,10 @@
   (s/with-fn-validation
     (let [secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
           doc-ns (k/namespace {:name :doc ::load-doc true})
-          read (k/handler {:name :read} (p/fnk [[:entity doc :- s/Str]] {:read doc}))
+          read (k/handler {:name :read} (p/fnk [[:entity doc :- s/Str] :as ctx]
+                                          ;; despite we haven't defined [:data :doc-id], it already coerced!
+                                          (assert (-> ctx :data :doc-id class (= Long)))
+                                          {:read doc}))
           d (k/dispatcher {:user {::roles require-role
                                   ::load-doc (constantly
                                                (p/fnk [[:data doc-id :- s/Int] :as ctx]
@@ -732,7 +735,16 @@
                                                               s/Keyword s/Any}
                                                       :action-input {:entity {:doc s/Str, s/Keyword s/Any}
                                                                      :data {:doc-id s/Int, s/Keyword s/Any}
-                                                                     s/Keyword s/Any}})))))
+                                                                     s/Keyword s/Any}}))
+
+      (fact "with invalid credentials"
+        (k/invoke d :api.secret.doc/read {}) => missing-route?)
+
+      (fact "with valid credentials"
+        (fact "data in correct format"
+          (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}}) => {:read "hello ruby"})
+        (fact "data in wrong format gets coerced already with ns metas"
+          (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}}) => {:read "hello ruby"})))))
 
 (fact "invoke-time extra data"
   (let [d (k/dispatcher {:handlers

@@ -277,12 +277,19 @@
 
                           ;; run all the user transformers per namespace/handler
                           ;; start from the root. a returned nil context short-circuits
-                          ;; the run an causes ::dispatch error
+                          ;; the run an causes ::dispatch error. Apply local coercion
+                          ;; in the input is defined (using same definitions as with handlers)
                           (reduce
-                            (fn [context [k v]]
+                            (fn [ctx [k v]]
                               (if-let [mapper-gen (get-in dispatcher [:user k])]
-                                (or ((mapper-gen v) context) (reduced nil))
-                                context))
+                                (let [mapper (mapper-gen v)
+                                      input-schema (:input (extract-schema mapper))
+                                      ;; TODO: automatic coercion = too much magic? just coerce :data?
+                                      ctx (if-not (= input-schema s/Any)
+                                            (coerce! input-schema input-matcher ctx nil ::request)
+                                            ctx)]
+                                  (or (mapper ctx) (reduced nil)))
+                                ctx))
                             context
                             (apply concat all-user))
 
