@@ -36,6 +36,7 @@
    (s/optional-key :all-user) [KeywordMap]
    :description (s/maybe s/Str)
    :input s/Any
+   :action-input s/Any
    :output s/Any
    (s/optional-key :source-map) {:line s/Int
                                  :column s/Int
@@ -129,54 +130,55 @@
 ;; Collection helpers
 ;;
 
-(defn- extract-schema [schema-key x]
-  (let [pfnk-schema (case schema-key
-                      :input pfnk/input-schema
-                      :output pfnk/output-schema)
-        pfnk? (fn [x]
-                (and
-                  (satisfies? pfnk/PFnk x)
-                  (:schema (meta x))))]
-    (if (var? x)
-      (cond
-        (pfnk? @x) (pfnk-schema @x)
-        :else (or (schema-key (meta x))))
-      (or (and (-> x meta :schema) (pfnk-schema x)) (-> x meta schema-key) s/Any))))
+(defn- extract-schema [x]
+  (p/for-map [k [:input :output]]
+    k (let [pfnk-schema (case k
+                          :input pfnk/input-schema
+                          :output pfnk/output-schema)
+            pfnk? (fn [x] (and (satisfies? pfnk/PFnk x) (:schema (meta x))))]
+        (if (var? x)
+          (cond
+            (pfnk? @x) (pfnk-schema @x)
+            :else (or (-> x meta k) s/Any))
+          (or (and (-> x meta :schema) (pfnk-schema x))
+              (-> x meta k) s/Any)))))
 
 (extend-type AFunction
   Collector
   (-collect [this type-resolver]
     (if-let [{:keys [name description type] :as meta} (type-resolver (meta this))]
-      (if name
-        {(namespace
-           {:name (keyword name)})
-         {:function this
-          :type type
-          :name (keyword name)
-          :user (user-meta meta)
-          :description (or description "")
-          :input (extract-schema :input this)
-          :output (extract-schema :output this)}})
+      (let [{:keys [input output]} (extract-schema this)]
+        (if name
+          {(namespace
+             {:name (keyword name)})
+           {:function this
+            :type type
+            :name (keyword name)
+            :user (user-meta meta)
+            :description (or description "")
+            :input input
+            :output output}}))
       (throw (ex-info (format "Function %s can't be type-resolved" this) {:target this})))))
 
 (extend-type Var
   Collector
   (-collect [this type-resolver]
     (if-let [{:keys [line column file ns name doc type] :as meta} (type-resolver (meta this))]
-      {(namespace
-         {:name (keyword name)})
-       {:function @this
-        :type type
-        :name (keyword name)
-        :user (user-meta meta)
-        :description doc
-        :input (extract-schema :input this)
-        :output (extract-schema :output this)
-        :source-map {:line line
-                     :column column
-                     :file file
-                     :ns (ns-name ns)
-                     :name name}}}
+      (let [{:keys [input output]} (extract-schema this)]
+        {(namespace
+           {:name (keyword name)})
+         {:function @this
+          :type type
+          :name (keyword name)
+          :user (user-meta meta)
+          :description doc
+          :input input
+          :output output
+          :source-map {:line line
+                       :column column
+                       :file file
+                       :ns (ns-name ns)
+                       :name name}}})
       (throw (ex-info (format "Var %s can't be type-resolved" this) {:target this})))))
 
 (extend-type Symbol
@@ -324,7 +326,7 @@
    :user {}})
 
 (defn- collect-and-enrich
-  [handlers type-resolver allow-empty-namespaces?]
+  [{:keys [handlers type-resolver user]} allow-empty-namespaces?]
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
         collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
@@ -333,10 +335,18 @@
                    (let [ns (handler-ns m)
                          ns-user (collect-ns-meta m)
                          user-meta (:user h)
-                         all-user (if-not (empty? user-meta) (conj ns-user user-meta) ns-user)]
+                         all-user (if-not (empty? user-meta) (conj ns-user user-meta) ns-user)
+                         user-input (reduce
+                                      (fn [acc [k v]]
+                                        (if-let [f (user k)]
+                                          (let [schema (:input (extract-schema (f v)))]
+                                            (kc/merge-map-schemas acc schema))
+                                          acc)) {} (apply concat all-user))
+                         action-input (kc/merge-map-schemas (:input h) user-input)]
                      (merge h {:ns ns
                                :ns-user ns-user
                                :all-user all-user
+                               :action-input action-input
                                :action (handler-action (:name h) ns)}))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
@@ -355,7 +365,7 @@
   "Creates a InMemoryDispatcher."
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
-        handlers (->> (collect-and-enrich (:handlers options) (:type-resolver options) false))]
+        handlers (->> (collect-and-enrich options false))]
     (map->InMemoryDispatcher
       (merge
         (select-keys options [:context :transformers :coercion :user])
@@ -371,12 +381,14 @@
                                            (filter (p/fn-> second))
                                            (into {})))))
 
+;; TODO: works just with the InMemoryDispatcher -> publish to IDispatcher?
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
-  [dispatcher :- Dispatcher, handlers]
+  [in-memory-dispatcher :- InMemoryDispatcher, handlers]
   (if handlers
-    (let [handler (collect-and-enrich handlers any-type-resolver true)]
-      (update-in dispatcher [:handlers] merge handler))))
+    (let [handler (collect-and-enrich
+                    (merge in-memory-dispatcher {:handlers handlers :type-resolver any-type-resolver}) true)]
+      (update-in in-memory-dispatcher [:handlers] merge handler))))
 
 ;;
 ;; Calling handlers

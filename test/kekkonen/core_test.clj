@@ -712,6 +712,28 @@
     => (contains
          {:handlers {}})))
 
+(facts "transformers requiring parameters"
+  (s/with-fn-validation
+    (let [secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
+          doc-ns (k/namespace {:name :doc ::load-doc true})
+          read (k/handler {:name :read} (p/fnk [[:entity doc :- s/Str]] {:read doc}))
+          d (k/dispatcher {:user {::roles require-role
+                                  ::load-doc (constantly
+                                               (p/fnk [[:data doc-id :- s/Int] :as ctx]
+                                                 (assoc-in ctx [:entity :doc] (-> ctx :docs (get doc-id)))))}
+                           :coercion {:input {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}}
+                           :context {:docs {1 "hello ruby"
+                                            2 "land of lisp"}}
+                           :handlers {:api {secret-ns {doc-ns read}}}})]
+
+      (fact "user-meta handlers have contributed to action-input"
+        (k/some-handler d :api.secret.doc/read) => (contains
+                                                     {:input {:entity {:doc s/Str, s/Keyword s/Any}
+                                                              s/Keyword s/Any}
+                                                      :action-input {:entity {:doc s/Str, s/Keyword s/Any}
+                                                                     :data {:doc-id s/Int, s/Keyword s/Any}
+                                                                     s/Keyword s/Any}})))))
+
 (fact "invoke-time extra data"
   (let [d (k/dispatcher {:handlers
                          {:api
