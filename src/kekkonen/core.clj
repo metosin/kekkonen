@@ -31,13 +31,20 @@
    :name s/Keyword
    :ns (s/maybe s/Keyword)
    :action s/Keyword
+   :description (s/maybe s/Str)
+
+   ;; extra meta-data
    :user KeywordMap
    (s/optional-key :ns-user) [KeywordMap]
    (s/optional-key :all-user) [KeywordMap]
-   :description (s/maybe s/Str)
+
+   ;; input schemas
    :input s/Any
    :action-input s/Any
+
+   ;; output schemas
    :output s/Any
+
    (s/optional-key :source-map) {:line s/Int
                                  :column s/Int
                                  :file s/Str
