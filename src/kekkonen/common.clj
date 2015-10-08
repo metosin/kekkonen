@@ -70,8 +70,11 @@
 ;; lazy
 ;;
 
-(defn lazy-map []
-  (lm/create-lazy-map {}))
+(defn lazy-map
+  ([]
+   (lazy-map {}))
+  ([m]
+   (if (satisfies? lm/ILazyPersistentMap m) m (merge (lm/create-lazy-map {}) m))))
 
 (defn lazy-assoc-in
   "Value should be either derefable (delay or future) which will be dereffed when value is needed
@@ -79,7 +82,7 @@
   [m [k & ks] f]
   (if (seq ks)
     (assoc m k (lazy-assoc-in (or (get m k) (lazy-map)) ks f))
-    (let [m (if (satisfies? lm/ILazyPersistentMap m) m (merge (lazy-map) m))]
+    (let [m (if (satisfies? lm/ILazyPersistentMap m) m (lazy-map m))]
       (lm/delayed-assoc m k (cond
                               (instance? IDeref f) f
                               (fn? f) (delay (f))
