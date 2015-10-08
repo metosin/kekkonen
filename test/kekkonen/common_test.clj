@@ -75,7 +75,7 @@
     (let [realized? (atom 0)
           m (-> (kc/lazy-map)
                 (kc/lazy-assoc-in [:a :b] (fn [] (swap! realized? inc) 1))
-                (kc/lazy-copy [:a :b] [:data]))]
+                (kc/lazy-copy [[:a :b] [:data]]))]
       @realized? => 0
       (-> m :data) => 1
       @realized? => 1

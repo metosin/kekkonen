@@ -97,5 +97,5 @@
         (if (= k (lm/get-key entry))
           (lm/get-raw-value entry))) m)))
 
-(defn lazy-copy [m from to]
+(defn lazy-copy [m [from to]]
   (lazy-assoc-in m to (lazy-get m from)))
