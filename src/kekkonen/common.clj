@@ -88,3 +88,14 @@
                               (fn? f) (delay (f))
                               :else (throw
                                       (ex-info "lazy-assoc-in requres a derefable or a fn value" {:value f})))))))
+
+(defn lazy-get [m [k & ks]]
+  (if (seq ks)
+    (lazy-get (m k) ks)
+    (some
+      (fn [entry]
+        (if (= k (lm/get-key entry))
+          (lm/get-raw-value entry))) m)))
+
+(defn lazy-copy [m from to]
+  (lazy-assoc-in m to (lazy-get m from)))
