@@ -45,19 +45,16 @@
       (str "/" (str/replace ns #"\." "/")))
     "/" (name (:name handler))))
 
-(defn- coerce-request! [request handler {:keys [coercion]}]
+(defn- lazy-coerce-request! [request handler {:keys [coercion]}]
   (reduce
     (fn [request [k matcher]]
       (if matcher
         (if-let [schema (get-in handler [:ring :input :request k])]
-          (let [value (get request k {})
-                coerced (k/coerce! schema matcher value k ::request)]
-            (if-not (empty? value)
-              (assoc request k coerced)
-              request))
+          (let [value (get request k {})]
+            (kc/lazy-assoc-in request [k] (fn [] (k/coerce! schema matcher value k ::request))))
           request)
         request))
-    request
+    (kc/lazy-map request)
     coercion))
 
 (defn- coerce!-response [response handler options]
@@ -116,11 +113,11 @@
                     ;; TODO: create an interceptor chain, validate params later to avoid detail leaking
                     ;; TODO: example: in example.cqrs, calling http POST :3000/api/item/reset-items!
                     ;; TODO: will reveal a) the expoint exists b) the input data format. Not ok'ish.
-                    request (coerce-request! request handler options)
+                    request (lazy-coerce-request! request handler options)
                     context (as-> {:request request} context
 
                                   ;; map parameters from ring-request into common keys
-                                  (reduce kc/deep-merge-from-to context (:parameters type-config))
+                                  (reduce kc/lazy-copy context (:parameters type-config))
 
                                   ;; global transformers first
                                   (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
