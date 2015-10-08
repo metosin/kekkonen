@@ -86,6 +86,7 @@
       (lm/delayed-assoc m k (cond
                               (instance? IDeref f) f
                               (fn? f) (delay (f))
+                              (nil? f) (delay nil)
                               :else (throw
                                       (ex-info "lazy-assoc-in requres a derefable or a fn value" {:value f})))))))
 
