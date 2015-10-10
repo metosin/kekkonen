@@ -7,7 +7,6 @@
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.0"]
                  [prismatic/schema "1.0.1"]
-                 [de.kotka/lazymap "3.1.1"]
 
                  ;; http-stuff, separate module?
                  [metosin/ring-swagger "0.22.0-SNAPSHOT"]

@@ -41,10 +41,9 @@
       (app {:uri "/api/ping" :request-method :post})
       => "pong")
 
-    ;; lazy-map != persistent-map :(
-    #_(fact "request can be read as-is"
-        (let [request {:uri "/api/snoop" :request-method :post}]
-          (app request) => (ok request)))))
+    (fact "request can be read as-is"
+      (let [request {:uri "/api/snoop" :request-method :post}]
+        (app request) => (ok request)))))
 
 (p/defnk ^:handler plus
   [[:request [:query-params x :- s/Int, y :- s/Int]]]

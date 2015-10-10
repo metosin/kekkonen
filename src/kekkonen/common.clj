@@ -1,8 +1,6 @@
 (ns kekkonen.common
   (:require [clojure.walk :as walk]
-            [schema.core :as s]
-            [lazymap.core :as lm])
-  (:import [clojure.lang IDeref]))
+            [schema.core :as s]))
 
 (defn- deep-merge* [& maps]
   (let [f (fn [old new]
@@ -65,38 +63,3 @@
         (merge acc schema)
         acc))
     {} schemas))
-
-;;
-;; lazy
-;;
-
-(defn lazy-map
-  ([]
-   (lazy-map {}))
-  ([m]
-   (if (satisfies? lm/ILazyPersistentMap m) m (merge (lm/create-lazy-map {}) m))))
-
-(defn lazy-assoc-in
-  "Value should be either derefable (delay or future) which will be dereffed when value is needed
-  or a function which will be called."
-  [m [k & ks] f]
-  (if (seq ks)
-    (assoc m k (lazy-assoc-in (or (get m k) (lazy-map)) ks f))
-    (let [m (if (satisfies? lm/ILazyPersistentMap m) m (lazy-map m))]
-      (lm/delayed-assoc m k (cond
-                              (instance? IDeref f) f
-                              (fn? f) (delay (f))
-                              (nil? f) (delay nil)
-                              :else (throw
-                                      (ex-info "lazy-assoc-in requres a derefable or a fn value" {:value f})))))))
-
-(defn lazy-get [m [k & ks]]
-  (if (seq ks)
-    (lazy-get (m k) ks)
-    (some
-      (fn [entry]
-        (if (= k (lm/get-key entry))
-          (lm/get-raw-value entry))) m)))
-
-(defn lazy-copy [m [from to]]
-  (lazy-assoc-in m to (lazy-get m from)))
