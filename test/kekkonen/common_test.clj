@@ -43,3 +43,9 @@
   (kc/merge-map-schemas s/Any {:a s/Str}) => {:a s/Str}
   (kc/merge-map-schemas s/Any s/Any) => {}
   (kc/merge-map-schemas {:a s/Str} {:a {:b s/Str}}) => {:a {:b s/Str}})
+
+(fact "any-map-schema?"
+  (kc/any-map-schema? nil) => false
+  (kc/any-map-schema? {:a s/Str}) => false
+  (kc/any-map-schema? s/Any) => true
+  (kc/any-map-schema? {s/Keyword s/Any}) => true)

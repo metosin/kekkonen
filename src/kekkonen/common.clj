@@ -63,3 +63,7 @@
         (merge acc schema)
         acc))
     {} schemas))
+
+(defn any-map-schema? [schema]
+  (or (= schema s/Any)
+      (= schema {s/Keyword s/Any})))
