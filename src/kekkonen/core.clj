@@ -266,7 +266,7 @@
 (s/defn with-context [dispatcher :- Dispatcher, context :- Context]
   (update-in dispatcher [:context] kc/deep-merge context))
 
-(defn context-coerce! [context schema]
+(defn- context-coerce! [context schema]
   (if-let [coercions (some-> context ::coercion (pm/flatten))]
     (reduce
       (fn [ctx [ks coerce-fn]]
@@ -276,14 +276,19 @@
       context coercions)
     context))
 
-(defn input-coerce! [context schema matcher]
-  (if-not (kc/any-map-schema? schema)
-    (as-> context context
-          (if matcher
-            (coerce! schema matcher context nil ::request)
-            context)
-          (context-coerce! context schema))
-    context))
+(defn input-coerce!
+  ([context schema]
+   (if-let [dispatcher (get-dispatcher context)]
+     (input-coerce! context schema (-> dispatcher :coercion :input))
+     (throw (ex-info "no attached dispatcher." {}))))
+  ([context schema matcher]
+   (if-not (kc/any-map-schema? schema)
+     (as-> context context
+           (context-coerce! context schema)
+           (if matcher
+             (coerce! schema matcher context nil ::request)
+             context))
+     context)))
 
 (s/defn context-copy
   "Returns a function that assocs in a value from to-kws path into from-kws in a context"
