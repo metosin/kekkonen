@@ -3,6 +3,7 @@
             [plumbing.core :as p]
             [clojure.string :as str]
             [plumbing.fnk.pfnk :as pfnk]
+            [plumbing.map :as pm]
             [kekkonen.common :as kc]
             [clojure.walk :as walk]
             [schema.coerce :as sc]
@@ -265,6 +266,18 @@
 (s/defn with-context [dispatcher :- Dispatcher, context :- Context]
   (update-in dispatcher [:context] kc/deep-merge context))
 
+(s/defn context-coerce! [context :- Context, schema :- s/Any]
+  (if-not (kc/any-map-schema? schema)
+    (if-let [coercions (some-> context ::coercion (pm/flatten))]
+      (reduce
+        (fn [ctx [ks coerce-fn]]
+          (if-let [coercion-schema (get-in schema ks)]
+            (assoc-in ctx ks (coerce-fn coercion-schema (get-in ctx ks)))
+            ctx))
+        context coercions)
+      context)
+    context))
+
 (s/defn context-copy
   "Returns a function that assocs in a value from to-kws path into from-kws in a context"
   [from :- [s/Any], to :- [s/Any]]
@@ -292,6 +305,7 @@
   (get-handlers [_]
     handlers)
 
+  ;; TODO: merge coercion into single function
   (dispatch [dispatcher mode action context]
     (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
       (let [input-matcher (-> dispatcher :coercion :input)
@@ -315,20 +329,29 @@
                               (if-let [mapper-gen (get-in dispatcher [:user k])]
                                 (let [mapper (mapper-gen v)
                                       input-schema (:input (extract-schema mapper))
+
                                       ;; TODO: automatic coercion = too much magic? just coerce :data?
                                       ctx (if-not (kc/any-map-schema? input-schema)
-                                            (if input-matcher
-                                            (coerce! input-schema input-matcher ctx nil ::request)
-                                              ctx)
+                                            (as-> ctx ctx
+                                                  (if input-matcher
+                                                    (coerce! input-schema input-matcher ctx nil ::request)
+                                                    ctx)
+                                                  (context-coerce! ctx input-schema))
                                             ctx)]
                                   (or (mapper ctx) (reduced nil)))
                                 ctx))
                             context
                             (apply concat all-user))
 
+                          ;; run context coercion for :validate|:invoke and if context coercion is set
+                          (cond-> context (and context (#{:validate :invoke} mode) input (::coercion context))
+                                  ((fn [ctx]
+                                     (context-coerce! ctx input))))
+
                           ;; run coercion for :validate|:invoke and if coercion-matcher is set
                           (cond-> context (and context (#{:validate :invoke} mode) input input-matcher)
-                                  ((fn [ctx] (coerce! input input-matcher ctx nil ::request))))
+                                  ((fn [ctx]
+                                     (coerce! input input-matcher ctx nil ::request))))
 
                           ;; inject in stuff the context if not nil
                           (cond-> context context (merge context {::dispatcher dispatcher

@@ -863,3 +863,75 @@
 
             (k/invoke d :api/plus {:data {:x 0, :y -10}})
             => {:result -10}))))))
+
+(facts "context-coerce!"
+  (let [str->long-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
+        str->long-coercion (fn [schema value] (k/coerce! schema str->long-matcher value ..in.. ..type..))]
+
+    (facts "manual coercion"
+      (let [d (k/dispatcher {:handlers {:api (k/handler
+                                               {:name :test
+                                                :output {:value s/Int}}
+                                               (fn [context]
+                                                 (:data (k/context-coerce! context {:data {:value s/Int}}))))}})]
+
+        (fact "with request-coercion off"
+          (k/invoke d :api/test {:data {:value "123"}})
+          => output-coercion-error?)
+
+        (fact "with request-coercion on"
+          (k/invoke d :api/test {:data {:value "123"}
+                                 ::k/coercion {:data str->long-coercion}})
+          => {:value 123})
+
+        (fact "with ineffective request-coercion"
+          (k/invoke d :api/test {:data {:value false}
+                                 ::k/coercion {:data str->long-coercion}})
+          => (throws? {:in ..in.., :type ..type..}))))
+
+    (fact "automatic endpoint coercion"
+      (let [d (k/dispatcher {:handlers {:api (k/handler
+                                               {:name :test}
+                                               (p/fnk f :- {:value s/Int} [data :- {:value s/Int}]
+                                                 data))}
+                             :coercion {:input nil}})]
+
+        (fact "with request-coercion off"
+          (k/invoke d :api/test {:data {:value "123"}})
+          => output-coercion-error?)
+
+        (fact "with request-coercion on"
+          (k/invoke d :api/test {:data {:value "123"}
+                                 ::k/coercion {:data str->long-coercion}})
+          => {:value 123})
+
+        (fact "with ineffective request-coercion"
+          (k/invoke d :api/test {:data {:value false}
+                                 ::k/coercion {:data str->long-coercion}})
+          => (throws? {:in ..in.., :type ..type..}))))
+
+    (fact "automatic path coercion"
+      (let [api (k/namespace {:name :api ::load-doc true})
+            d (k/dispatcher {:user {::roles require-role
+                                    ::load-doc (constantly
+                                                 (p/fnk f :- {:value s/Int} [data :- {:value s/Int} :as ctx]
+                                                   ctx))}
+                             :coercion {:input nil}
+                             :handlers {api (k/handler
+                                              {:name :test
+                                               :output {:value s/Int}}
+                                              (fn [context] (:data context)))}})]
+
+        (fact "with request-coercion off"
+          (k/invoke d :api/test {:data {:value "123"}})
+          => output-coercion-error?)
+
+        (fact "with request-coercion on"
+          (k/invoke d :api/test {:data {:value "123"}
+                                 ::k/coercion {:data str->long-coercion}})
+          => {:value 123})
+
+        (fact "with ineffective request-coercion"
+            (k/invoke d :api/test {:data {:value false}
+                                   ::k/coercion {:data str->long-coercion}})
+            => (throws? {:in ..in.., :type ..type..}))))))
