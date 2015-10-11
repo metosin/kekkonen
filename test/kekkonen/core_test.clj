@@ -714,7 +714,8 @@
 
 (facts "transformers requiring parameters"
   (s/with-fn-validation
-    (let [secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
+    (let [str->int-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
+          secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
           doc-ns (k/namespace {:name :doc ::load-doc true})
           read (k/handler {:name :read} (p/fnk [[:entity doc :- s/Str] :as ctx]
                                           ;; despite we haven't defined [:data :doc-id], it already coerced!
@@ -724,7 +725,7 @@
                                   ::load-doc (constantly
                                                (p/fnk [[:data doc-id :- s/Int] :as ctx]
                                                  (assoc-in ctx [:entity :doc] (-> ctx :docs (get doc-id)))))}
-                           :coercion {:input {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}}
+                           :coercion {:input str->int-matcher}
                            :context {:docs {1 "hello ruby"
                                             2 "land of lisp"}}
                            :handlers {:api {secret-ns {doc-ns read}}}})]
