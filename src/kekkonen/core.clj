@@ -316,8 +316,10 @@
                                 (let [mapper (mapper-gen v)
                                       input-schema (:input (extract-schema mapper))
                                       ;; TODO: automatic coercion = too much magic? just coerce :data?
-                                      ctx (if-not (= input-schema s/Any)
+                                      ctx (if-not (kc/any-map-schema? input-schema)
+                                            (if input-matcher
                                             (coerce! input-schema input-matcher ctx nil ::request)
+                                              ctx)
                                             ctx)]
                                   (or (mapper ctx) (reduced nil)))
                                 ctx))

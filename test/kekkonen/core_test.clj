@@ -715,6 +715,9 @@
 (facts "transformers requiring parameters"
   (s/with-fn-validation
     (let [str->int-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
+          load-doc (constantly
+                     (p/fnk [[:data doc-id :- s/Int] :as ctx]
+                       (assoc-in ctx [:entity :doc] (-> ctx :docs (get doc-id)))))
           secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
           doc-ns (k/namespace {:name :doc ::load-doc true})
           read (k/handler {:name :read} (p/fnk [[:entity doc :- s/Str] :as ctx]
@@ -722,9 +725,7 @@
                                           (assert (-> ctx :data :doc-id class (= Long)))
                                           {:read doc}))
           d (k/dispatcher {:user {::roles require-role
-                                  ::load-doc (constantly
-                                               (p/fnk [[:data doc-id :- s/Int] :as ctx]
-                                                 (assoc-in ctx [:entity :doc] (-> ctx :docs (get doc-id)))))}
+                                  ::load-doc load-doc}
                            :coercion {:input str->int-matcher}
                            :context {:docs {1 "hello ruby"
                                             2 "land of lisp"}}
@@ -743,11 +744,34 @@
 
       (fact "with valid credentials"
         (fact "data in correct format"
-          (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}}) => {:read "hello ruby"})
+          (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}})
+          => {:read "hello ruby"})
+
         (fact "data in wrong format gets coerced already with ns metas"
-          (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}}) => {:read "hello ruby"})
+          (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}})
+          => {:read "hello ruby"})
+
         (fact "data in wrong format and can't get fixed"
-          (k/invoke d :api.secret.doc/read {:data {:doc-id true} ::roles #{:admin}}) => input-coercion-error?)))))
+          (k/invoke d :api.secret.doc/read {:data {:doc-id true} ::roles #{:admin}})
+          => input-coercion-error?))
+
+      (fact "with input-coercion disabled"
+        (let [d (k/dispatcher {:user {::roles require-role
+                                      ::load-doc load-doc}
+                               :coercion {:input nil}
+                               :context {:docs {1 "hello ruby"
+                                                2 "land of lisp"}}
+                               :handlers {:api {secret-ns {doc-ns read}}}})]
+
+          (fact "with valid credentials"
+
+            (fact "data in correct format"
+              (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}})
+              => {:read "hello ruby"})
+
+            (fact "data in wrong format and can't get fixed"
+              (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}})
+              => (throws? {:type ::s/error}))))))))
 
 (fact "invoke-time extra data"
   (let [d (k/dispatcher {:handlers
