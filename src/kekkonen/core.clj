@@ -219,26 +219,6 @@
       (-collect k type-resolver) (-collect v type-resolver))))
 
 ;;
-;; coercion
-;;
-
-(def memoized-coercer (memoize sc/coercer))
-
-(defn coerce! [schema matcher value in type]
-  (let [coercer (memoized-coercer schema matcher)
-        coerced (coercer value)]
-    (if-not (su/error? coerced)
-      coerced
-      (throw
-        (ex-info
-          "Coercion error"
-          {:type type
-           :in in
-           :value value
-           :schema schema
-           :error coerced})))))
-
-;;
 ;; Dispatcher
 ;;
 
@@ -266,30 +246,6 @@
 (s/defn with-context [dispatcher :- Dispatcher, context :- Context]
   (update-in dispatcher [:context] kc/deep-merge context))
 
-(defn- context-coerce! [context schema]
-  (if-let [coercions (some-> context ::coercion (pm/flatten))]
-    (reduce
-      (fn [ctx [ks coerce-fn]]
-        (if-let [coercion-schema (get-in schema ks)]
-          (assoc-in ctx ks (coerce-fn coercion-schema (get-in ctx ks)))
-          ctx))
-      context coercions)
-    context))
-
-(defn input-coerce!
-  ([context schema]
-   (if-let [dispatcher (get-dispatcher context)]
-     (input-coerce! context schema (-> dispatcher :coercion :input))
-     (throw (ex-info "no attached dispatcher." {}))))
-  ([context schema matcher]
-   (if-not (kc/any-map-schema? schema)
-     (as-> context context
-           (context-coerce! context schema)
-           (if matcher
-             (coerce! schema matcher context nil ::request)
-             context))
-     context)))
-
 (s/defn context-copy
   "Returns a function that assocs in a value from to-kws path into from-kws in a context"
   [from :- [s/Any], to :- [s/Any]]
@@ -300,6 +256,57 @@
   "Returns a function that dissocs in a value from from-kws in a context"
   (s/fn [context :- Context]
     (kc/dissoc-in context from-kws)))
+
+;;
+;; coercion
+;;
+
+(def memoized-coercer (memoize sc/coercer))
+
+(defn coerce! [schema matcher value in type]
+  (let [coercer (memoized-coercer schema matcher)
+        coerced (coercer value)]
+    (if-not (su/error? coerced)
+      coerced
+      (throw
+        (ex-info
+          "Coercion error"
+          {:type type
+           :in in
+           :value value
+           :schema schema
+           :error coerced})))))
+
+(defn simple-coercion [matcher]
+  (fn [context schema]
+    (coerce! schema matcher context nil ::request)))
+
+(defn multi-coercion [key->coercion]
+  (fn [context schema]
+    (let [coercions (pm/flatten key->coercion)]
+      (reduce
+        (fn [ctx [ks coercion]]
+          (if-let [coercion-schema (get-in schema ks)]
+            (assoc-in ctx ks (coercion coercion-schema (get-in ctx ks)))
+            ctx))
+        context coercions))))
+
+(defn input-coerce!
+  ([context schema]
+    ;; TODO: ensure that dispatcher is always present, also for transformers.
+   (if-let [dispatcher (get-dispatcher context)]
+     (input-coerce! context schema (-> dispatcher :coercion :input))
+     (throw (ex-info "no attached dispatcher." {}))))
+  ([context schema matcher]
+   (if-not (kc/any-map-schema? schema)
+     (as-> context context
+           (if-let [coercion (::coercion context)]
+             (coercion context schema)
+             context)
+           (if matcher
+             (coerce! schema matcher context nil ::request)
+             context))
+     context)))
 
 ;;
 ;; InMemoryDispatcher
