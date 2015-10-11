@@ -16,6 +16,7 @@
 
 (def missing-route? (throws? {:type ::k/dispatch}))
 (def input-coercion-error? (throws? {:type ::k/request}))
+(def output-coercion-error? (throws? {:type ::k/response}))
 
 (defn parse [x]
   (if (and x (:body x))

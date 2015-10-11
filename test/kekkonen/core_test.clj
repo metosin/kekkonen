@@ -744,7 +744,9 @@
         (fact "data in correct format"
           (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}}) => {:read "hello ruby"})
         (fact "data in wrong format gets coerced already with ns metas"
-          (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}}) => {:read "hello ruby"})))))
+          (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}}) => {:read "hello ruby"})
+        (fact "data in wrong format and can't get fixed"
+          (k/invoke d :api.secret.doc/read {:data {:doc-id true} ::roles #{:admin}}) => input-coercion-error?)))))
 
 (fact "invoke-time extra data"
   (let [d (k/dispatcher {:handlers
