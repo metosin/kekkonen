@@ -253,6 +253,30 @@
   ((get-handlers dispatcher) action))
 
 ;;
+;; Working with contexts
+;;
+
+(s/defn get-dispatcher [context :- Context]
+  (get context ::dispatcher))
+
+(s/defn get-handler [context :- Context]
+  (get context ::handler))
+
+(s/defn with-context [dispatcher :- Dispatcher, context :- Context]
+  (update-in dispatcher [:context] kc/deep-merge context))
+
+(s/defn context-copy
+  "Returns a function that assocs in a value from to-kws path into from-kws in a context"
+  [from :- [s/Any], to :- [s/Any]]
+  (s/fn [context :- Context]
+    (assoc-in context to (get-in context from {}))))
+
+(s/defn context-dissoc [from-kws :- [s/Any]]
+  "Returns a function that dissocs in a value from from-kws in a context"
+  (s/fn [context :- Context]
+    (kc/dissoc-in context from-kws)))
+
+;;
 ;; InMemoryDispatcher
 ;;
 
@@ -492,27 +516,3 @@
    context :- Context]
   (let [[mode failure] (if (= mode :available) [:check (constantly nil)] [mode ex-data])]
     (map-handlers dispatcher mode prefix context (constantly nil) failure)))
-
-;;
-;; Working with contexts
-;;
-
-(s/defn get-dispatcher [context :- Context]
-  (get context ::dispatcher))
-
-(s/defn get-handler [context :- Context]
-  (get context ::handler))
-
-(s/defn with-context [dispatcher :- Dispatcher, context :- Context]
-  (update-in dispatcher [:context] kc/deep-merge context))
-
-(s/defn context-copy
-  "Returns a function that assocs in a value from to-kws path into from-kws in a context"
-  [from :- [s/Any], to :- [s/Any]]
-  (s/fn [context :- Context]
-    (assoc-in context to (get-in context from {}))))
-
-(s/defn context-dissoc [from-kws :- [s/Any]]
-  "Returns a function that dissocs in a value from from-kws in a context"
-  (s/fn [context :- Context]
-    (kc/dissoc-in context from-kws)))
