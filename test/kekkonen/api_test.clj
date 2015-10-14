@@ -73,7 +73,7 @@
               (parse response) => {:error {:x "missing-required-key"}
                                    :in "body-params"
                                    :type "kekkonen.ring/request"
-                                   :value {}}))))
+                                   :value {}})))))
 
       (fact "secret handler"
         (fact "without role"
@@ -138,6 +138,61 @@
                                      :type "kekkonen.ring/request"
                                      :value {}})))))
 
+    (fact "kekkonen endpoints"
+      (fact "get-handler"
+        (let [response (app {:uri "/kekkonen/get-handler"
+                             :request-method :post
+                             :body-params {:action "api.public/plus"}})]
+          response => ok?
+          (parse response) => (contains
+                                {:action "api.public/plus"})))
+
+      (fact "all-handlers"
+        (fact "from root ns"
+          (let [response (app {:uri "/kekkonen/all-handlers"
+                               :request-method :post})]
+            response => ok?
+            (parse response) => (just [(contains {:action "api.public/plus"})
+                                       (contains {:action "api.secret/plus"})])))
+        (fact "from a ns"
+          (let [response (app {:uri "/kekkonen/all-handlers"
+                               :body-params {:ns "api.public"}
+                               :request-method :post})]
+            response => ok?
+            (parse response) => (just [(contains {:action "api.public/plus"})]))))
+
+      (fact "available-handlers"
+        (fact "without role"
+          (let [response (app {:uri "/kekkonen/available-handlers"
+                               :request-method :post})]
+            response => ok?
+            (parse response) => (just [(contains {:action "api.public/plus"})])))
+
+        ; TODO: fixme!
+        #_(fact "with role"
+          (let [response (app {:uri "/kekkonen/available-handlers"
+                               :query-params {::role :admin}
+                               :request-method :post})]
+            response => ok?
+            (parse response) => (just [(contains {:action "api.public/plus"})
+                                       (contains {:action "api.secret/plus"})]))))
+
+      #_(fact "actions"
+        (fact "without role"
+          (let [response (app {:uri "/kekkonen/actions"
+                               :request-method :post})]
+            response => ok?
+            (parse response) => {:api.public/plus nil}))
+
+        ; TODO: fixme!
+        #_(fact "with role"
+          (let [response (app {:uri "/kekkonen/actions"
+                               :query-params {::role :admin}
+                               :request-method :post})]
+            response => ok?
+            (parse response) => {:api.public/plus nil
+                                 :api.secret/plus nil}))))
+
       (fact "swagger-object"
         (fact "without role"
           (let [response (app {:uri "/swagger.json" :request-method :get})
@@ -194,7 +249,9 @@
                             :/kekkonen/available-handlers anything})}))))
 
         (fact "with role"
-          (let [response (app {:uri "/swagger.json" :request-method :get :query-params {::role :admin}})
+        (let [response (app {:uri "/swagger.json"
+                             :request-method :get
+                             :query-params {::role :admin}})
                 body (parse response)]
             response => ok?
 
@@ -211,4 +268,4 @@
                         {:status 302
                          :body ""
                          :headers (contains
-                                    {"Location" "/index.html"})}))))))
+                                  {"Location" "/index.html"})})))))
