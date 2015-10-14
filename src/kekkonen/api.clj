@@ -2,66 +2,9 @@
   (:require [kekkonen.ring :as r]
             [kekkonen.core :as k]
             [kekkonen.middleware :as mw]
-            [ring.util.http-response :refer [ok]]
             [kekkonen.swagger :as ks]
             [schema.core :as s]
-            [kekkonen.common :as kc]
-            [plumbing.core :as p]))
-
-(defn kekkonen-handlers [type]
-  {:kekkonen
-   [(k/handler
-      {:type type
-       :name "all-handlers"
-       :description "Return a list of handlers"}
-      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
-        (ok (->> context
-                 k/get-dispatcher
-                 (p/<- (k/all-handlers ns))
-                 (filter (p/fn-> :ring))
-                 (remove (p/fn-> :ns (= :kekkonen)))
-                 (remove (p/fn-> :user :no-doc))
-                 (map k/public-handler)))))
-    (k/handler
-      {:type type
-       :name "available-handlers"
-       :description "Return a list of available handlers"}
-      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
-        (ok (->> context
-                 k/get-dispatcher
-                 (p/<- (k/available-handlers ns {}))
-                 (filter (p/fn-> :ring))
-                 (remove (p/fn-> :ns (= :kekkonen)))
-                 (remove (p/fn-> :user :no-doc))
-                 (map k/public-handler)))))
-    ;; FIXME: should use the ring-dispatcher!
-    #_(k/handler
-      {:type type
-       :name "actions"
-       :description "Return a map of action -> error of all available handlers"}
-      (p/fnk [[:data
-               {ns :- s/Keyword nil}
-               {mode :- (with-meta
-                          k/DispatchHandlersMode
-                          {:json-schema {:default :available}}) :available}]
-              :as context]
-        (ok (->> context
-                 k/get-dispatcher
-                 (p/<- (k/dispatch-handlers mode ns {}))
-                 (filter (p/fn-> first :ring))
-                 (remove (p/fn-> first :ns (= :kekkonen)))
-                 (remove (p/fn-> first :user :no-doc))
-                 (map (fn [[k v]] [(:action k) v]))
-                 (into {})))))
-    (k/handler
-      {:type type
-       :name "get-handler"
-       :description "Returns a handler info or nil."}
-      (p/fnk [[:data action :- s/Keyword] :as context]
-        (ok (k/public-handler
-              (k/some-handler
-                (k/get-dispatcher context)
-                action)))))]})
+            [kekkonen.common :as kc]))
 
 (s/defschema Options
   {:core k/KeywordMap
@@ -74,7 +17,7 @@
 
 (s/def +default-options+ :- Options
   {:core (assoc k/+default-options+ :coercion {:input nil, :output nil})
-   :api {:handlers (kekkonen-handlers :handler)}
+   :api {:handlers (r/kekkonen-handlers :handler)}
    :ring r/+default-options+
    :mw mw/+default-options+
    :info {}

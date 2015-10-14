@@ -6,7 +6,7 @@
             [ring.util.http-status :as hs]
             [ring.util.http-predicates :as hp]
             [schema.core :as s]
-            [plumbing.core :as p]))
+            [kekkonen.ring :as r]))
 
 ;;
 ;; response wrappers
@@ -47,7 +47,7 @@
   (ka/api
     (kc/deep-merge
       {:core {:type-resolver (k/type-resolver :command :query)}
-       :api {:handlers (ka/kekkonen-handlers :query)}
+       :api {:handlers (r/kekkonen-handlers :query)}
        :ring {:types {:query {:methods #{:get}
                               :parameters [[[:request :query-params] [:data]]]}
                       :command {:methods #{:post}

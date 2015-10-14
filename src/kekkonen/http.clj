@@ -2,13 +2,14 @@
   (:require [kekkonen.core :as k]
             [kekkonen.api :as ka]
             [kekkonen.common :as kc]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [kekkonen.ring :as r]))
 
 (s/defn http-api [options]
   (ka/api
     (kc/deep-merge
       {:core {:type-resolver (k/type-resolver :get :head :patch :delete :options :post :put :any)}
-       :api {:handlers (ka/kekkonen-handlers :get)}
+       :api {:handlers (r/kekkonen-handlers :get)}
        :ring {:types {:get {:methods #{:get}}
                       :head {:methods #{:head}}
                       :patch {:methods #{:patch}}
