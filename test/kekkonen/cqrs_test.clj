@@ -67,55 +67,35 @@
 
     (fact "kekkonen endpoints"
 
-      (fact "all-handlers returns info of all handlers"
-        (let [response (app {:uri "/kekkonen/all-handlers"
+      (fact "handlers returns all handlers with rules ok"
+        (let [response (app {:uri "/kekkonen/handlers"
                              :request-method :get})]
           response => success?
-          (parse response) => (n-of map? 3)))
+          (parse response) => (n-of map? 2)))
 
-      (fact "all-handlers with ns returns all handlers in that ns"
-        (let [response (app {:uri "/kekkonen/all-handlers"
+      (fact "handlers with ns returns all handlers with rules ok"
+        (let [response (app {:uri "/kekkonen/handlers"
                              :request-method :get
                              :query-params {:ns "api.items"}})]
           response => success?
           (parse response) => (n-of map? 2)))
 
-      (fact "all-handlers with invalid ns returns nothing"
-        (let [response (app {:uri "/kekkonen/all-handlers"
+      (fact "handlers with invalid ns returns nothing"
+        (let [response (app {:uri "/kekkonen/handlers"
                              :request-method :get
                              :query-params {:ns "api.item"}})]
           response => success?
           (parse response) => (n-of map? 0)))
 
-      (fact "available-handlers returns all handlers with rules ok"
-        (let [response (app {:uri "/kekkonen/available-handlers"
-                             :request-method :get})]
-          response => success?
-          (parse response) => (n-of map? 2)))
-
-      (fact "available-handlers with ns returns all handlers with rules ok"
-        (let [response (app {:uri "/kekkonen/available-handlers"
-                             :request-method :get
-                             :query-params {:ns "api.items"}})]
-          response => success?
-          (parse response) => (n-of map? 2)))
-
-      (fact "available-handlers with invalid ns returns nothing"
-        (let [response (app {:uri "/kekkonen/available-handlers"
-                             :request-method :get
-                             :query-params {:ns "api.item"}})]
-          response => success?
-          (parse response) => (n-of map? 0)))
-
-      (fact "get-handler with valid handler action"
-        (let [response (app {:uri "/kekkonen/get-handler"
+      (fact "handler with valid handler action"
+        (let [response (app {:uri "/kekkonen/handler"
                              :request-method :get
                              :query-params {:action "api.items/get-items"}})]
           response => success?
           (parse response) => map?))
 
-      (fact "get-handler with invalid handler action returns nil"
-        (let [response (app {:uri "/kekkonen/get-handler"
+      (fact "handler with invalid handler action returns nil"
+        (let [response (app {:uri "/kekkonen/handler"
                              :request-method :get
                              :query-params {:action "api.items/get-item"}})]
           response => success?

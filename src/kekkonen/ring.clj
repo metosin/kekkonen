@@ -156,55 +156,47 @@
 ;;
 
 (defn kekkonen-handlers [type]
-  {:kekkonen
-   [(k/handler
-      {:type type
-       :name "all-handlers"
-       :description "Return a list of handlers"}
-      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
-        (ok (->> context
-                 k/get-dispatcher
-                 (p/<- (k/all-handlers ns))
-                 (filter (p/fn-> :ring))
-                 (remove (p/fn-> :ns (= :kekkonen)))
-                 (remove (p/fn-> :user :no-doc))
-                 (map k/public-handler)))))
-    (k/handler
-      {:type type
-       :name "available-handlers"
-       :description "Return a list of available handlers"}
-      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
-        (ok (->> context
-                 k/get-dispatcher
-                 (p/<- (k/available-handlers ns {}))
-                 (filter (p/fn-> :ring))
-                 (remove (p/fn-> :ns (= :kekkonen)))
-                 (remove (p/fn-> :user :no-doc))
-                 (map k/public-handler)))))
-    #_(k/handler
-      {:type type
-       :name "actions"
-       :description "Return a map of action -> error of all available handlers"}
-      (p/fnk [[:data
-               {ns :- s/Keyword nil}
-               {mode :- (with-meta
-                          k/DispatchHandlersMode
-                          {:json-schema {:default :available}}) :available}]
-              :as context]
-        (ok (->> context
-                 k/get-dispatcher
-                 (p/<- (k/dispatch-handlers mode ns {}))
-                 (filter (p/fn-> first :ring))
-                 (remove (p/fn-> first :ns (= :kekkonen)))
-                 (remove (p/fn-> first :user :no-doc))
-                 (map (fn [[k v]] [(:action k) v]))
-                 (into {})))))
-    (k/handler
-      {:type type
-       :name "get-handler"
-       :description "Returns a handler info or nil."}
-      (p/fnk [[:data action :- s/Keyword] :as context]
-        (ok (k/public-handler
-              (k/some-handler
-                (k/get-dispatcher context)
-                action)))))]})
+  (let [clean (fn [ctx]
+                (-> ctx
+                    (kc/dissoc-in [:data :ns])
+                    (kc/dissoc-in [:data :mode])))]
+    {:kekkonen
+     [(k/handler
+        {:type type
+         :name "handler"
+         :description "Returns a handler info or nil."}
+        (p/fnk [[:data action :- s/Keyword] :as context]
+          (ok (k/public-handler
+                (k/some-handler
+                  (k/get-dispatcher context)
+                  action)))))
+      (k/handler
+        {:type type
+         :name "handlers"
+         :description "Return a list of available handlers"}
+        (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
+          (ok (->> context
+                   k/get-dispatcher
+                   (p/<- (k/available-handlers ns (clean context)))
+                   (filter (p/fn-> :ring))
+                   (remove (p/fn-> :ns (= :kekkonen)))
+                   (remove (p/fn-> :user :no-doc))
+                   (map k/public-handler)))))
+      (k/handler
+        {:type type
+         :name "actions"
+         :description "Return a map of action -> error of all available handlers"}
+        (p/fnk [[:data
+                 {ns :- s/Keyword nil}
+                 {mode :- (with-meta
+                            k/DispatchHandlersMode
+                            {:json-schema {:default :available}}) :available}]
+                :as context]
+          (ok (->> context
+                   k/get-dispatcher
+                   (p/<- (k/dispatch-handlers mode ns (clean context)))
+                   (filter (p/fn-> first :ring))
+                   (remove (p/fn-> first :ns (= :kekkonen)))
+                   (remove (p/fn-> first :user :no-doc))
+                   (map (fn [[k v]] [(:action k) (k/stringify-schema v)]))
+                   (into {})))))]}))

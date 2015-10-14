@@ -75,117 +75,94 @@
                                    :type "kekkonen.ring/request"
                                    :value {}})))))
 
-      (fact "secret handler"
-        (fact "without role"
-          (fact "can't be validated"
-            (let [response (app {:uri "/api/secret/nada"
-                                 :request-method :post
-                                 :headers {"kekkonen.mode" "validate"}})]
-              response => not-found?
-              (parse response) => nil))
+    (fact "secret handler"
+      (fact "without role"
+        (fact "can't be validated"
+          (let [response (app {:uri "/api/secret/plus"
+                               :request-method :post
+                               :headers {"kekkonen.mode" "validate"}})]
+            response => not-found?
+            (parse response) => nil))
 
-          (fact "can't be validated"
+        (fact "can't be invoked"
+          (let [response (app {:uri "/api/secret/plus"
+                               :request-method :post})]
+            response => not-found?
+            (parse response) => nil)))
+
+      (fact "with role"
+        (fact "can be validated"
+          (fact "with valid parameers"
             (let [response (app {:uri "/api/secret/plus"
                                  :request-method :post
-                                 :headers {"kekkonen.mode" "validate"}})]
-              response => not-found?
+                                 :headers {"kekkonen.mode" "validate"}
+                                 :query-params {::role :admin}
+                                 :body-params {:x 1}})]
+              response => ok?
               (parse response) => nil))
 
-          (fact "can't be invoked"
+          (fact "with invalid parameters"
             (let [response (app {:uri "/api/secret/plus"
-                                 :request-method :post})]
-              response => not-found?
-              (parse response) => nil)))
+                                 :request-method :post
+                                 :headers {"kekkonen.mode" "validate"}
+                                 :query-params {::role :admin}})]
+              response => bad-request?
+              (parse response) => {:error {:x "missing-required-key"}
+                                   :in "body-params"
+                                   :type "kekkonen.ring/request"
+                                   :value {}})))
 
-        (fact "with role"
-          (fact "can be validated"
-            (fact "with valid parameers"
-              (let [response (app {:uri "/api/secret/plus"
-                                   :request-method :post
-                                   :headers {"kekkonen.mode" "validate"}
-                                   :query-params {::role :admin}
-                                   :body-params {:x 1}})]
-                response => ok?
-                (parse response) => nil))
+        (fact "can be invoked"
+          (fact "with valid parameers"
+            (let [response (app {:uri "/api/secret/plus"
+                                 :request-method :post
+                                 :query-params {::role :admin}
+                                 :body-params {:x 1}})]
+              response => ok?
+              (parse response) => {:result 2}))
 
-            (fact "with invalid parameters"
-              (let [response (app {:uri "/api/secret/plus"
-                                   :request-method :post
-                                   :headers {"kekkonen.mode" "validate"}
-                                   :query-params {::role :admin}})]
-                response => bad-request?
-                (parse response) => {:error {:x "missing-required-key"}
-                                     :in "body-params"
-                                     :type "kekkonen.ring/request"
-                                     :value {}})))
-
-          (fact "can be invoked"
-            (fact "with valid parameers"
-              (let [response (app {:uri "/api/secret/plus"
-                                   :request-method :post
-                                   :query-params {::role :admin}
-                                   :body-params {:x 1}})]
-                response => ok?
-                (parse response) => {:result 2}))
-
-            (fact "with invalid parameters"
-              (let [response (app {:uri "/api/secret/plus"
-                                   :request-method :post
-                                   :query-params {::role :admin}})]
-                response => bad-request?
-                (parse response) => {:error {:x "missing-required-key"}
-                                     :in "body-params"
-                                     :type "kekkonen.ring/request"
-                                     :value {}})))))
+          (fact "with invalid parameters"
+            (let [response (app {:uri "/api/secret/plus"
+                                 :request-method :post
+                                 :query-params {::role :admin}})]
+              response => bad-request?
+              (parse response) => {:error {:x "missing-required-key"}
+                                   :in "body-params"
+                                   :type "kekkonen.ring/request"
+                                   :value {}})))))
 
     (fact "kekkonen endpoints"
       (fact "get-handler"
-        (let [response (app {:uri "/kekkonen/get-handler"
+        (let [response (app {:uri "/kekkonen/handler"
                              :request-method :post
                              :body-params {:action "api.public/plus"}})]
           response => ok?
           (parse response) => (contains
                                 {:action "api.public/plus"})))
 
-      (fact "all-handlers"
-        (fact "from root ns"
-          (let [response (app {:uri "/kekkonen/all-handlers"
-                               :request-method :post})]
-            response => ok?
-            (parse response) => (just [(contains {:action "api.public/plus"})
-                                       (contains {:action "api.secret/plus"})])))
-        (fact "from a ns"
-          (let [response (app {:uri "/kekkonen/all-handlers"
-                               :body-params {:ns "api.public"}
-                               :request-method :post})]
-            response => ok?
-            (parse response) => (just [(contains {:action "api.public/plus"})]))))
-
       (fact "available-handlers"
         (fact "without role"
-          (let [response (app {:uri "/kekkonen/available-handlers"
+          (let [response (app {:uri "/kekkonen/handlers"
                                :request-method :post})]
             response => ok?
             (parse response) => (just [(contains {:action "api.public/plus"})])))
 
-        ; TODO: fixme!
-        #_(fact "with role"
-          (let [response (app {:uri "/kekkonen/available-handlers"
+        (fact "with role"
+          (let [response (app {:uri "/kekkonen/handlers"
                                :query-params {::role :admin}
                                :request-method :post})]
             response => ok?
             (parse response) => (just [(contains {:action "api.public/plus"})
                                        (contains {:action "api.secret/plus"})]))))
 
-      #_(fact "actions"
+      (fact "actions"
         (fact "without role"
           (let [response (app {:uri "/kekkonen/actions"
                                :request-method :post})]
             response => ok?
             (parse response) => {:api.public/plus nil}))
 
-        ; TODO: fixme!
-        #_(fact "with role"
+        (fact "with role"
           (let [response (app {:uri "/kekkonen/actions"
                                :query-params {::role :admin}
                                :request-method :post})]
@@ -193,79 +170,78 @@
             (parse response) => {:api.public/plus nil
                                  :api.secret/plus nil}))))
 
-      (fact "swagger-object"
-        (fact "without role"
-          (let [response (app {:uri "/swagger.json" :request-method :get})
-                body (parse response)]
-            response => ok?
+    (fact "swagger-object"
+      (fact "without role"
+        (let [response (app {:uri "/swagger.json" :request-method :get})
+              body (parse response)]
+          response => ok?
+          body => (contains
+                    {:swagger "2.0"
+                     :info {:title "Swagger API"
+                            :version "0.0.1"}
+                     :consumes ["application/json"
+                                "application/x-yaml"
+                                "application/edn"
+                                "application/transit+json"
+                                "application/transit+msgpack"]
+                     :produces ["application/json"
+                                "application/x-yaml"
+                                "application/edn"
+                                "application/transit+json"
+                                "application/transit+msgpack"]
+                     :definitions anything
+                     :paths (contains
+                              {:/api/public/plus
+                               (just
+                                 {:post
+                                  (just
+                                    {:parameters
+                                     (just
+                                       [(just
+                                          {:in "body"
+                                           :name anything
+                                           :description ""
+                                           :required true
+                                           :schema (just {:$ref anything})})
+                                        (just
+                                          {:in "header"
+                                           :name "kekkonen.mode"
+                                           :description "mode"
+                                           :type "string"
+                                           :enum ["invoke" "validate"]
+                                           :default "invoke"
+                                           :required false})] :in-any-order)
+                                     :responses {:default
+                                                 {:description ""}}
+                                     :tags ["api.public"]})})})})
+
+          (fact "there are extra (kekkonen) endpoints"
             body => (contains
-                      {:swagger "2.0"
-                       :info {:title "Swagger API"
-                              :version "0.0.1"}
-                       :consumes ["application/json"
-                                  "application/x-yaml"
-                                  "application/edn"
-                                  "application/transit+json"
-                                  "application/transit+msgpack"]
-                       :produces ["application/json"
-                                  "application/x-yaml"
-                                  "application/edn"
-                                  "application/transit+json"
-                                  "application/transit+msgpack"]
-                       :definitions anything
-                       :paths (contains
-                                {:/api/public/plus
-                                 (just
-                                   {:post
-                                    (just
-                                      {:parameters
-                                       (just
-                                         [(just
-                                            {:in "body"
-                                             :name anything
-                                             :description ""
-                                             :required true
-                                             :schema (just {:$ref anything})})
-                                          (just
-                                            {:in "header"
-                                             :name "kekkonen.mode"
-                                             :description "mode"
-                                             :type "string"
-                                             :enum ["invoke" "validate"]
-                                             :default "invoke"
-                                             :required false})] :in-any-order)
-                                       :responses {:default
-                                                   {:description ""}}
-                                       :tags ["api.public"]})})})})
+                      {:paths
+                       (just
+                         {:/api/public/plus anything
+                          :/kekkonen/handler anything
+                          :/kekkonen/handlers anything
+                          :/kekkonen/actions anything})}))))
 
-            (fact "there are extra (kekkonen) endpoints"
-              body => (contains
-                        {:paths
-                         (just
-                           {:/api/public/plus anything
-                            ;:/kekkonen/actions anything
-                            :/kekkonen/get-handler anything
-                            :/kekkonen/all-handlers anything
-                            :/kekkonen/available-handlers anything})}))))
-
-        (fact "with role"
+      (fact "with role"
         (let [response (app {:uri "/swagger.json"
                              :request-method :get
                              :query-params {::role :admin}})
-                body (parse response)]
-            response => ok?
+              body (parse response)]
+          response => ok?
 
-            (fact "secret endpoints are also documented"
-              body => (contains
-                        {:paths
-                         (contains
-                           {:/api/public/plus anything
-                            :/api/secret/plus anything})})))))
+          (fact "secret endpoints are also documented"
+            body => (contains
+                      {:paths
+                       (contains
+                         {:/api/public/plus anything
+                          :/api/secret/plus anything})})))))
 
-      (fact "swagger-ui"
-        (let [response (app {:uri "/" :request-method :get})]
-          response => (contains
-                        {:status 302
-                         :body ""
-                         :headers (contains
+    (fact "swagger-ui"
+      (let [response (app {:uri "/" :request-method :get})]
+        response => (contains
+                      {:status 302
+                       :body ""
+                       :headers (contains
                                   {"Location" "/index.html"})})))))
