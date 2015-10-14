@@ -268,7 +268,26 @@
                           :/api/public/nada anything
                           :/kekkonen/handler anything
                           :/kekkonen/handlers anything
-                          :/kekkonen/actions anything})}))))
+                          :/kekkonen/actions anything})}))
+
+          (fact "secret endpoints are not documented"
+            body =not=> (contains
+                          {:paths
+                           (contains
+                             {:/api/secret/plus anything})})))
+
+        (fact "with ns-filter"
+          (let [response (app {:uri "/swagger.json"
+                               :request-method :get
+                               :query-params {::role :admin
+                                              :ns "api.public"}})
+                body (parse response)]
+            response => ok?
+            body => (contains
+                      {:paths
+                       (just
+                         {:/api/public/plus anything
+                          :/api/public/nada anything})})))))
 
       (fact "with role"
         (let [response (app {:uri "/swagger.json"
@@ -281,8 +300,7 @@
             body => (contains
                       {:paths
                        (contains
-                         {:/api/public/plus anything
-                          :/api/secret/plus anything})})))))
+                         {:/api/secret/plus anything})}))))
 
     (fact "swagger-ui"
       (let [response (app {:uri "/" :request-method :get})]

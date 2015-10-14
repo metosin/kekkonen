@@ -5,7 +5,8 @@
             [ring.swagger.ui :as ui]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
-            [plumbing.core :as p]))
+            [plumbing.core :as p]
+            [kekkonen.ring :as r]))
 
 (def +default-swagger-ui-options+
   {:path "/"})
@@ -57,7 +58,8 @@
      :no-doc true}
     (fn [context]
       (let [dispatcher (k/get-dispatcher context)
-            handlers (k/available-handlers dispatcher nil context)]
+            ns (some-> context :request :query-params :ns str keyword)
+            handlers (k/available-handlers dispatcher ns (@#'r/clean-context context))]
         (ok (swagger-object
               (ring-swagger handlers info)
               options))))))
