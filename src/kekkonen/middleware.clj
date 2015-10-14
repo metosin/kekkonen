@@ -105,6 +105,17 @@
     (handler (update-in request path walk/keywordize-keys))))
 
 ;;
+;; Not Found
+;;
+
+(defn wrap-not-found [handler f]
+  (fn [request]
+    (let [response (handler request)]
+      (if (and (not response) f)
+        (f request)
+        response))))
+
+;;
 ;; api info
 ;;
 
@@ -121,6 +132,7 @@
   {:format {:formats [:json-kw :yaml-kw :edn :transit-json :transit-msgpack]
             :params-opts {}
             :response-opts {}}
+   :not-found missing-route-handler
    :exceptions {:default safe-handler
                 :handlers {:kekkonen.core/dispatch missing-route-handler
                            :kekkonen.ring/request request-validation-handler
@@ -128,24 +140,24 @@
                            :kekkonen.ring/response response-validation-handler}}})
 
 (defn api-middleware
-  "Opinionated chain of middlewares for web apis. Takes options-map, with namespaces
-   options for the used middlewares (see middlewares for full details on options):
-   - **:exceptions**                for *compojure.api.middleware/wrap-exceptions*
-       - **:handlers**                Map of error handlers for different exception types, type refers to `:type` key in ExceptionInfo data.
-                                      An error handler is a function of exception, ExceptionInfo data and request to response.
-                                      Default:
-                                      {:compojure.api.exception/request-validation  compojure.api.exception/request-validation-handler
-                                       :compojure.api.exception/request-parsing     compojure.api.exception/request-parsing-handler
-                                       :compojure.api.exception/response-validation compojure.api.exception/response-validation-handler
-                                       :compojure.api.exception/default             compojure.api.exception/safe-handler}
-                                      Note: To catch Schema errors use {:schema.core/error compojure.api.exception/schema-error-handler}
-                                      Note: Adding alias for exception namespace makes it easier to define these options.
-   - **:format**                    for ring-middleware-format middlewares
-       - **:formats**                 sequence of supported formats, e.g. `[:json-kw :edn]`
-       - **:params-opts**             for *ring.middleware.format-params/wrap-restful-params*,
-                                      e.g. `{:transit-json {:options {:handlers readers}}}`
-       - **:response-opts**           for *ring.middleware.format-params/wrap-restful-response*,
-                                      e.g. `{:transit-json {:handlers writers}}`"
+  "Opinionated chain of middlewares for web apis. Takes options-map to configure
+   all the needed middlewares. See details and defaults from the source.
+
+   Accepts the following options:
+
+   - :exceptions                options for kekkonen.core/wrap-exceptions
+     - :handlers                - map of type->exception-handler for exceptions. exception-handlers
+                                  take 3 arguments: the exception, ExceptionInfo data and the originating request.
+                                  tip: to catch normal Schema errors use :schema.core/error as type
+
+   - :not-found                 a function request=>response to handle nil responses
+
+   - :format                    options for ring-middleware-format middlewares
+     - :formats                 - sequence of supported formats, e.g. [:json-kw :edn]
+     - :params-opts             - for ring.middleware.format-params/wrap-restful-params,
+                                  e.g. {:transit-json {:options {:handlers readers}}}
+     - :response-opts           - for *ring.middleware.format-params/wrap-restful-response*,
+                                  e.g. {:transit-json {:handlers writers}}"
   ([handler]
    (api-middleware handler {}))
   ([handler options]
@@ -154,6 +166,7 @@
          {:keys [formats params-opts response-opts]} format]
      (-> handler
          ring.middleware.http-response/wrap-http-response
+         (wrap-not-found (:not-found options))
          (wrap-restful-params
            (merge {:formats formats
                    :handle-error handle-req-error}

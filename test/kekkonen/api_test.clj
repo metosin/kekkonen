@@ -29,13 +29,13 @@
           (let [response (app {:uri "/INVALID"
                                :request-method :post
                                :headers {"kekkonen.mode" "validate"}})]
-            response => nil
+            response => not-found?
             (parse response) => nil))
 
         (fact "can't be invoked"
           (let [response (app {:uri "/INVALID"
                                :request-method :post})]
-            response => nil
+            response => not-found?
             (parse response) => nil)))
 
       (fact "public handler"
