@@ -46,14 +46,14 @@
       (str "/" (str/replace ns #"\." "/")))
     "/" (name (:name handler))))
 
-(defn ring-coercion [handler {:keys [coercion]}]
+(defn ring-coercion [parameters coercion]
   (let [request-coercions (pm/unflatten
                             (for [[k matcher] coercion
                                   :when matcher]
                               [[:request k] (fn [schema value]
                                               (k/coerce! schema matcher (or value {}) k ::request))]))]
     (k/multi-coercion
-      (if-let [parameters (some-> handler :ring :type-config :parameters)]
+      (if parameters
         (reduce
           (fn [acc [from to]]
             (assoc-in acc to (get-in acc from)))
@@ -88,11 +88,13 @@
   (= (get-in request [:headers mode-parameter]) "validate"))
 
 (defn- attach-ring-meta [options handler]
-  (let [type-config (get (:types options) (:type handler))
+  (let [{:keys [parameters] :as type-config} (get (:types options) (:type handler))
+        coercion (:coercion options)
         input-schema (-> (:input handler)
-                         (ring-input-schema (:parameters type-config))
+                         (ring-input-schema parameters)
                          attach-mode-parameter)]
     (assoc handler :ring {:type-config type-config
+                          :coercion (ring-coercion parameters coercion)
                           :uri (handler-uri handler)
                           :input input-schema})))
 
@@ -110,15 +112,14 @@
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method uri] :as request}]
-        (if-let [handler (router uri)]
-          (if-let [type-config (-> handler :ring :type-config)]
+        (if-let [{{:keys [type-config coercion]} :ring action :action :as handler} (router uri)]
+          (if type-config
             (if (get (:methods type-config) request-method)
-              (let [action (:action handler)
-                    ;; TODO: create an interceptor chain
-                    context (as-> {:request request} context
+              ;; TODO: create an interceptor chain
+              (let [context (as-> {:request request} context
 
                                   ;; add lazy-coercion
-                                  (assoc context ::k/coercion (ring-coercion handler options))
+                                  (assoc context ::k/coercion coercion)
 
                                   ;; map parameters from ring-request into common keys
                                   (reduce kc/deep-merge-from-to context (:parameters type-config))
