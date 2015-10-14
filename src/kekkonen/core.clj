@@ -535,7 +535,6 @@
    context :- Context]
   (keep first (map-handlers dispatcher :check prefix context identity (constantly nil))))
 
-; TODO: ring should be a dispatcher to get the coercions right, also :ring -filtering there
 ; TODO: test via ring
 ; TODO: update docs
 (s/defn dispatch-handlers :- {Handler s/Any}
