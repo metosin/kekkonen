@@ -68,7 +68,7 @@
 
 (p/defnk ^:command reset-items!
   "Resets the database"
-  {:roles #{:boss}}
+  {::roles #{:boss}}
   [[:components db]
    [:data really :- s/Bool]]
   (success
@@ -112,7 +112,7 @@
             :context {:components {:db (atom {})
                                    :ids (atom 0)
                                    :counter (atom 0)}}
-            :user {:roles require-roles}}
+            :user {::roles require-roles}}
      :ring {:transformers [api-key-authenticator]}}))
 
 (defn start []
