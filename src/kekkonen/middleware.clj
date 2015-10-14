@@ -139,7 +139,7 @@
                            :kekkonen.ring/parsing request-parsing-handler
                            :kekkonen.ring/response response-validation-handler}}})
 
-(defn api-middleware
+(defn wrap-api
   "Opinionated chain of middlewares for web apis. Takes options-map to configure
    all the needed middlewares. See details and defaults from the source.
 
@@ -159,7 +159,7 @@
      - :response-opts           - for *ring.middleware.format-params/wrap-restful-response*,
                                   e.g. {:transit-json {:handlers writers}}"
   ([handler]
-   (api-middleware handler {}))
+   (wrap-api handler {}))
   ([handler options]
    (let [options (kc/deep-merge +default-options+ options)
          {:keys [exceptions format]} options

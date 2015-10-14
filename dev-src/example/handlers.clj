@@ -17,7 +17,7 @@
   (ok {:x x}))
 
 (def app
-  (mw/api-middleware
+  (mw/wrap-api
     (r/ring-handler
       (k/dispatcher
         {:handlers {:api 'example.handlers}}))))

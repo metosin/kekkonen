@@ -88,7 +88,7 @@
           dispatcher (-> (k/dispatcher (:core options))
                          (k/inject (-> options :api :handlers))
                          (k/inject (ks/swagger-handler info options)))]
-      (mw/api-middleware
+      (mw/wrap-api
         (r/routes
           [(r/ring-handler dispatcher (:ring options))
            (ks/swagger-ui (:swagger-ui options))])
