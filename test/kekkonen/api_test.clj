@@ -11,6 +11,8 @@
 (p/defnk ^:handler plus [[:data x :- s/Int]]
   (ok {:result (inc x)}))
 
+(p/defnk ^:handler nada [] (ok))
+
 (defn require-role [role]
   (fn [context]
     (if (= (-> context :request :query-params ::role) role)
@@ -18,8 +20,8 @@
 
 (facts "api-test"
   (let [secret (k/namespace {:name :secret ::role :admin})
-        app (api {:core {:handlers {:api {:public #'plus
-                                          secret [#'plus]}}
+        app (api {:core {:handlers {:api {:public [#'plus #'nada]
+                                          secret #'plus}}
                          :user {::role require-role}}})]
 
     (facts "without required roles"
@@ -145,7 +147,8 @@
           (let [response (app {:uri "/kekkonen/handlers"
                                :request-method :post})]
             response => ok?
-            (parse response) => (just [(contains {:action "api.public/plus"})])))
+            (parse response) => (just [(contains {:action "api.public/plus"})
+                                       (contains {:action "api.public/nada"})])))
 
         (fact "with role"
           (let [response (app {:uri "/kekkonen/handlers"
@@ -153,6 +156,7 @@
                                :request-method :post})]
             response => ok?
             (parse response) => (just [(contains {:action "api.public/plus"})
+                                       (contains {:action "api.public/nada"})
                                        (contains {:action "api.secret/plus"})]))))
 
       (fact "actions"
@@ -160,7 +164,8 @@
           (let [response (app {:uri "/kekkonen/actions"
                                :request-method :post})]
             response => ok?
-            (parse response) => {:api.public/plus nil}))
+            (parse response) => {:api.public/plus nil
+                                 :api.public/nada nil}))
 
         (fact "with role"
           (let [response (app {:uri "/kekkonen/actions"
@@ -168,7 +173,47 @@
                                :request-method :post})]
             response => ok?
             (parse response) => {:api.public/plus nil
-                                 :api.secret/plus nil}))))
+                                 :api.public/nada nil
+                                 :api.secret/plus nil})
+
+          (fact "mode = available"
+            (let [response (app {:uri "/kekkonen/actions"
+                                 :query-params {::role :admin}
+                                 :body-params {:mode :available}
+                                 :request-method :post})]
+              response => ok?
+              (parse response) => {:api.public/plus nil
+                                   :api.public/nada nil
+                                   :api.secret/plus nil}))
+
+          (fact "mode = check"
+            (let [response (app {:uri "/kekkonen/actions"
+                                 :query-params {::role :admin}
+                                 :body-params {:mode :check}
+                                 :request-method :post})]
+              response => ok?
+              (parse response) => {:api.public/plus nil
+                                   :api.public/nada nil
+                                   :api.secret/plus nil}))
+
+          (fact "mode = validate"
+            (let [response (app {:uri "/kekkonen/actions"
+                                 :query-params {::role :admin}
+                                 :body-params {:mode :validate}
+                                 :request-method :post})]
+              response => ok?
+              (parse response) => (just
+                                    {:api.public/plus map?
+                                     :api.public/nada nil
+                                     :api.secret/plus map?})))
+
+          (fact "invalid mode"
+            (let [response (app {:uri "/kekkonen/actions"
+                                 :query-params {::role :admin}
+                                 :body-params {:mode :INVALID}
+                                 :request-method :post})]
+              response => bad-request?
+              (parse response) => map?)))))
 
     (fact "swagger-object"
       (fact "without role"
@@ -220,6 +265,7 @@
                       {:paths
                        (just
                          {:/api/public/plus anything
+                          :/api/public/nada anything
                           :/kekkonen/handler anything
                           :/kekkonen/handlers anything
                           :/kekkonen/actions anything})}))))
