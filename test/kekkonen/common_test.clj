@@ -21,6 +21,13 @@
 (fact "strip-nil-values"
   (kc/strip-nil-values {:a {:b {:c {:e nil}}, :b2 true}}) => {:a {:b2 true}})
 
+(fact "copy-from-to"
+  (kc/copy-from-to
+    {:request {:body-params {:x String, :y String}}}
+    [[:request :body-params] [:data]])
+  => {:request {:body-params {:x String, :y String}}
+      :data {:x String, :y String}})
+
 (fact "move-from-to"
   (kc/move-from-to
     {:request {:body-params {:x String, :y String}}}

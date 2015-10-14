@@ -46,6 +46,9 @@
 (defn deep-merge-to-from [data [to from]]
   (deep-merge-from-to data [from to]))
 
+(defn copy-from-to [data [from to]]
+  (assoc-in data to (get-in data from)))
+
 (defn move-from-to [data [from to]]
   (if-let [target (get-in data from)]
     (-> data

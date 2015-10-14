@@ -47,19 +47,15 @@
     "/" (name (:name handler))))
 
 (defn ring-coercion [parameters coercion]
-  (let [request-coercions (pm/unflatten
-                            (for [[k matcher] coercion
-                                  :when matcher]
-                              [[:request k] (fn [schema value]
-                                              (k/coerce! schema matcher (or value {}) k ::request))]))]
+  (let [coercions (pm/unflatten
+                    (for [[k matcher] coercion
+                          :when matcher]
+                      [[:request k] (fn [schema value]
+                                      (k/coerce! schema matcher (or value {}) k ::request))]))]
     (k/multi-coercion
       (if parameters
-        (reduce
-          (fn [acc [from to]]
-            (assoc-in acc to (get-in acc from)))
-          request-coercions
-          parameters)
-        request-coercions))))
+        (reduce kc/copy-from-to coercions parameters)
+        coercions))))
 
 (defn- coerce!-response [response handler options]
   (if-let [responses (-> handler :user :responses)]
