@@ -75,21 +75,27 @@
                                    :type "kekkonen.ring/request"
                                    :value {}}))))
 
-      ;; FIXME: parameter leak here
       (fact "secret handler"
-        #_(fact "without role"
-            (fact "can't be validated"
-              (let [response (app {:uri "/api/secret/plus"
-                                   :request-method :post
-                                   :headers {"kekkonen.mode" "validate"}})]
-                response => nil
-                (parse response) => nil))
+        (fact "without role"
+          (fact "can't be validated"
+            (let [response (app {:uri "/api/secret/nada"
+                                 :request-method :post
+                                 :headers {"kekkonen.mode" "validate"}})]
+              response => not-found?
+              (parse response) => nil))
 
-            (fact "can't be invoked"
-              (let [response (app {:uri "/api/secret/plus"
-                                   :request-method :post})]
-                response => nil
-                (parse response) => nil)))
+          (fact "can't be validated"
+            (let [response (app {:uri "/api/secret/plus"
+                                 :request-method :post
+                                 :headers {"kekkonen.mode" "validate"}})]
+              response => not-found?
+              (parse response) => nil))
+
+          (fact "can't be invoked"
+            (let [response (app {:uri "/api/secret/plus"
+                                 :request-method :post})]
+              response => not-found?
+              (parse response) => nil)))
 
         (fact "with role"
           (fact "can be validated"

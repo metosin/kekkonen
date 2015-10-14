@@ -5,7 +5,8 @@
             [kekkonen.common :as kc]
             [clojure.string :as str]
             [ring.swagger.json-schema :as rsjs]
-            [plumbing.core :as p]))
+            [plumbing.core :as p]
+            [plumbing.map :as pm]))
 
 (def ^:private mode-parameter "kekkonen.mode")
 
@@ -45,20 +46,20 @@
       (str "/" (str/replace ns #"\." "/")))
     "/" (name (:name handler))))
 
-(defn- coerce-request! [request handler {:keys [coercion]}]
-  (reduce
-    (fn [request [k matcher]]
-      (if matcher
-        (if-let [schema (get-in handler [:ring :input :request k])]
-          (let [value (get request k {})
-                coerced (k/coerce! schema matcher value k ::request)]
-            (if-not (empty? value)
-              (assoc request k coerced)
-              request))
-          request)
-        request))
-    request
-    coercion))
+(defn ring-coercion [handler {:keys [coercion]}]
+  (let [request-coercions (pm/unflatten
+                            (for [[k matcher] coercion
+                                  :when matcher]
+                              [[:request k] (fn [schema value]
+                                              (k/coerce! schema matcher (or value {}) k ::request))]))]
+    (k/multi-coercion
+      (if-let [parameters (some-> handler :ring :type-config :parameters)]
+        (reduce
+          (fn [acc [from to]]
+            (assoc-in acc to (get-in acc from)))
+          request-coercions
+          parameters)
+        request-coercions))))
 
 (defn- coerce!-response [response handler options]
   (if-let [responses (-> handler :user :responses)]
@@ -113,11 +114,11 @@
           (if-let [type-config (-> handler :ring :type-config)]
             (if (get (:methods type-config) request-method)
               (let [action (:action handler)
-                    ;; TODO: create an interceptor chain, validate params later to avoid detail leaking
-                    ;; TODO: example: in example.cqrs, calling http POST :3000/api/item/reset-items!
-                    ;; TODO: will reveal a) the expoint exists b) the input data format. Not ok'ish.
-                    request (coerce-request! request handler options)
+                    ;; TODO: create an interceptor chain
                     context (as-> {:request request} context
+
+                                  ;; add lazy-coercion
+                                  (assoc context ::k/coercion (ring-coercion handler options))
 
                                   ;; map parameters from ring-request into common keys
                                   (reduce kc/deep-merge-from-to context (:parameters type-config))
