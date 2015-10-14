@@ -74,10 +74,10 @@
 ;; Exposing handler meta-data
 ;;
 
-(defn- stringify-schema [schema]
+(defn stringify-schema [schema]
   (walk/prewalk
     (fn [x]
-      (if-not (or (and (map? x) (not (record? x))) (vector? x) (string? x) (keyword? x))
+      (if-not (or (and (map? x) (not (record? x))) (vector? x) (string? x) (keyword? x) (nil? x))
         (pr-str x) x))
     schema))
 
