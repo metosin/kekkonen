@@ -58,7 +58,7 @@
         (reduce kc/copy-from-to coercions parameters)
         coercions))))
 
-(defn- coerce!-response [response handler options]
+(defn- coerce-response! [response handler options]
   (if-let [responses (-> handler :user :responses)]
     (let [status (or (:status response) 200)
           schema (get-in responses [status :schema])
@@ -130,7 +130,7 @@
                 (if (is-validate-request? request)
                   (ok (k/validate dispatcher action context))
                   (let [response (k/invoke dispatcher action context)]
-                    (coerce!-response response handler options)))))))))))
+                    (coerce-response! response handler options)))))))))))
 
 ;;
 ;; Routing
