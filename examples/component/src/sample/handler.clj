@@ -1,6 +1,5 @@
 (ns sample.handler
-  (:require [org.httpkit.server :as server]
-            [plumbing.core :refer [defnk]]
+  (:require [plumbing.core :refer [defnk]]
             [kekkonen.cqrs :refer :all]
             [schema.core :as s]))
 

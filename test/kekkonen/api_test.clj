@@ -289,18 +289,18 @@
                          {:/api/public/plus anything
                           :/api/public/nada anything})})))))
 
-      (fact "with role"
-        (let [response (app {:uri "/swagger.json"
-                             :request-method :get
-                             :query-params {::role :admin}})
-              body (parse response)]
-          response => ok?
+    (fact "with role"
+      (let [response (app {:uri "/swagger.json"
+                           :request-method :get
+                           :query-params {::role :admin}})
+            body (parse response)]
+        response => ok?
 
-          (fact "secret endpoints are also documented"
-            body => (contains
-                      {:paths
-                       (contains
-                         {:/api/secret/plus anything})}))))
+        (fact "secret endpoints are also documented"
+          body => (contains
+                    {:paths
+                     (contains
+                       {:/api/secret/plus anything})}))))
 
     (fact "swagger-ui"
       (let [response (app {:uri "/" :request-method :get})]
