@@ -148,7 +148,7 @@
                                :request-method :post})]
             response => ok?
             (parse response) => (just [(contains {:action "api.public/plus"})
-                                       (contains {:action "api.public/nada"})])))
+                                       (contains {:action "api.public/nada"}) :in-any-order])))
 
         (fact "with role"
           (let [response (app {:uri "/kekkonen/handlers"
@@ -157,7 +157,7 @@
             response => ok?
             (parse response) => (just [(contains {:action "api.public/plus"})
                                        (contains {:action "api.public/nada"})
-                                       (contains {:action "api.secret/plus"})]))))
+                                       (contains {:action "api.secret/plus"})] :in-any-order))))
 
       (fact "actions"
         (fact "without role"
