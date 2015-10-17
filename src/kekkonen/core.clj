@@ -230,14 +230,6 @@
    transformers :- [Function]
    user :- KeywordMap])
 
-(s/defn get-handlers [dispatcher :- Dispatcher]
-  (:handlers dispatcher))
-
-(s/defn some-handler :- (s/maybe Handler)
-  "Returns a handler or nil"
-  [dispatcher, action :- s/Keyword]
-  ((get-handlers dispatcher) action))
-
 ;;
 ;; Working with contexts
 ;;
@@ -266,7 +258,7 @@
 ;; coercion
 ;;
 
-(def memoized-coercer (memoize sc/coercer))
+(def ^:private memoized-coercer (memoize sc/coercer))
 
 (defn coerce! [schema matcher value in type]
   (let [coercer (memoized-coercer schema matcher)
@@ -314,15 +306,15 @@
      context)))
 
 ;;
-;; InMemoryDispatcher
+;; Dispatching to handlers
 ;;
 
-(s/defn dispatch
-  [dispatcher :- Dispatcher
-   mode :- s/Keyword
-   action :- s/Keyword
-   context :- Context]
+(s/defn some-handler :- (s/maybe Handler)
+  "Returns a handler or nil"
+  [dispatcher, action :- s/Keyword]
+  (get-in dispatcher [:handlers action]))
 
+(defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
     (let [input-matcher (-> dispatcher :coercion :input)
           context (as-> context context
@@ -371,6 +363,93 @@
             (coerce! output (-> dispatcher :coercion :output) response nil ::response)
             response))))
     (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action}))))
+
+(s/defn check
+  "Checks an action handler with the given context."
+  ([dispatcher :- Dispatcher, action :- s/Keyword]
+    (check dispatcher action {}))
+  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
+    (dispatch dispatcher :check action context)))
+
+(s/defn validate
+  "Checks if context is valid for the handler (without calling the body).
+  Returns nil or throws an exception."
+  ([dispatcher :- Dispatcher, action :- s/Keyword]
+    (validate dispatcher action {}))
+  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
+    (dispatch dispatcher :validate action context)))
+
+(s/defn invoke
+  "Invokes an action handler with the given context."
+  ([dispatcher :- Dispatcher, action :- s/Keyword]
+    (invoke dispatcher action {}))
+  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
+    (dispatch dispatcher :invoke action context)))
+
+;;
+;; Listing handlers
+;;
+
+(def DispatchHandlersMode (s/enum :available :check :validate))
+
+(defn- filter-by-path [handlers path]
+  (if-not path
+    handlers
+    (seq
+      (filter
+        (fn [{:keys [ns]}]
+          (if ns
+            (let [path-seq (str/split (subs (str path) 1) #"[\.]")
+                  action-seq (str/split (subs (str ns) 1) #"[\.]")]
+              (= path-seq (take (count path-seq) action-seq)))
+            true))
+        handlers))))
+
+(defn- map-handlers [dispatcher mode prefix context success failure]
+  (-> dispatcher
+      :handlers
+      vals
+      (filter-by-path prefix)
+      (->>
+        (map
+          (fn [handler]
+            (try
+              (when-not (= mode :all)
+                (dispatch dispatcher mode (:action handler) context))
+              [handler (success handler)]
+              (catch Exception e
+                (if (-> e ex-data :type (= ::dispatch))
+                  [nil nil]
+                  [handler (failure e)])))))
+        (filter first)
+        (into {}))))
+
+(s/defn all-handlers :- [Handler]
+  "Returns all handlers filtered by namespace"
+  [dispatcher :- Dispatcher
+   prefix :- (s/maybe s/Keyword)]
+  (keep second (map-handlers dispatcher :all prefix {} identity (constantly nil))))
+
+(s/defn available-handlers :- [Handler]
+  "Returns all available handlers based on namespace and context"
+  [dispatcher :- Dispatcher
+   prefix :- (s/maybe s/Keyword)
+   context :- Context]
+  (keep first (map-handlers dispatcher :check prefix context identity (constantly nil))))
+
+(s/defn dispatch-handlers :- {Handler s/Any}
+  "Returns a map of action -> errors based on mode, namespace and context."
+  [dispatcher :- Dispatcher
+   mode :- DispatchHandlersMode
+   prefix :- (s/maybe s/Keyword)
+   context :- Context]
+  (let [[mode failure] (if (= mode :available) [:check (constantly nil)] [mode ex-data])]
+    (map-handlers dispatcher mode prefix context (constantly nil) failure)))
+
+;;
+;; Creating a Dispatcher
+;;
+
 (s/defschema Options
   {:handlers KeywordMap
    (s/optional-key :context) KeywordMap
@@ -436,7 +515,6 @@
         (select-keys options [:context :transformers :coercion :user])
         {:handlers handlers}))))
 
-;; TODO: works just with the InMemoryDispatcher -> publish to IDispatcher?
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,
   the handler is removed."
@@ -449,94 +527,8 @@
 
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
-  [in-memory-dispatcher :- Dispatcher, handlers]
+  [dispatcher :- Dispatcher, handlers]
   (if handlers
     (let [handler (collect-and-enrich
-                    (merge in-memory-dispatcher {:handlers handlers :type-resolver any-type-resolver}) true)]
-      (update-in in-memory-dispatcher [:handlers] merge handler))))
-
-;;
-;; Calling handlers
-;;
-
-(s/defn check
-  "Checks an action handler with the given context."
-  ([dispatcher :- Dispatcher, action :- s/Keyword]
-    (check dispatcher action {}))
-  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (dispatch dispatcher :check action context)))
-
-(s/defn validate
-  "Checks if context is valid for the handler (without calling the body).
-  Returns nil or throws an exception."
-  ([dispatcher :- Dispatcher, action :- s/Keyword]
-    (validate dispatcher action {}))
-  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (dispatch dispatcher :validate action context)))
-
-(s/defn invoke
-  "Invokes an action handler with the given context."
-  ([dispatcher :- Dispatcher, action :- s/Keyword]
-    (invoke dispatcher action {}))
-  ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
-    (dispatch dispatcher :invoke action context)))
-
-;;
-;; Listing handlers
-;;
-
-(def DispatchHandlersMode (s/enum :available :check :validate))
-
-(defn- filter-by-path [handlers path]
-  (if-not path
-    handlers
-    (seq
-      (filter
-        (fn [{:keys [ns]}]
-          (if ns
-            (let [path-seq (str/split (subs (str path) 1) #"[\.]")
-                  action-seq (str/split (subs (str ns) 1) #"[\.]")]
-              (= path-seq (take (count path-seq) action-seq)))
-            true))
-        handlers))))
-
-(defn- map-handlers [dispatcher mode prefix context success failure]
-  (-> dispatcher
-      get-handlers
-      vals
-      (filter-by-path prefix)
-      (->>
-        (map
-          (fn [handler]
-            (try
-              (when-not (= mode :all)
-                (dispatch dispatcher mode (:action handler) context))
-              [handler (success handler)]
-              (catch Exception e
-                (if (-> e ex-data :type (= ::dispatch))
-                  [nil nil]
-                  [handler (failure e)])))))
-        (filter first)
-        (into {}))))
-
-(s/defn all-handlers :- [Handler]
-  "Returns all handlers filtered by namespace"
-  [dispatcher :- Dispatcher
-   prefix :- (s/maybe s/Keyword)]
-  (keep second (map-handlers dispatcher :all prefix {} identity (constantly nil))))
-
-(s/defn available-handlers :- [Handler]
-  "Returns all available handlers based on namespace and context"
-  [dispatcher :- Dispatcher
-   prefix :- (s/maybe s/Keyword)
-   context :- Context]
-  (keep first (map-handlers dispatcher :check prefix context identity (constantly nil))))
-
-(s/defn dispatch-handlers :- {Handler s/Any}
-  "Returns a map of action -> errors based on mode, namespace and context."
-  [dispatcher :- Dispatcher
-   mode :- DispatchHandlersMode
-   prefix :- (s/maybe s/Keyword)
-   context :- Context]
-  (let [[mode failure] (if (= mode :available) [:check (constantly nil)] [mode ex-data])]
-    (map-handlers dispatcher mode prefix context (constantly nil) failure)))
+                    (merge dispatcher {:handlers handlers :type-resolver any-type-resolver}) true)]
+      (update-in dispatcher [:handlers] merge handler))))
