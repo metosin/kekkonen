@@ -222,6 +222,7 @@
 ;; Dispatcher
 ;;
 
+; TODO: complex - there is a) protocol, b) schema and c) recored -> still is only one impl.
 (defprotocol IDispatcher
   (get-handlers [this])
   (dispatch [this mode action context]))
@@ -439,6 +440,7 @@
         (select-keys options [:context :transformers :coercion :user])
         {:handlers handlers}))))
 
+;; TODO: works just with the InMemoryDispatcher -> publish to IDispatcher?
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,
   the handler is removed."
@@ -535,8 +537,6 @@
    context :- Context]
   (keep first (map-handlers dispatcher :check prefix context identity (constantly nil))))
 
-; TODO: test via ring
-; TODO: update docs
 (s/defn dispatch-handlers :- {Handler s/Any}
   "Returns a map of action -> errors based on mode, namespace and context."
   [dispatcher :- Dispatcher
