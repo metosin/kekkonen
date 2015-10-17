@@ -49,8 +49,7 @@
       {:core {:type-resolver (k/type-resolver :command :query)}
        :api {:handlers (r/kekkonen-handlers :query)}
        :ring {:types {:query {:methods #{:get}
-                              :parameters [[[:request :query-params] [:data]]]}
+                              :parameters {[:data] [:request :query-params]}}
                       :command {:methods #{:post}
-                                :parameters [[[:request :body-params] [:data]]]}}}}
+                                :parameters {[:data] [:request :body-params]}}}}}
       options)))
-

@@ -49,6 +49,9 @@
 (defn copy-from-to [data [from to]]
   (assoc-in data to (get-in data from)))
 
+(defn copy-to-from [data [to from]]
+  (copy-from-to data [from to]))
+
 (defn move-from-to [data [from to]]
   (if-let [target (get-in data from)]
     (-> data

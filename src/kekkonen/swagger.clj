@@ -17,7 +17,7 @@
   (let [{:keys [description ns ring] {:keys [summary responses no-doc]} :user} handler
         {:keys [parameters input type-config uri]} ring
         ;; deep-merge back the mappings to get right request requirements
-        input (reduce kc/deep-merge-to-from input parameters)
+        input (reduce kc/deep-merge-from-to input parameters)
         {:keys [body-params query-params path-params header-params]} (:request input)
         methods (-> type-config :methods sort)]
 

@@ -28,6 +28,13 @@
   => {:request {:body-params {:x String, :y String}}
       :data {:x String, :y String}})
 
+(fact "copy-to-fom"
+  (kc/copy-to-from
+    {:request {:body-params {:x String, :y String}}}
+    [[:data] [:request :body-params]])
+  => {:request {:body-params {:x String, :y String}}
+      :data {:x String, :y String}})
+
 (fact "move-from-to"
   (kc/move-from-to
     {:request {:body-params {:x String, :y String}}}

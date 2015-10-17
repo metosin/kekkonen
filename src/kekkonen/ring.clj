@@ -13,8 +13,7 @@
 
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
-                      (s/optional-key :parameters) [[(s/one [s/Keyword] 'from)
-                                                     (s/one [s/Keyword] 'to)]]
+                      (s/optional-key :parameters) {[s/Keyword] [s/Keyword]}
                       (s/optional-key :transformers) [k/Function]}}
    :coercion {s/Keyword k/Function}
    :transformers [k/Function]})
@@ -24,7 +23,7 @@
   ; TODO: add type-resolver?
   {:types {::handler {:methods #{:get :head :patch :delete :options :post :put}}
            :handler {:methods #{:post}
-                     :parameters [[[:request :body-params] [:data]]]}}
+                     :parameters {[:data] [:request :body-params]}}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
               :path-params rsc/query-schema-coercion-matcher
               :form-params rsc/query-schema-coercion-matcher
@@ -55,7 +54,7 @@
                                       (k/coerce! schema matcher (or value {}) k ::request))]))]
     (k/multi-coercion
       (if parameters
-        (reduce kc/copy-from-to coercions parameters)
+        (reduce kc/copy-to-from coercions parameters)
         coercions))))
 
 (defn- coerce-response! [response handler options]
@@ -72,7 +71,7 @@
 
 (defn- ring-input-schema [input parameters]
   (if parameters
-    (reduce kc/move-to-from input parameters)
+    (reduce kc/move-from-to input parameters)
     input))
 
 (defn- attach-mode-parameter [schema]
@@ -119,7 +118,7 @@
                                   (assoc context ::k/coercion coercion)
 
                                   ;; map parameters from ring-request into common keys
-                                  (reduce kc/deep-merge-from-to context (:parameters type-config))
+                                  (reduce kc/deep-merge-to-from context (:parameters type-config))
 
                                   ;; global transformers first
                                   (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))

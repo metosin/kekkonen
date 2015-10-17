@@ -22,7 +22,7 @@
     {:data {:d s/Str}
      :request {:query-params {:q s/Str}
                :body-params {:b s/Str}}}
-    [[[:request :query-params] [:data]]])
+    {[:data] [:request :query-params]})
   => {:request {:query-params {:d s/Str}
                 :body-params {:b s/Str}}})
 
@@ -216,7 +216,7 @@
   (fact "custom query-params -> query via parameters"
     (let [app (r/ring-handler
                 (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
-                {:types {:handler {:parameters [[[:request :query-params] [:query]]]}}})]
+                {:types {:handler {:parameters {[:query] [:request :query-params]}}}})]
 
       (app {:uri "/api/test"
             :request-method :post
