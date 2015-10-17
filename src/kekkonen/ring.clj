@@ -46,7 +46,7 @@
       (str "/" (str/replace ns #"\." "/")))
     "/" (name (:name handler))))
 
-(defn ring-coercion [parameters coercion]
+(defn- ring-coercion [parameters coercion]
   (let [coercions (pm/unflatten
                     (for [[k matcher] coercion
                           :when matcher]
@@ -109,27 +109,26 @@
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method uri] :as request}]
         (if-let [{{:keys [type-config coercion]} :ring action :action :as handler} (router uri)]
-          (if type-config
-            (if (get (:methods type-config) request-method)
-              ;; TODO: create an interceptor chain
-              (let [context (as-> {:request request} context
+          (if (and type-config (get (:methods type-config) request-method))
+            ;; TODO: create an interceptor chain
+            (let [context (as-> {:request request} context
 
-                                  ;; add lazy-coercion
-                                  (assoc context ::k/coercion coercion)
+                                ;; add lazy-coercion
+                                (assoc context ::k/coercion coercion)
 
-                                  ;; map parameters from ring-request into common keys
-                                  (reduce kc/deep-merge-to-from context (:parameters type-config))
+                                ;; map parameters from ring-request into common keys
+                                (reduce kc/deep-merge-to-from context (:parameters type-config))
 
-                                  ;; global transformers first
-                                  (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
+                                ;; global transformers first
+                                (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
 
-                                  ;; type-level transformers
-                                  (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config)))]
+                                ;; type-level transformers
+                                (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config)))]
 
-                (if (is-validate-request? request)
-                  (ok (k/validate dispatcher action context))
-                  (let [response (k/invoke dispatcher action context)]
-                    (coerce-response! response handler options)))))))))))
+              (if (is-validate-request? request)
+                (ok (k/validate dispatcher action context))
+                (let [response (k/invoke dispatcher action context)]
+                  (coerce-response! response handler options))))))))))
 
 ;;
 ;; Routing
