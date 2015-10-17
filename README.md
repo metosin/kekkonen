@@ -95,11 +95,8 @@ Examples projects under [`/examples`](https://github.com/metosin/kekkonen/tree/m
 ;; Start it
 ;;
 
-(defn start []
-  (server/run-server #'app {:port 3000}))
-
 (comment
-  (start))
+  (server/run-server #'app {:port 3000}))
 ```
 
 Start the server and browse to http://localhost:3000 and you should see the following:

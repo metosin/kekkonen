@@ -46,12 +46,5 @@
                              :sample [#'ping #'inc! #'plus]}}
             :context {:components {:counter (atom 0)}}}}))
 
-;;
-;; Start it
-;;
-
-(defn start []
-  (server/run-server #'app {:port 3000}))
-
 (comment
-  (start))
+  (server/run-server #'app {:port 3000}))

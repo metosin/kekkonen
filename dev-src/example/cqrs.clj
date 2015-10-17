@@ -115,8 +115,5 @@
             :user {::roles require-roles}}
      :ring {:transformers [api-key-authenticator]}}))
 
-(defn start []
-  (server/run-server #'app {:port 3000}))
-
 (comment
-  (start))
+  (server/run-server #'app {:port 3000}))

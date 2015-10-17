@@ -22,8 +22,5 @@
       (k/dispatcher
         {:handlers {:api 'example.handlers}}))))
 
-(defn start []
-  (server/run-server #'app {:port 3000}))
-
 (comment
-  (start))
+  (server/run-server #'app {:port 3000}))
