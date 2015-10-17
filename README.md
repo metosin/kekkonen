@@ -117,7 +117,7 @@ Examples with [httpie](https://github.com/jkbrzt/httpie):
 Invoking a handler with invalid input:
 
 ```bash
-➜  http :3000/api/sample/plus
+➜  http :3000/api/example/plus
 HTTP/1.1 400 Bad Request
 Content-Length: 127
 Content-Type: application/json; charset=utf-8
@@ -138,7 +138,7 @@ Server: http-kit
 Invoking a handler with valid input:
 
 ```bash
-➜  http :3000/api/sample/plus x==1 y==2
+➜  http :3000/api/example/plus x==1 y==2
 HTTP/1.1 200 OK
 Content-Length: 12
 Content-Type: application/json; charset=utf-8
@@ -153,24 +153,23 @@ Server: http-kit
 Validating a handler with valid input (does not run the actual body):
 
 ```bash
-➜  http :3000/api/sample/plus x==1 y==2 kekkonen.mode:validate
+➜  http :3000/api/example/plus x==1 y==2 kekkonen.mode:validate
 HTTP/1.1 200 OK
 Content-Length: 0
 Date: Wed, 16 Sep 2015 21:14:39 GMT
 Server: http-kit
-
 ```
 
 There are also few special endpoints mounted in the `kekkonen` namespace:
 
-* `kekkonen/all-handlers` list all handlers in the given namespace.
-* `kekkonen/available-handlers` all handlers that are available in the given namespace
-* `kekkonen/get-handler` info of a single handler.
+* `kekkonen/handlers` list all available handlers in the given namespace.
+* `kekkonen/handler` details of a single handler.
+* `kekkonen/actions` available action in a given namespace & possible errors (available, checked or validated)
 
-Example call to the get-handler:
+Example call to the `kekkonen/handler`:
 
 ```bash
-➜  http :3000/kekkonen/get-handler action==api.pizza/echo-pizza
+➜  http :3000/kekkonen/handler action==api.pizza/echo-pizza
 HTTP/1.1 200 OK
 Content-Length: 436
 Content-Type: application/json; charset=utf-8
@@ -201,6 +200,50 @@ Server: http-kit
         "ns": "example.api"
     },
     "type": "command"
+}
+```
+
+Executing all the namespace rules for `example.api`, without touchung the handlers:
+
+```bash
+➜  http :3000/kekkonen/actions ns==api.example mode==check
+HTTP/1.1 200 OK
+Content-Length: 73
+Content-Type: application/json; charset=utf-8
+Date: Fri, 16 Oct 2015 20:33:38 GMT
+Server: http-kit
+
+{
+    "api.example/inc!": null,
+    "api.example/ping": null,
+    "api.example/plus": null
+}
+```
+
+Executing all the namespace rules for `example.api` & validating handlers:
+
+```
+http :3000/kekkonen/actions ns==api.example mode==validate
+HTTP/1.1 200 OK
+Content-Length: 277
+Content-Type: application/json; charset=utf-8
+Date: Fri, 16 Oct 2015 20:36:24 GMT
+Server: http-kit
+
+{
+    "api.example/inc!": null,
+    "api.example/ping": null,
+    "api.example/plus": {
+        "error": "#schema.utils.ErrorContainer{:error {:y missing-required-key, :x missing-required-key}}",
+        "in": "query-params",
+        "schema": {
+            "Keyword": "Any",
+            "x": "Int",
+            "y": "Int"
+        },
+        "type": "kekkonen.ring/request",
+        "value": {}
+    }
 }
 ```
 
