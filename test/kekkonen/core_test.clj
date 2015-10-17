@@ -4,7 +4,8 @@
             [midje.sweet :refer :all]
             [schema.core :as s]
             [plumbing.core :as p]
-            [clojure.set :as set]))
+            [clojure.set :as set])
+  (:import [kekkonen.core Dispatcher]))
 
 ;;
 ;; test handlers
@@ -793,7 +794,7 @@
                                     set)))]}})]
 
     (fact "::dispatcher"
-      (s/validate k/Dispatcher (k/invoke d :api/dispatcher)) => truthy)
+      (s/validate Dispatcher (k/invoke d :api/dispatcher)) => truthy)
 
     (fact "::handler"
       (k/invoke d :api/handler) => (contains {:description "metameta"}))

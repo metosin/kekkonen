@@ -7,7 +7,8 @@
             [ring.swagger.json-schema :as rsjs]
             [ring.util.http-response :refer [ok]]
             [plumbing.core :as p]
-            [plumbing.map :as pm]))
+            [plumbing.map :as pm])
+  (:import [kekkonen.core Dispatcher]))
 
 (def ^:private mode-parameter "kekkonen.mode")
 
@@ -98,12 +99,11 @@
 ;; Ring-handler
 ;;
 
-; TODO: create a Ring-dispatcher
 (s/defn ring-handler
   "Creates a ring handler from Dispatcher and options."
-  ([dispatcher :- k/Dispatcher]
+  ([dispatcher :- Dispatcher]
     (ring-handler dispatcher {}))
-  ([dispatcher :- k/Dispatcher, options :- k/KeywordMap]
+  ([dispatcher :- Dispatcher, options :- k/KeywordMap]
     (let [options (kc/deep-merge +default-options+ options)
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]

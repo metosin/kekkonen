@@ -222,12 +222,16 @@
 ;; Dispatcher
 ;;
 
-; TODO: complex - there is a) protocol, b) schema and c) recored -> still is only one impl.
-(defprotocol IDispatcher
-  (get-handlers [this])
-  (dispatch [this mode action context]))
+(s/defrecord Dispatcher
+  [handlers :- {s/Keyword Handler}
+   context :- KeywordMap
+   coercion :- {:input s/Any
+                :output s/Any}
+   transformers :- [Function]
+   user :- KeywordMap])
 
-(s/defschema Dispatcher (s/protocol IDispatcher))
+(s/defn get-handlers [dispatcher :- Dispatcher]
+  (:handlers dispatcher))
 
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
@@ -313,68 +317,60 @@
 ;; InMemoryDispatcher
 ;;
 
-(s/defrecord InMemoryDispatcher
-  [handlers :- {s/Keyword Handler}
-   context :- KeywordMap
-   coercion :- {:input s/Any
-                :output s/Any}
-   transformers :- [Function]
-   user :- KeywordMap]
+(s/defn dispatch
+  [dispatcher :- Dispatcher
+   mode :- s/Keyword
+   action :- s/Keyword
+   context :- Context]
 
-  IDispatcher
-  (get-handlers [_]
-    handlers)
+  (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
+    (let [input-matcher (-> dispatcher :coercion :input)
+          context (as-> context context
 
-  (dispatch [dispatcher mode action context]
-    (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
-      (let [input-matcher (-> dispatcher :coercion :input)
-            context (as-> context context
+                        ;; TODO: in what order are these run? -> back to namespaces...
 
-                          ;; TODO: in what order are these run? -> back to namespaces...
+                        ;; base-context from Dispatcher
+                        (kc/deep-merge (:context dispatcher) context)
 
-                          ;; base-context from Dispatcher
-                          (kc/deep-merge (:context dispatcher) context)
+                        ;; run all the transformers
+                        ;; short-circuit execution if a transformer returns nil
+                        (reduce (fn [ctx mapper] (or (mapper ctx) (reduced nil))) context (:transformers dispatcher))
 
-                          ;; run all the transformers
-                          ;; short-circuit execution if a transformer returns nil
-                          (reduce (fn [ctx mapper] (or (mapper ctx) (reduced nil))) context (:transformers dispatcher))
+                        ;; run all the user transformers per namespace/handler
+                        ;; start from the root. a returned nil context short-circuits
+                        ;; the run an causes ::dispatch error. Apply local coercion
+                        ;; in the input is defined (using same definitions as with handlers)
+                        (reduce
+                          (fn [ctx [k v]]
+                            (if-let [mapper-gen (get-in dispatcher [:user k])]
+                              (let [mapper (mapper-gen v)
+                                    input-schema (:input (extract-schema mapper))
+                                    ;; TODO: automatic coercion = too much magic? just coerce :data?
+                                    ctx (input-coerce! ctx input-schema input-matcher)]
+                                (or (mapper ctx) (reduced nil)))
+                              ctx))
+                          context
+                          (apply concat all-user))
 
-                          ;; run all the user transformers per namespace/handler
-                          ;; start from the root. a returned nil context short-circuits
-                          ;; the run an causes ::dispatch error. Apply local coercion
-                          ;; in the input is defined (using same definitions as with handlers)
-                          (reduce
-                            (fn [ctx [k v]]
-                              (if-let [mapper-gen (get-in dispatcher [:user k])]
-                                (let [mapper (mapper-gen v)
-                                      input-schema (:input (extract-schema mapper))
-                                      ;; TODO: automatic coercion = too much magic? just coerce :data?
-                                      ctx (input-coerce! ctx input-schema input-matcher)]
-                                  (or (mapper ctx) (reduced nil)))
-                                ctx))
-                            context
-                            (apply concat all-user))
+                        ;; run context coercion for :validate|:invoke and if context coercion is set
+                        (cond-> context (and context (#{:validate :invoke} mode))
+                                ((fn [ctx] (input-coerce! ctx input input-matcher))))
 
-                          ;; run context coercion for :validate|:invoke and if context coercion is set
-                          (cond-> context (and context (#{:validate :invoke} mode))
-                                  ((fn [ctx] (input-coerce! ctx input input-matcher))))
+                        ;; inject in stuff the context if not nil
+                        (cond-> context context (merge context {::dispatcher dispatcher
+                                                                ::handler handler})))]
 
-                          ;; inject in stuff the context if not nil
-                          (cond-> context context (merge context {::dispatcher dispatcher
-                                                                  ::handler handler})))]
+      (when-not context
+        (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
 
-        (when-not context
-          (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
-
-        ;; all good, let's invoke?
-        (if (#{:invoke} mode)
-          (let [response (function context)]
-            ;; response coercion
-            (if (and output (-> dispatcher :coercion :output))
-              (coerce! output (-> dispatcher :coercion :output) response nil ::response)
-              response))))
-      (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))))
-
+      ;; all good, let's invoke?
+      (if (#{:invoke} mode)
+        (let [response (function context)]
+          ;; response coercion
+          (if (and output (-> dispatcher :coercion :output))
+            (coerce! output (-> dispatcher :coercion :output) response nil ::response)
+            response))))
+    (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action}))))
 (s/defschema Options
   {:handlers KeywordMap
    (s/optional-key :context) KeywordMap
@@ -431,11 +427,11 @@
              (p/map-vals first)))))
 
 (s/defn dispatcher :- Dispatcher
-  "Creates a InMemoryDispatcher."
+  "Creates a Dispatcher"
   [options :- Options]
   (let [options (kc/deep-merge +default-options+ options)
         handlers (->> (collect-and-enrich options false))]
-    (map->InMemoryDispatcher
+    (map->Dispatcher
       (merge
         (select-keys options [:context :transformers :coercion :user])
         {:handlers handlers}))))
@@ -451,10 +447,9 @@
                                            (filter (p/fn-> second))
                                            (into {})))))
 
-;; TODO: works just with the InMemoryDispatcher -> publish to IDispatcher?
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
-  [in-memory-dispatcher :- InMemoryDispatcher, handlers]
+  [in-memory-dispatcher :- Dispatcher, handlers]
   (if handlers
     (let [handler (collect-and-enrich
                     (merge in-memory-dispatcher {:handlers handlers :type-resolver any-type-resolver}) true)]
