@@ -176,16 +176,6 @@
                                  :api.public/nada nil
                                  :api.secret/plus nil})
 
-          (fact "mode = available"
-            (let [response (app {:uri "/kekkonen/actions"
-                                 :query-params {::role :admin}
-                                 :body-params {:mode :available}
-                                 :request-method :post})]
-              response => ok?
-              (parse response) => {:api.public/plus nil
-                                   :api.public/nada nil
-                                   :api.secret/plus nil}))
-
           (fact "mode = check"
             (let [response (app {:uri "/kekkonen/actions"
                                  :query-params {::role :admin}

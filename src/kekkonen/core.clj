@@ -390,7 +390,7 @@
 ;; Listing handlers
 ;;
 
-(def DispatchHandlersMode (s/enum :available :check :validate))
+(def DispatchHandlersMode (s/enum :check :validate))
 
 (defn- filter-by-path [handlers path]
   (if-not path
@@ -443,8 +443,7 @@
    mode :- DispatchHandlersMode
    prefix :- (s/maybe s/Keyword)
    context :- Context]
-  (let [[mode failure] (if (= mode :available) [:check (constantly nil)] [mode ex-data])]
-    (map-handlers dispatcher mode prefix context (constantly nil) failure)))
+  (map-handlers dispatcher mode prefix context (constantly nil) ex-data))
 
 ;;
 ;; Creating a Dispatcher

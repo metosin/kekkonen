@@ -162,9 +162,9 @@ Server: http-kit
 
 There are also few special endpoints mounted in the `kekkonen` namespace:
 
-* `kekkonen/handlers` list all available handlers in the given namespace.
-* `kekkonen/handler` details of a single handler.
-* `kekkonen/actions` available action in a given namespace & possible errors (available, checked or validated)
+* `kekkonen/handlers` list all available handlers in the given namespace
+* `kekkonen/handler` details of a single handler
+* `kekkonen/actions` available actions in a given namespace & possible errors (checked or validated)
 
 Example call to the `kekkonen/handler`:
 

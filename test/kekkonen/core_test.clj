@@ -397,6 +397,9 @@
       (throw (ex-info "missing role" {:roles (::roles context)
                                       :required required})))))
 
+(defn requires-role? [role]
+  (fn [x] (and (map? x) (= (:required x) role))))
+
 (facts "user-meta"
   (facts "exception throwing"
     (fact "on handler"
@@ -481,7 +484,9 @@
           (k/invoke d :api.admin/test {:x 1 ::roles #{:anyone, :admin, :superadmin}}) => 1)))))
 
 (facts "all-handlers, available-handlers & dispatch-handlers"
-  (let [handler->action (fn [m] (p/for-map [[k v] m] (:action k) v))]
+  (let [handler->action (fn [m] (p/for-map [[k v] m] (:action k) v))
+        require-admin? (contains {:required #{:admin}})
+        invalid-input? (contains {:type ::k/request})]
     (s/with-fn-validation
       (let [admin-ns (k/namespace {:name :admin, ::roles! #{:admin}})
             secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
@@ -496,11 +501,11 @@
         (fact "there are 6 handlers"
           (k/all-handlers d nil) => (n-of k/handler? 6))
 
-        (fact "4 handlers are available (as 2 are secret)"
-          (handler->action (k/dispatch-handlers d :available nil {}))
+        (fact "4 handlers could be called (as 2 are secret)"
+          (handler->action (k/dispatch-handlers d :check nil {}))
           => (just
-               {:api.admin/handler1 nil
-                :api.admin/handler2 nil
+               {:api.admin/handler1 require-admin?
+                :api.admin/handler2 require-admin?
                 :api.public/handler1 nil
                 :api.public/handler2 nil}))
 
@@ -510,13 +515,13 @@
             (k/all-handlers d :api) => (n-of k/handler? 6))
 
           (fact "4 handlers are available (2 are secret)"
+            (k/available-handlers d nil {}) => (n-of k/handler? 4))
 
-            (k/available-handlers d nil {}) => (n-of k/handler? 4)
-
-            (handler->action (k/dispatch-handlers d :available :api {}))
+          (fact "4 handlers could be called (as 2 are secret)"
+            (handler->action (k/dispatch-handlers d :check :api {}))
             => (just
-                 {:api.admin/handler1 nil
-                  :api.admin/handler2 nil
+                 {:api.admin/handler1 require-admin?
+                  :api.admin/handler2 require-admin?
                   :api.public/handler1 nil
                   :api.public/handler2 nil})))
 
@@ -526,13 +531,13 @@
             (k/all-handlers d :api.admin) => (n-of k/handler? 2))
 
           (fact "2 handlers are available"
+            (k/available-handlers d :api.admin {}) => (n-of k/handler? 2))
 
-            (k/available-handlers d :api.admin {}) => (n-of k/handler? 2)
-
-            (handler->action (k/dispatch-handlers d :available :api.admin {}))
+          (fact "2 handlers could be called (with errors)"
+            (handler->action (k/dispatch-handlers d :check :api.admin {}))
             => (just
-                 {:api.admin/handler1 nil
-                  :api.admin/handler2 nil})))
+                 {:api.admin/handler1 require-admin?
+                  :api.admin/handler2 require-admin?})))
 
         (fact "in namespace api.secret"
 
@@ -540,10 +545,10 @@
             (k/all-handlers d :api.secret) => (n-of k/handler? 2))
 
           (fact "0 handlers are available"
+            (k/available-handlers d :api.secret {}) => [])
 
-            (k/available-handlers d :api.secret {}) => []
-
-            (handler->action (k/dispatch-handlers d :available :api.secret {}))
+          (fact "no handlers could be called"
+            (handler->action (k/dispatch-handlers d :check :api.secret {}))
             => (just {})))
 
         (fact "in invalid namespace"
@@ -551,8 +556,8 @@
           (fact "there are no handlers"
             (k/all-handlers d :api.adm) => [])
 
-          (fact "0 handlers are available"
-            (handler->action (k/dispatch-handlers d :available :api.adm {}))
+          (fact "0 handlers could be called"
+            (handler->action (k/dispatch-handlers d :check :api.adm {}))
             => (just {})))
 
         (facts "dispatch"
@@ -567,18 +572,18 @@
 
                 (handler->action (k/dispatch-handlers d :check nil ctx))
                 => (just
-                     {:api.admin/handler1 map?
-                      :api.admin/handler2 map?
+                     {:api.admin/handler1 require-admin?
+                      :api.admin/handler2 require-admin?
                       :api.public/handler1 nil
                       :api.public/handler2 nil})
 
                 (handler->action
                   (k/dispatch-handlers d :validate nil ctx))
                 => (just
-                     {:api.admin/handler1 map?
-                      :api.admin/handler2 map?
+                     {:api.admin/handler1 require-admin?
+                      :api.admin/handler2 require-admin?
                       :api.public/handler1 nil
-                      :api.public/handler2 map?}))
+                      :api.public/handler2 invalid-input?}))
 
               (fact "admin-apis"
 
@@ -587,54 +592,77 @@
 
                 (handler->action (k/dispatch-handlers d :check :api.admin ctx))
                 => (just
-                     {:api.admin/handler1 map?
-                      :api.admin/handler2 map?})
+                     {:api.admin/handler1 require-admin?
+                      :api.admin/handler2 require-admin?})
 
                 (handler->action (k/dispatch-handlers d :validate :api.admin ctx))
                 => (just
-                     {:api.admin/handler1 map?
-                      :api.admin/handler2 map?}))))
+                     {:api.admin/handler1 require-admin?
+                      :api.admin/handler2 require-admin?}))))
 
           (fact "for admin-user"
-            (let [ctx {::roles #{:admin}}]
+            (let [ctx {::roles #{:admin}}
+                  ctx2 (merge ctx {:data {:x true}})]
 
               (fact "all handlers"
 
-                (k/available-handlers d nil ctx)
-                => (n-of k/handler? 6)
+                (fact "all handlers are available"
+                  (k/available-handlers d nil ctx)
+                  => (n-of k/handler? 6))
 
-                (handler->action (k/dispatch-handlers d :check nil ctx))
-                => (just
-                     {:api.admin/handler1 nil
-                      :api.admin/handler2 nil
-                      :api.public/handler1 nil
-                      :api.public/handler2 nil
-                      :api.secret/handler1 nil
-                      :api.secret/handler2 nil})
+                (fact "everything checks ok"
+                  (handler->action (k/dispatch-handlers d :check nil ctx))
+                  => (just
+                       {:api.admin/handler1 nil
+                        :api.admin/handler2 nil
+                        :api.public/handler1 nil
+                        :api.public/handler2 nil
+                        :api.secret/handler1 nil
+                        :api.secret/handler2 nil}))
 
-                (handler->action (k/dispatch-handlers d :validate nil ctx))
-                => (just
-                     {:api.admin/handler1 nil
-                      :api.admin/handler2 map?
-                      :api.public/handler1 nil
-                      :api.public/handler2 map?
-                      :api.secret/handler1 nil
-                      :api.secret/handler2 map?}))
+                (fact "validate gives validation errors for missing parameters"
+                  (handler->action (k/dispatch-handlers d :validate nil ctx))
+                  => (just
+                       {:api.admin/handler1 nil
+                        :api.admin/handler2 invalid-input?
+                        :api.public/handler1 nil
+                        :api.public/handler2 invalid-input?
+                        :api.secret/handler1 nil
+                        :api.secret/handler2 invalid-input?}))
+
+                (fact "with valid input validate passes ok"
+                  (handler->action (k/dispatch-handlers d :validate nil ctx2))
+                  => (just
+                       {:api.admin/handler1 nil
+                        :api.admin/handler2 nil
+                        :api.public/handler1 nil
+                        :api.public/handler2 nil
+                        :api.secret/handler1 nil
+                        :api.secret/handler2 nil})))
 
               (fact "admin apis"
 
-                (k/available-handlers d :api.admin ctx)
-                => (n-of k/handler? 2)
+                (fact "all handlers are available"
+                  (k/available-handlers d :api.admin ctx)
+                  => (n-of k/handler? 2))
 
-                (handler->action (k/dispatch-handlers d :check :api.admin ctx))
-                => (just
-                     {:api.admin/handler1 nil
-                      :api.admin/handler2 nil})
+                (fact "everything checks ok"
+                  (handler->action (k/dispatch-handlers d :check :api.admin ctx))
+                  => (just
+                       {:api.admin/handler1 nil
+                        :api.admin/handler2 nil}))
 
-                (handler->action (k/dispatch-handlers d :validate :api.admin ctx))
-                => (just
-                     {:api.admin/handler1 nil
-                      :api.admin/handler2 map?})))
+                (fact "validate gives validation errors for missing parameters"
+                  (handler->action (k/dispatch-handlers d :validate :api.admin ctx))
+                  => (just
+                       {:api.admin/handler1 nil
+                        :api.admin/handler2 invalid-input?}))
+
+                (fact "with valid input validate passes ok"
+                  (handler->action (k/dispatch-handlers d :validate :api.admin ctx2))
+                  => (just
+                       {:api.admin/handler1 nil
+                        :api.admin/handler2 nil}))))
 
             (fact "interacting with a spesific handler"
 
