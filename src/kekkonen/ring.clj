@@ -15,6 +15,7 @@
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
                       (s/optional-key :parameters) {[s/Keyword] [s/Keyword]}
+                      (s/optional-key :allow-method-override?) s/Bool
                       (s/optional-key :transformers) [k/Function]}}
    :coercion {s/Keyword k/Function}
    :transformers [k/Function]})
@@ -22,7 +23,9 @@
 (s/def +default-options+ :- Options
   ; TODO: no types in default bindings?
   ; TODO: add type-resolver?
-  {:types {::handler {:methods #{:get :head :patch :delete :options :post :put}}
+  {:types {::handler {:methods #{:post}
+                      :allow-method-override? true
+                      :parameters {[:data] [:request :body-params]}}
            :handler {:methods #{:post}
                      :parameters {[:data] [:request :body-params]}}}
    :coercion {:query-params rsc/query-schema-coercion-matcher
@@ -85,12 +88,17 @@
   (= (get-in request [:headers mode-parameter]) "validate"))
 
 (defn- attach-ring-meta [options handler]
-  (let [{:keys [parameters] :as type-config} (get (:types options) (:type handler))
+  (let [{:keys [parameters allow-method-override?] :as type-config} (get (:types options) (:type handler))
         coercion (:coercion options)
+        method (some-> handler :user ::method)
+        methods (if (and allow-method-override? method)
+                  (conj #{} method)
+                  (:methods type-config))
         input-schema (-> (:input handler)
                          (ring-input-schema parameters)
                          attach-mode-parameter)]
     (assoc handler :ring {:type-config type-config
+                          :methods methods
                           :coercion (ring-coercion parameters coercion)
                           :uri (handler-uri handler)
                           :input input-schema})))
@@ -108,8 +116,10 @@
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method uri] :as request}]
-        (if-let [{{:keys [type-config coercion]} :ring action :action :as handler} (router uri)]
-          (if (and type-config (get (:methods type-config) request-method))
+        ;; match a handlers based on uri
+        (if-let [{{:keys [type-config methods coercion] :as ring} :ring action :action :as handler} (router uri)]
+          ;; only allow calls to ring-mapped handlers with matching method
+          (if (and ring (methods request-method))
             ;; TODO: create an interceptor chain
             (let [context (as-> {:request request} context
 
@@ -161,21 +171,33 @@
 (defn kekkonen-handlers [type1 type2]
   {:kekkonen
    [(k/handler
-      {:type type1
-       :name "handler"
-       :input {:data {(s/optional-key :kekkonen.action) s/Keyword}}
+      {:name "handler"
+       :type ::handler
+       ::method :get
+       :input {:request
+               {:query-params
+                {(s/optional-key :kekkonen.action) s/Keyword
+                 s/Keyword s/Any}
+                s/Keyword s/Any}
+               s/Keyword s/Any}
        :description "Returns a handler info or nil."}
-      (fn [{{action :kekkonen.action} :data :as context}]
+      (fn [{{{action :kekkonen.action} :query-params} :request :as context}]
         (ok (k/public-handler
               (k/some-handler
                 (k/get-dispatcher context)
                 action)))))
     (k/handler
-      {:type type1
-       :name "handlers"
-       :input {:data {(s/optional-key :kekkonen.ns) s/Keyword}}
+      {:name "handlers"
+       :type ::handler
+       ::method :get
+       :input {:request
+               {:query-params
+                {(s/optional-key :kekkonen.ns) s/Keyword
+                 s/Keyword s/Any}
+                s/Keyword s/Any}
+               s/Keyword s/Any}
        :description "Return a list of available handlers from kekkonen.ns namespace"}
-      (fn [{{ns :kekkonen.ns} :data :as context}]
+      (fn [{{{ns :kekkonen.ns} :query-params} :request :as context}]
         (ok (->> context
                  k/get-dispatcher
                  (p/<- (k/available-handlers ns (clean-context context)))
@@ -184,12 +206,13 @@
                  (remove (p/fn-> :user :no-doc))
                  (map k/public-handler)))))
     (k/handler
-      {:type type2
-       :name "actions"
+      {:name "actions"
+       :type ::handler
+       ::method :post
        ::disable-validate true
        :input {:data {(s/optional-key :kekkonen.ns) s/Keyword
                       (s/optional-key :kekkonen.mode) (with-meta
-                          k/DispatchHandlersMode
+                                                        k/DispatchHandlersMode
                                                         {:json-schema {:default :check}})
                       s/Keyword s/Any}
                s/Keyword s/Any}

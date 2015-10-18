@@ -15,15 +15,14 @@
   "Transforms a handler into ring-swagger path->method->operation map."
   [handler]
   (let [{:keys [description ns ring] {:keys [summary responses no-doc]} :user} handler
-        {:keys [parameters input type-config uri]} ring
+        {:keys [parameters input methods uri]} ring
         ;; deep-merge back the mappings to get right request requirements
         input (reduce kc/deep-merge-from-to input parameters)
-        {:keys [body-params query-params path-params header-params]} (:request input)
-        methods (-> type-config :methods sort)]
+        {:keys [body-params query-params path-params header-params]} (:request input)]
 
     ;; discard handlers with :no-doc or without :ring metadata
     (if (and (not no-doc) ring)
-      {uri (p/for-map [method methods]
+      {uri (p/for-map [method (sort methods)]
              method (merge
                       (if ns {:tags [ns]})
                       (if description {:description description
@@ -54,6 +53,7 @@
 (defn swagger-handler [info options]
   (k/handler
     {:type :kekkonen.ring/handler
+     :kekkonen.ring/method :get
      :name "swagger.json"
      :no-doc true}
     (fn [context]

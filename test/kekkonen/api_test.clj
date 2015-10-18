@@ -136,8 +136,8 @@
     (fact "kekkonen endpoints"
       (fact "get-handler"
         (let [response (app {:uri "/kekkonen/handler"
-                             :request-method :post
-                             :body-params {:kekkonen.action "api.public/plus"}})]
+                             :request-method :get
+                             :headers {"kekkonen.action" "api.public/plus"}})]
           response => ok?
           (parse response) => (contains
                                 {:action "api.public/plus"})))
@@ -145,7 +145,7 @@
       (fact "available-handlers"
         (fact "without role"
           (let [response (app {:uri "/kekkonen/handlers"
-                               :request-method :post})]
+                               :request-method :get})]
             response => ok?
             (parse response) => (just [(contains {:action "api.public/plus"})
                                        (contains {:action "api.public/nada"})] :in-any-order)))
@@ -153,7 +153,7 @@
         (fact "with role"
           (let [response (app {:uri "/kekkonen/handlers"
                                :query-params {::role :admin}
-                               :request-method :post})]
+                               :request-method :get})]
             response => ok?
             (parse response) => (just [(contains {:action "api.public/plus"})
                                        (contains {:action "api.public/nada"})
