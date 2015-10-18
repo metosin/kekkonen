@@ -17,7 +17,7 @@
 
 (s/def +default-options+ :- Options
   {:core (assoc k/+default-options+ :coercion {:input nil, :output nil})
-   :api {:handlers (r/kekkonen-handlers :handler)}
+   :api {:handlers (r/kekkonen-handlers :handler :handler)}
    :ring r/+default-options+
    :mw mw/+default-options+
    :info {}

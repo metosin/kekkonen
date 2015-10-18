@@ -158,10 +158,10 @@
       (kc/dissoc-in [:data :kekkonen.ns])
       (kc/dissoc-in [:data :kekkonen.mode])))
 
-(defn kekkonen-handlers [type]
+(defn kekkonen-handlers [type1 type2]
   {:kekkonen
    [(k/handler
-      {:type type
+      {:type type1
        :name "handler"
        :input {:data {(s/optional-key :kekkonen.action) s/Keyword}}
        :description "Returns a handler info or nil."}
@@ -171,7 +171,7 @@
                 (k/get-dispatcher context)
                 action)))))
     (k/handler
-      {:type type
+      {:type type1
        :name "handlers"
        :input {:data {(s/optional-key :kekkonen.ns) s/Keyword}}
        :description "Return a list of available handlers from kekkonen.ns namespace"}
@@ -184,8 +184,9 @@
                  (remove (p/fn-> :user :no-doc))
                  (map k/public-handler)))))
     (k/handler
-      {:type type
+      {:type type2
        :name "actions"
+       ::disable-validate true
        :input {:data {(s/optional-key :kekkonen.ns) s/Keyword
                       (s/optional-key :kekkonen.mode) (with-meta
                           k/DispatchHandlersMode

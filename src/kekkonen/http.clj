@@ -9,7 +9,7 @@
   (ka/api
     (kc/deep-merge
       {:core {:type-resolver (k/type-resolver :get :head :patch :delete :options :post :put :any)}
-       :api {:handlers (r/kekkonen-handlers :get)}
+       :api {:handlers (r/kekkonen-handlers :get :handler)}
        :ring {:types {:get {:methods #{:get}}
                       :head {:methods #{:head}}
                       :patch {:methods #{:patch}}
@@ -17,5 +17,7 @@
                       :options {:methods #{:options}}
                       :post {:methods #{:post}}
                       :put {:methods #{:put}}
-                      :any {:methods #{:get :head :patch :delete :options :post :put}}}}}
+                      :any {:methods #{:get :head :patch :delete :options :post :put}}
+                      :handler {:methods #{:post}
+                                :parameters {[:data] [:request :body-params]}}}}}
       options)))
