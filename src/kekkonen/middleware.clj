@@ -93,7 +93,7 @@
   ;; i.e. (handler req) is inside try-catch. If r-m-f was changed to catch only
   ;; exceptions from parsing the request, we wouldn't need to check the exception class.
   (if (or (instance? JsonParseException e) (instance? ParserException e))
-    (slingshot/throw+ {:type :kekkonen.core/parsing} e)
+    (slingshot/throw+ {:type :kekkonen.ring/parsing} e)
     (slingshot/throw+ e)))
 
 ;;
