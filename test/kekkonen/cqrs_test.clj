@@ -77,14 +77,14 @@
         (fact "with ns returns all handlers with rules ok"
           (let [response (app {:uri "/kekkonen/handlers"
                                :request-method :get
-                               :query-params {:ns "api.items"}})]
+                               :query-params {:kekkonen.ns "api.items"}})]
             response => success?
             (parse response) => (n-of map? 2)))
 
         (fact "with invalid ns returns nothing"
           (let [response (app {:uri "/kekkonen/handlers"
                                :request-method :get
-                               :query-params {:ns "api.item"}})]
+                               :query-params {:kekkonen.ns "api.item"}})]
             response => success?
             (parse response) => (n-of map? 0))))
 
@@ -92,14 +92,14 @@
         (fact "with valid handler action"
           (let [response (app {:uri "/kekkonen/handler"
                                :request-method :get
-                               :query-params {:action "api.items/get-items"}})]
+                               :query-params {:kekkonen.action "api.items/get-items"}})]
             response => success?
             (parse response) => map?))
 
         (fact "with invalid handler action returns nil"
           (let [response (app {:uri "/kekkonen/handler"
                                :request-method :get
-                               :query-params {:action "api.items/get-item"}})]
+                               :query-params {:kekkonen.action "api.items/get-item"}})]
             response => success?
             (parse response) => nil))))))
 

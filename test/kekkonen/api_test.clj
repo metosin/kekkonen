@@ -137,7 +137,7 @@
       (fact "get-handler"
         (let [response (app {:uri "/kekkonen/handler"
                              :request-method :post
-                             :body-params {:action "api.public/plus"}})]
+                             :body-params {:kekkonen.action "api.public/plus"}})]
           response => ok?
           (parse response) => (contains
                                 {:action "api.public/plus"})))
@@ -179,7 +179,7 @@
           (fact "mode = check"
             (let [response (app {:uri "/kekkonen/actions"
                                  :query-params {::role :admin}
-                                 :body-params {:mode :check}
+                                 :body-params {:kekkonen.mode :check}
                                  :request-method :post})]
               response => ok?
               (parse response) => {:api.public/plus nil
@@ -189,7 +189,7 @@
           (fact "mode = validate"
             (let [response (app {:uri "/kekkonen/actions"
                                  :query-params {::role :admin}
-                                 :body-params {:mode :validate}
+                                 :body-params {:kekkonen.mode :validate}
                                  :request-method :post})]
               response => ok?
               (parse response) => (just
@@ -200,7 +200,7 @@
           (fact "invalid mode"
             (let [response (app {:uri "/kekkonen/actions"
                                  :query-params {::role :admin}
-                                 :body-params {:mode :INVALID}
+                                 :body-params {:kekkonen.mode :INVALID}
                                  :request-method :post})]
               response => bad-request?
               (parse response) => map?)))))

@@ -155,16 +155,17 @@
 
 (defn- clean-context [ctx]
   (-> ctx
-      (kc/dissoc-in [:data :ns])
-      (kc/dissoc-in [:data :mode])))
+      (kc/dissoc-in [:data :kekkonen.ns])
+      (kc/dissoc-in [:data :kekkonen.mode])))
 
 (defn kekkonen-handlers [type]
   {:kekkonen
    [(k/handler
       {:type type
        :name "handler"
+       :input {:data {(s/optional-key :kekkonen.action) s/Keyword}}
        :description "Returns a handler info or nil."}
-      (p/fnk [[:data action :- s/Keyword] :as context]
+      (fn [{{action :kekkonen.action} :data :as context}]
         (ok (k/public-handler
               (k/some-handler
                 (k/get-dispatcher context)
@@ -172,8 +173,9 @@
     (k/handler
       {:type type
        :name "handlers"
-       :description "Return a list of available handlers"}
-      (p/fnk [[:data {ns :- s/Keyword nil}] :as context]
+       :input {:data {(s/optional-key :kekkonen.ns) s/Keyword}}
+       :description "Return a list of available handlers from kekkonen.ns namespace"}
+      (fn [{{ns :kekkonen.ns} :data :as context}]
         (ok (->> context
                  k/get-dispatcher
                  (p/<- (k/available-handlers ns (clean-context context)))
@@ -181,20 +183,20 @@
                  (remove (p/fn-> :ns (= :kekkonen)))
                  (remove (p/fn-> :user :no-doc))
                  (map k/public-handler)))))
-    ;; FIXME: should consume input parameters via :body-params
     (k/handler
       {:type type
        :name "actions"
-       :description "Return a map of action -> error of all available handlers"}
-      (p/fnk [[:data
-               {ns :- s/Keyword nil}
-               {mode :- (with-meta
+       :input {:data {(s/optional-key :kekkonen.ns) s/Keyword
+                      (s/optional-key :kekkonen.mode) (with-meta
                           k/DispatchHandlersMode
-                          {:json-schema {:default :available}}) :available}]
-              :as context]
+                                                        {:json-schema {:default :check}})
+                      s/Keyword s/Any}
+               s/Keyword s/Any}
+       :description "Return a map of action -> error of all available handlers"}
+      (fn [{{ns :kekkonen.ns mode :kekkonen.mode} :data :as context}]
         (ok (->> context
                  k/get-dispatcher
-                 (p/<- (k/dispatch-handlers mode ns (clean-context context)))
+                 (p/<- (k/dispatch-handlers (or mode :check) ns (clean-context context)))
                  (filter (p/fn-> first :ring))
                  (remove (p/fn-> first :ns (= :kekkonen)))
                  (remove (p/fn-> first :user :no-doc))
