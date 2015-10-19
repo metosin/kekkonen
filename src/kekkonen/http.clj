@@ -9,7 +9,6 @@
   (ka/api
     (kc/deep-merge
       {:core {:type-resolver (k/type-resolver :get :head :patch :delete :options :post :put :any)}
-       :api {:handlers (r/kekkonen-handlers :get :handler)}
        :ring {:types {:get {:methods #{:get}}
                       :head {:methods #{:head}}
                       :patch {:methods #{:patch}}

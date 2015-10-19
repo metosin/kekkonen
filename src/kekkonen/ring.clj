@@ -169,7 +169,7 @@
       (kc/dissoc-in [:request :query-params :kekkonen.mode])
       (kc/dissoc-in [:request :query-params :kekkonen.ns])))
 
-(defn kekkonen-handlers [_ _]
+(defn kekkonen-handlers []
   {:kekkonen
    [(k/handler
       {:name "handler"

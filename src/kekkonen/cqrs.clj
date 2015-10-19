@@ -47,7 +47,6 @@
   (ka/api
     (kc/deep-merge
       {:core {:type-resolver (k/type-resolver :command :query)}
-       :api {:handlers (r/kekkonen-handlers :query :command)}
        :ring {:types {:query {:methods #{:get}
                               :parameters {[:data] [:request :query-params]}}
                       :command {:methods #{:post}
