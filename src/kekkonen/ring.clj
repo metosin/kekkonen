@@ -96,7 +96,7 @@
                   (:methods type-config))
         input-schema (-> (:input handler)
                          (ring-input-schema parameters)
-                         attach-mode-parameter)]
+                         (cond-> (not (get-in handler [:user ::disable-mode])) attach-mode-parameter))]
     (assoc handler :ring {:type-config type-config
                           :methods methods
                           :coercion (ring-coercion parameters coercion)
@@ -163,16 +163,18 @@
 ;; Special handlers, TODO: should use the ring-dispatcher?
 ;;
 
-(defn- clean-context [ctx]
-  (-> ctx
-      (kc/dissoc-in [:data :kekkonen.ns])
-      (kc/dissoc-in [:data :kekkonen.mode])))
+(defn clean-context [context]
+  (-> context
+      (kc/dissoc-in [:request :query-params :kekkonen.action])
+      (kc/dissoc-in [:request :query-params :kekkonen.mode])
+      (kc/dissoc-in [:request :query-params :kekkonen.ns])))
 
-(defn kekkonen-handlers [type1 type2]
+(defn kekkonen-handlers [_ _]
   {:kekkonen
    [(k/handler
       {:name "handler"
        :type ::handler
+       ::disable-mode true
        ::method :get
        :input {:request
                {:query-params
@@ -189,6 +191,7 @@
     (k/handler
       {:name "handlers"
        :type ::handler
+       ::disable-mode true
        ::method :get
        :input {:request
                {:query-params
@@ -208,16 +211,19 @@
     (k/handler
       {:name "actions"
        :type ::handler
+       ::disable-mode true
        ::method :post
-       ::disable-validate true
-       :input {:data {(s/optional-key :kekkonen.ns) s/Keyword
-                      (s/optional-key :kekkonen.mode) (with-meta
-                                                        k/DispatchHandlersMode
-                                                        {:json-schema {:default :check}})
-                      s/Keyword s/Any}
+       :input {:request
+               {:query-params
+                {(s/optional-key :kekkonen.ns) s/Keyword
+                 (s/optional-key :kekkonen.mode) (with-meta
+                                                   (s/enum :check :validate)
+                                                   {:json-schema {:default :check}})
+                 s/Keyword s/Any}
+                s/Keyword s/Any}
                s/Keyword s/Any}
        :description "Return a map of action -> error of all available handlers"}
-      (fn [{{ns :kekkonen.ns mode :kekkonen.mode} :data :as context}]
+      (fn [{{{mode :kekkonen.mode ns, :kekkonen.ns} :query-params} :request :as context}]
         (ok (->> context
                  k/get-dispatcher
                  (p/<- (k/dispatch-handlers (or mode :check) ns (clean-context context)))

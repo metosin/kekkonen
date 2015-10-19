@@ -390,8 +390,6 @@
 ;; Listing handlers
 ;;
 
-(def DispatchHandlersMode (s/enum :check :validate))
-
 (defn- filter-by-path [handlers path]
   (if-not path
     handlers
@@ -440,7 +438,7 @@
 (s/defn dispatch-handlers :- {Handler s/Any}
   "Returns a map of action -> errors based on mode, namespace and context."
   [dispatcher :- Dispatcher
-   mode :- DispatchHandlersMode
+   mode :- (s/enum :check :validate)
    prefix :- (s/maybe s/Keyword)
    context :- Context]
   (map-handlers dispatcher mode prefix context (constantly nil) ex-data))
