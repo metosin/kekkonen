@@ -160,16 +160,16 @@
         (ring-handler request)))))
 
 ;;
-;; Special handlers, TODO: should use the ring-dispatcher?
+;; Special handlers
 ;;
 
-(defn clean-context [context]
+(defn- clean-context [context]
   (-> context
       (kc/dissoc-in [:request :query-params :kekkonen.action])
       (kc/dissoc-in [:request :query-params :kekkonen.mode])
       (kc/dissoc-in [:request :query-params :kekkonen.ns])))
 
-(defn kekkonen-handlers []
+(def +kekkonen-handlers+
   {:kekkonen
    [(k/handler
       {:name "handler"
