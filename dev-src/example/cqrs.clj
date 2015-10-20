@@ -28,7 +28,7 @@
         context))))
 
 (p/defnk ^:query get-user
-  {:responses {success-status {:schema (s/maybe User)}}}
+  {:responses {:default {:schema (s/maybe User)}}}
   [user] (success user))
 
 ;;
@@ -52,13 +52,13 @@
 
 (p/defnk ^:query get-items
   "Retrieves all items"
-  {:responses {success-status {:schema [Item]}}}
+  {:responses {:default {:schema [Item]}}}
   [[:components db]]
   (success (vals @db)))
 
 (p/defnk ^:command add-item!
   "Adds an item to database"
-  {:responses {success-status {:schema Item}}}
+  {:responses {:default {:schema Item}}}
   [[:components db ids]
    data :- AddNewItem]
   (let [id (swap! ids inc)
@@ -84,17 +84,17 @@
 ;;
 
 (p/defnk ^:query plus
-  {:responses {success-status {:schema {:result s/Int}}}}
+  {:responses {:default {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
 
 (p/defnk ^:query times
-  {:responses {success-status {:schema {:result s/Int}}}}
+  {:responses {:default {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (* x y)}))
 
 (p/defnk ^:command inc!
-  {:responses {success-status {:schema {:result s/Int}}}}
+  {:responses {:default {:schema {:result s/Int}}}}
   [[:components counter]]
   (success {:result (swap! counter inc)}))
 
