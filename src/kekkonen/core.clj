@@ -319,8 +319,6 @@
     (let [input-matcher (-> dispatcher :coercion :input)
           context (as-> context context
 
-                        ;; TODO: in what order are these run? -> back to namespaces...
-
                         ;; base-context from Dispatcher
                         (kc/deep-merge (:context dispatcher) context)
 
@@ -332,12 +330,12 @@
                         ;; start from the root. a returned nil context short-circuits
                         ;; the run an causes ::dispatch error. Apply local coercion
                         ;; in the input is defined (using same definitions as with handlers)
+                        ; TODO: precompile for fail-fast & speed? input-coerce only tagged ones? test!
                         (reduce
                           (fn [ctx [k v]]
                             (if-let [mapper-gen (get-in dispatcher [:user k])]
                               (let [mapper (mapper-gen v)
                                     input-schema (:input (extract-schema mapper))
-                                    ;; TODO: automatic coercion = too much magic? just coerce :data?
                                     ctx (input-coerce! ctx input-schema input-matcher)]
                                 (or (mapper ctx) (reduced nil)))
                               ctx))
