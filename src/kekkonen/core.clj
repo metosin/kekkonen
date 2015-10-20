@@ -319,12 +319,16 @@
     (let [input-matcher (-> dispatcher :coercion :input)
           context (as-> context context
 
+                        ; TODO: transformers -> middleware/interceptors
+
                         ;; base-context from Dispatcher
                         (kc/deep-merge (:context dispatcher) context)
 
                         ;; run all the transformers
                         ;; short-circuit execution if a transformer returns nil
                         (reduce (fn [ctx mapper] (or (mapper ctx) (reduced nil))) context (:transformers dispatcher))
+
+                        ; TODO: type-transformers?
 
                         ;; run all the user transformers per namespace/handler
                         ;; start from the root. a returned nil context short-circuits
