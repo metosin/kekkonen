@@ -24,9 +24,9 @@
    :swagger {}
    :swagger-ui ks/+default-swagger-ui-options+})
 
-(s/defn api [options :- Options]
+(defn api [options]
   (s/with-fn-validation
-    (let [options (kc/deep-merge +default-options+ options)
+    (let [options (s/validate Options (kc/deep-merge +default-options+ options))
           info (merge (:info options) (mw/api-info (:mw options)))
           dispatcher (-> (k/dispatcher (:core options))
                          (k/inject (-> options :api :handlers))
