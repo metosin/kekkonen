@@ -822,7 +822,7 @@
                                     set)))]}})]
 
     (fact "::dispatcher"
-      (s/validate Dispatcher (k/invoke d :api/dispatcher)) => truthy)
+      (s/validate Dispatcher (k/invoke d :api/dispatcher)) => (partial instance? Dispatcher))
 
     (fact "::handler"
       (k/invoke d :api/handler) => (contains {:description "metameta"}))
