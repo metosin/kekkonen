@@ -8,7 +8,8 @@
             [clojure.walk :as walk]
             [schema.coerce :as sc]
             [schema.utils :as su])
-  (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction Keyword])
+  (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction Keyword]
+           [java.io Writer])
   (:refer-clojure :exclude [namespace]))
 
 ;;
@@ -229,6 +230,10 @@
                 :output s/Any}
    transformers :- [Function]
    user :- KeywordMap])
+
+(defmethod clojure.core/print-method Dispatcher
+  [_ ^Writer writer]
+  (.write writer "#<Dispatcher>"))
 
 ;;
 ;; Working with contexts

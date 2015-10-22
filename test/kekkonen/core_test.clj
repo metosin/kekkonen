@@ -987,3 +987,6 @@
 
           (k/invoke d :api/test {:data {:value false}
                                  ::k/coercion single-coercion}) => input-coercion-error?)))))
+
+(fact "printing it"
+  (pr-str (k/dispatcher {})) => "#<Dispatcher>")
