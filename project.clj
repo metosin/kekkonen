@@ -5,8 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo
             :comments "same as Clojure"}
-  :dependencies [[prismatic/plumbing "0.5.0"]
-                 [prismatic/schema "1.0.1"]
+  :dependencies [[prismatic/plumbing "0.5.1"]
+                 [prismatic/schema "1.0.2"]
 
                  ;; http-stuff, separate module?
                  [metosin/ring-swagger "0.22.0-SNAPSHOT"]
@@ -16,7 +16,7 @@
 
                  ;; client stuff, separate module?
                  [clj-http "2.0.0"]]
-  :profiles {:dev {:plugins [[lein-midje "3.1.3"]]
+  :profiles {:dev {:plugins [[lein-midje "3.2"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.7.0"]
                                   [criterium "0.4.3"]
