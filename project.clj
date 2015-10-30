@@ -6,7 +6,7 @@
             :distribution :repo
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.1"]
-                 [prismatic/schema "1.0.2"]
+                 [prismatic/schema "1.0.3"]
 
                  ;; http-stuff, separate module?
                  [metosin/ring-swagger "0.22.0-SNAPSHOT"]
@@ -21,7 +21,7 @@
                    :dependencies [[org.clojure/clojure "1.7.0"]
                                   [criterium "0.4.3"]
                                   [http-kit "2.1.19"]
-                                  [midje "1.7.0"]]}
+                                  [midje "1.8.1"]]}
              :perf {:jvm-opts ^:replace []}
              :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}}
   :aliases {"all" ["with-profile" "dev:dev,1.6"]
