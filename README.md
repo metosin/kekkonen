@@ -14,8 +14,6 @@ A small, data-driven library for creating and consuming web APIs with Clojure(Sc
 
 Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto
 
-http://www.kekkonen.io
-
 ## Latest version
 
 [![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
