@@ -1,25 +1,64 @@
 # Kekkonen [![Build Status](https://travis-ci.org/metosin/kekkonen.svg?branch=master)](https://travis-ci.org/metosin/kekkonen) [![Dependencies Status](http://jarkeeper.com/metosin/kekkonen/status.svg)](http://jarkeeper.com/metosin/kekkonen)
 
-A library for creating and consuming remote APIs for Clojure(Script). http://kekkonen.io/
+<img src="https://raw.githubusercontent.com/wiki/metosin/kekkonen/kekkonen.png" align="right" width="250px" />
+
+A small, data-driven library for creating and consuming web APIs with Clojure(Script). Key features:
+* not focusing on the HTTP/REST, simple messaging with your domain data
+* supports multiple interaction models: RPC, CQRS, HTTP & messaging
+* supports multiple wire-protocols: JSON, Transit, EDN, YAML
+* [Schema](https://github.com/Prismatic/schema) for input & output data validation
+* live & secure api-docs, in both [Swagger](http://swagger.io/) & plain (domain) data
+* programmatic api-browser allowing cool new way to interact with the APIs
+* handler input & rule validation without executing the handler body
+* extensible & overridable, with sensible defaults
+
+Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto
+
+http://www.kekkonen.io
 
 ## Latest version
 
 [![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
 
+Currently in Alpha, targetting first production release this year.
+
 Quickstart: `lein new kekkonen kakkonen --snapshot`
 
-# Mission statement
+Example projects under [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples).
 
-We are building complex UIs and need great remote api libraries to support that. APIs should be easy to
-create, compose and consume. They should be interaction- & domain-driven, not spec-driven (like the REST).
-Security should be inbuilt. Clients should be able to browze the apis, validate inputs and business rules
-both on the server & on the client. Data should flow both ways. State and dependencies should be managed
-elegantly. The library should be named after a Finnish president.
+## Hello World (local dispatch)
+
+```clj
+(require '[kekkonen.core :as k])
+
+(def dispatcher 
+  (k/dispatcher 
+    {:handlers {:api (k/handler {:name :hello} (constantly "hello world"))}}))
+
+(k/invoke dispatcher :api/hello)
+; => "hello world"
+```
+
+## Hello World (ring-based CQRS API)
+
+```clj
+(require '[kekkonen.cqrs :refer :all])
+(require '[org.httpkit.server :as server])
+
+(defn ^:query hello
+  {:input {:data {:name String}}}
+  [ctx]
+  (success (str "Hello, " (-> ctx :data :name))))
+      
+(server/run-server 
+  (cqrs-api {:core {:handlers {:api #'hello}}})
+  {:port 6000})
+```
 
 # Idea
 
-- Simple **library** to create and consume apis
-- Expose simple Clojure **functions** as **message handlers**
+- Simple **library** to create and consume (remote) apis
+- Expose simple Clojure **functions** as **context handlers**
 - Manage handlers in **virtual namespaces**
 - Invoke or validate input to handlers via a **dispatcher**
 - **Schema** to describe messages and do coercion
@@ -30,15 +69,14 @@ elegantly. The library should be named after a Finnish president.
   - http via ring, websockets or use the queues, Luke.
 - Support different style of **apis**: messages, commands & queries, http
 - **Clients** as first-class citizens
-  - Ability to **validate** requests against handlers
+  - Ability to **check** rules &  **validate** requests against handlers
+  - Controlling transaction boundaries, e.g. multi-handler transactions
   - Remote **api documentation** as clojure/json data
   - Public http api documentation via **Swagger**
 
 More on the [Wiki](https://github.com/metosin/kekkonen/wiki/Basics).
 
-Examples projects under [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples).
-
-# A Simple example
+# A More complete example
 
 ## Creating an API
 
@@ -283,13 +321,6 @@ No.
 - [Ring-swagger](https://github.com/metosin/ring-swagger) for the Schema2Swagger -bindings
 - [Ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format) for all the http-transports
 - [Compojure-api](https://github.com/metosin/compojure-api) for some middleware goodies
-
-# TODO
-
-- [ ] ClojureScript client
-- [ ] JavaScript client
-- [ ] re-kekkonen, a Reagent template
-- [ ] Emitting Events from commands & Websockets, towards Event Sourcing?
 
 ## License
 
