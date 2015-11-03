@@ -1,16 +1,23 @@
 # Kekkonen [![Build Status](https://travis-ci.org/metosin/kekkonen.svg?branch=master)](https://travis-ci.org/metosin/kekkonen) [![Dependencies Status](http://jarkeeper.com/metosin/kekkonen/status.svg)](http://jarkeeper.com/metosin/kekkonen)
 
-<img src="https://raw.githubusercontent.com/wiki/metosin/kekkonen/kekkonen.png" align="right" width="250px" />
+<img src="https://raw.githubusercontent.com/wiki/metosin/kekkonen/kekkonen.png" align="right"/>
 
-A small, data-driven library for creating and consuming web APIs with Clojure(Script). Key features:
-* not focusing on the HTTP/REST, simple messaging with your domain data
-* supports multiple interaction models: RPC, CQRS, HTTP & messaging
-* supports multiple wire-protocols: JSON, Transit, EDN, YAML
-* [Schema](https://github.com/Prismatic/schema) for input & output data validation
-* live & secure api-docs, in both [Swagger](http://swagger.io/) & plain (domain) data
-* programmatic api-browser allowing cool new way to interact with the APIs
-* handler input & rule validation without executing the handler body
+A lightweight, data-driven library for creating and consuming remote APIs with Clojure(Script). Key features:
+* not dependent on HTTP/REST, actions are plain clojure functions & data
+* supports multiple interaction modes: RPC, CQRS, HTTP & messaging
+* [Schema](https://github.com/Prismatic/schema) validation for input & output
+* live & secure api-docs with [Swagger](http://swagger.io/)
+* api meta-data as a first-class citizen, enabling clients to:
+  * securely browse the api namespaces
+  * check & validate single or multiple handlers without executing the body
+  * extract public handler meta-data for client-side validation
 * extensible & overridable, with sensible defaults
+
+Some ideas for the future:
+* support for speculative transactions (+poke)
+* client-side context/action bundling (transactional writes)
+* Clojure(Script) client & project template
+* Adapter for Websockets
 
 Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto
 
