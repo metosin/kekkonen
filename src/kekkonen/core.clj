@@ -2,7 +2,6 @@
   (:require [schema.core :as s]
             [plumbing.core :as p]
             [clojure.string :as str]
-            [plumbing.fnk.pfnk :as pfnk]
             [plumbing.map :as pm]
             [kekkonen.common :as kc]
             [clojure.walk :as walk]

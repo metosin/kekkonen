@@ -10,7 +10,7 @@
 
                  ;; http-stuff, separate module?
                  [metosin/ring-swagger "0.22.0-SNAPSHOT"]
-                 [metosin/ring-swagger-ui "2.1.3"]
+                 [metosin/ring-swagger-ui "2.1.3-2"]
                  [metosin/ring-middleware-format "0.6.0"]
                  [metosin/ring-http-response "0.6.5"]
 
@@ -23,7 +23,7 @@
                                   [http-kit "2.1.19"]
                                   ; required when working with Java 1.6
                                   [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
-                                  [midje "1.8.1"]]}
+                                  [midje "1.8.2"]]}
              :perf {:jvm-opts ^:replace []}
              :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}}
   :aliases {"all" ["with-profile" "dev:dev,1.6"]
