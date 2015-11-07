@@ -270,8 +270,8 @@
     (coerce! schema matcher context nil ::request)))
 
 (defn multi-coercion [key->coercion]
-  (fn [context schema]
-    (let [coercions (pm/flatten key->coercion)]
+  (let [coercions (pm/flatten key->coercion)]
+    (fn [context schema]
       (reduce
         (fn [ctx [ks coercion]]
           (if-let [coercion-schema (get-in schema ks)]
