@@ -1,6 +1,8 @@
 (ns kekkonen.common
   (:require [clojure.walk :as walk]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [plumbing.core :as p]
+            [plumbing.fnk.pfnk :as pfnk]))
 
 (defn- deep-merge* [& maps]
   (let [f (fn [old new]
@@ -73,3 +75,20 @@
 (defn any-map-schema? [schema]
   (or (= schema s/Any)
       (= schema {s/Keyword s/Any})))
+
+;;
+;; Schema tools
+;;
+
+(defn extract-schema [x]
+  (p/for-map [k [:input :output]]
+    k (let [pfnk-schema (case k
+                          :input pfnk/input-schema
+                          :output pfnk/output-schema)
+            pfnk? (fn [x] (and (satisfies? pfnk/PFnk x) (:schema (meta x))))]
+        (if (var? x)
+          (cond
+            (pfnk? @x) (pfnk-schema @x)
+            :else (or (-> x meta k) s/Any))
+          (or (and (-> x meta :schema) (pfnk-schema x))
+              (-> x meta k) s/Any)))))

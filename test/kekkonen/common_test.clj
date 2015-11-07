@@ -1,7 +1,8 @@
 (ns kekkonen.common-test
   (:require [midje.sweet :refer :all]
             [kekkonen.common :as kc]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [plumbing.core :as p]))
 
 (fact "deep-merge"
   (kc/deep-merge {:a 1 :b {:c [1] :d 2}} {:b {:c [2] :d 3 :e 4}}) => {:a 1 :b {:c [2] :d 3 :e 4}})
@@ -63,3 +64,9 @@
   (kc/any-map-schema? {:a s/Str}) => false
   (kc/any-map-schema? s/Any) => true
   (kc/any-map-schema? {s/Keyword s/Any}) => true)
+
+(p/defnk handler [[:data x :- s/Int] y :- s/Bool])
+
+(fact "extracting schemas"
+  (kc/extract-schema handler) => {:input {:data {:x s/Int, s/Keyword s/Any}, :y s/Bool, s/Keyword s/Any}
+                                  :output s/Any})

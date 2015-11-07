@@ -139,24 +139,11 @@
 ;; Collection helpers
 ;;
 
-(defn- extract-schema [x]
-  (p/for-map [k [:input :output]]
-    k (let [pfnk-schema (case k
-                          :input pfnk/input-schema
-                          :output pfnk/output-schema)
-            pfnk? (fn [x] (and (satisfies? pfnk/PFnk x) (:schema (meta x))))]
-        (if (var? x)
-          (cond
-            (pfnk? @x) (pfnk-schema @x)
-            :else (or (-> x meta k) s/Any))
-          (or (and (-> x meta :schema) (pfnk-schema x))
-              (-> x meta k) s/Any)))))
-
 (extend-type AFunction
   Collector
   (-collect [this type-resolver]
     (if-let [{:keys [name description type] :as meta} (type-resolver (meta this))]
-      (let [{:keys [input output]} (extract-schema this)]
+      (let [{:keys [input output]} (kc/extract-schema this)]
         (if name
           {(namespace
              {:name (keyword name)})
@@ -173,7 +160,7 @@
   Collector
   (-collect [this type-resolver]
     (if-let [{:keys [line column file ns name doc type] :as meta} (type-resolver (meta this))]
-      (let [{:keys [input output]} (extract-schema this)]
+      (let [{:keys [input output]} (kc/extract-schema this)]
         {(namespace
            {:name (keyword name)})
          {:function @this
@@ -344,7 +331,7 @@
                           (fn [ctx [k v]]
                             (if-let [mapper-gen (get-in dispatcher [:user k])]
                               (let [mapper (mapper-gen v)
-                                    input-schema (:input (extract-schema mapper))
+                                    input-schema (:input (kc/extract-schema mapper))
                                     ctx (input-coerce! ctx input-schema input-matcher)]
                                 (or (mapper ctx) (reduced nil)))
                               ctx))
@@ -487,7 +474,7 @@
                          user-input (reduce
                                       (fn [acc [k v]]
                                         (if-let [f (user k)]
-                                          (let [schema (:input (extract-schema (f v)))]
+                                          (let [schema (:input (kc/extract-schema (f v)))]
                                             (kc/merge-map-schemas acc schema))
                                           acc)) {} (apply concat all-user))
                          action-input (kc/merge-map-schemas (:input h) user-input)]
