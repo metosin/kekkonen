@@ -168,13 +168,26 @@
             :query-params {:x "1", :y "2"}}) => (throws? {:type :kekkonen.ring/request})))
 
   (fact "any ring coercion can be disabled"
-    (let [app (r/ring-handler
-                (k/dispatcher {:handlers {:api [#'plus]}})
-                {:coercion {:query-params nil}})]
+    (fact "if handler is dependent on :request-input, no coercion is done"
+      (let [app (r/ring-handler
+                  (k/dispatcher {:handlers {:api [#'plus]}})
+                  {:coercion {:query-params nil}})]
 
-      (app {:uri "/api/plus"
-            :request-method :post
-            :query-params {:x "1", :y "2"}}) => (throws? {:type :kekkonen.core/request})))
+        (app {:uri "/api/plus"
+              :request-method :post
+              :query-params {:x "1", :y "2"}}) => (throws ClassCastException)))
+
+    (fact "if handler is dependent on :data-input, default coercion is applies"
+      (let [app (r/ring-handler
+                  (k/dispatcher {:handlers {:api (k/handler
+                                                   {:name :plus}
+                                                   (p/fnk [[:data x :- s/Int, y :- s/Int]]
+                                                     (ok (+ x y))))}})
+                  {:coercion {:body-params nil}})]
+
+        (app {:uri "/api/plus"
+              :request-method :post
+              :body-params {:x "1", :y "2"}}) => (throws? {:type :kekkonen.core/request}))))
 
   (fact "all ring coercions can be disabled"
     (let [app (r/ring-handler
@@ -183,7 +196,7 @@
 
       (app {:uri "/api/plus"
             :request-method :post
-            :query-params {:x "1", :y "2"}}) => (throws? {:type :kekkonen.core/request})))
+            :query-params {:x "1", :y "2"}}) => (throws ClassCastException)))
 
   (fact "all ring & core coercions can be disabled"
     (let [app (r/ring-handler
