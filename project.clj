@@ -25,7 +25,7 @@
                                   [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
                                   [midje "1.8.2"]]}
              :perf {:jvm-opts ^:replace []}
-             :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}}
-  :aliases {"all" ["with-profile" "dev:dev,1.6"]
+             :1.8 {:dependencies [[org.clojure/clojure "1.8.0-beta2"]]}}
+  :aliases {"all" ["with-profile" "dev:dev,1.8"]
             "perf" ["with-profile" "default,dev,perf"]
             "test-ancient" ["midje"]})
