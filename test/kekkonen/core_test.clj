@@ -891,7 +891,29 @@
             => {:result 2}
 
             (k/invoke d :api/plus {:data {:x 0, :y -10}})
-            => {:result -10}))))))
+            => {:result -10})))
+
+      (facts "with input coercion for another key"
+        (let [d (k/dispatcher {:handlers {:api [(k/handler
+                                                  {:name :plus}
+                                                  (p/fnk plus [[:data x :- s/Int]
+                                                               [:tada y :- s/Int]]
+                                                    {:result (+ x y)}))]}
+                               :coercion {:input {:data (constantly nil)
+                                                  :tada (constantly nil)}}})]
+
+          (fact "with invalid intpu"
+            (k/invoke d :api/plus {:data {:x 1}})
+            => input-coercion-error?)
+
+          (fact "with invalid intpu"
+            (k/invoke d :api/plus {:tada {:y 1}})
+            => input-coercion-error?)
+
+          (fact "with valid input"
+            (k/invoke d :api/plus {:data {:x 1}
+                                   :tada {:y 1}})
+            => {:result 2}))))))
 
 (facts "context-based coercion"
   (let [str->long-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
