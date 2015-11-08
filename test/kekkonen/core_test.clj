@@ -755,7 +755,7 @@
                                           {:read doc}))
           d (k/dispatcher {:user {::roles require-role
                                   ::load-doc load-doc}
-                           :coercion {:input str->int-matcher}
+                           :coercion {:input {:data str->int-matcher}}
                            :context {:docs {1 "hello ruby"
                                             2 "land of lisp"}}
                            :handlers {:api {secret-ns {doc-ns read}}}})]
@@ -859,7 +859,7 @@
                {:type :kekkonen.core/request
                 :in nil
                 :value {:data {:x 1, :y -10}}
-                :schema {:data {:x s/Int, :y PositiveInt, s/Keyword s/Any}, s/Keyword s/Any}}))
+                :schema {:data {:x s/Int, :y PositiveInt, s/Keyword s/Any}}}))
 
         (fact "return is validated"
 

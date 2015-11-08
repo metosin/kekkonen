@@ -212,7 +212,7 @@
 (s/defrecord Dispatcher
   [handlers :- {s/Keyword Handler}
    context :- KeywordMap
-   coercion :- {:input s/Any
+   coercion :- {:input (s/maybe KeywordMap)
                 :output s/Any}
    transformers :- [Function]
    user :- KeywordMap])
@@ -285,14 +285,19 @@
    (if-let [dispatcher (get-dispatcher context)]
      (input-coerce! context schema (-> dispatcher :coercion :input))
      (throw (ex-info "no attached dispatcher." {}))))
-  ([context schema matcher]
+  ([context schema key->matcher]
    (if-not (kc/any-map-schema? schema)
      (as-> context context
            (if-let [coercion (::coercion context)]
              (coercion context schema)
              context)
-           (if matcher
-             (coerce! schema matcher context nil ::request)
+           (if key->matcher
+             (reduce
+               (fn [ctx [k matcher]]
+                 (let [schema (select-keys schema [k])
+                       schema (if (seq schema) schema s/Any)]
+                   (merge ctx (coerce! schema matcher (select-keys ctx [k]) nil ::request))))
+               context key->matcher)
              context))
      context)))
 
@@ -445,7 +450,7 @@
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
    (s/optional-key :transformers) [Function]
-   (s/optional-key :coercion) {(s/optional-key :input) s/Any
+   (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
                                (s/optional-key :output) s/Any}
    (s/optional-key :user) KeywordMap
    s/Keyword s/Any})
@@ -454,7 +459,7 @@
   {:handlers {}
    :context {}
    :transformers []
-   :coercion {:input (constantly nil)
+   :coercion {:input {:data (constantly nil)}
               :output (constantly nil)}
    :type-resolver default-type-resolver
    :user {}})
