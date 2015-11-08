@@ -9,10 +9,10 @@
                  [prismatic/schema "1.0.3"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.0-SNAPSHOT"]
+                 [metosin/ring-swagger "0.22.0"]
                  [metosin/ring-swagger-ui "2.1.3-2"]
-                 [metosin/ring-middleware-format "0.6.0"]
                  [metosin/ring-http-response "0.6.5"]
+                 [ring-middleware-format "0.7.0"]
 
                  ;; client stuff, separate module?
                  [clj-http "2.0.0"]]
