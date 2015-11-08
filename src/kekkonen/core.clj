@@ -292,8 +292,8 @@
              (coercion context schema)
              context)
            (if key->matcher
-             (reduce
-               (fn [ctx [k matcher]]
+             (reduce-kv
+               (fn [ctx k matcher]
                  (let [schema (select-keys schema [k])
                        schema (if (seq schema) schema s/Any)]
                    (merge ctx (coerce! schema matcher (select-keys ctx [k]) nil ::request))))
