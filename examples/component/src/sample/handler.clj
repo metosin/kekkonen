@@ -37,8 +37,8 @@
 
 (defn new-app [system]
   (cqrs-api
-    {:info {:info {:title "Kekkonen with Component"
-                   :description "created with http://kekkonen.io"}}
+    {:swagger {:info {:title "Kekkonen with Component"
+                      :description "created with http://kekkonen.io"}}
      :core {:handlers {:api {:pizza #'echo-pizza
                              :example [#'ping #'inc! #'plus]}}
             :context {:components system}}}))

@@ -50,7 +50,7 @@
   [options]
   (apply ui/swagger-ui (into [(:path options)] (apply concat (dissoc options :path)))))
 
-(defn swagger-handler [info options]
+(defn swagger-handler [swagger options]
   (k/handler
     {:type :kekkonen.ring/handler
      :kekkonen.ring/method :get
@@ -61,5 +61,5 @@
             ns (some-> context :request :query-params :ns str keyword)
             handlers (k/available-handlers dispatcher ns (@#'r/clean-context context))]
         (ok (swagger-object
-              (ring-swagger handlers info)
+              (ring-swagger handlers swagger)
               options))))))

@@ -112,8 +112,8 @@
 
 (def app
   (cqrs-api
-    {:info {:info {:title "Kekkonen"
-                   :version "1.0"}}
+    {:swagger {:info {:title "Kekkonen"
+                      :version "1.0"}}
      :core {:handlers {:api {:github [#'get-repository
                                       #'list-repositorys
                                       #'fork

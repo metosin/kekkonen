@@ -212,7 +212,7 @@
           response => ok?
           body => (contains
                     {:swagger "2.0"
-                     :info {:title "Swagger API"
+                     :info {:title "Kekkonen API"
                             :version "0.0.1"}
                      :consumes ["application/json"
                                 "application/x-yaml"

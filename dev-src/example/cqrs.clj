@@ -104,7 +104,7 @@
 
 (def app
   (cqrs-api
-    {:info {:info {:title "Kekkonen"}}
+    {:swagger {:info {:title "Kekkonen"}}
      :core {:handlers {:api {:item [#'get-items #'add-item! #'reset-items!]
                              :calculator [#'plus #'times #'inc!]
                              :security #'get-user
