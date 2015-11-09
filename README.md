@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/wiki/metosin/kekkonen/kekkonen.png" align="right"/>
 
-A&nbsp;lightweight, data-driven library for creating and consuming remote APIs with Clojure(Script). Key features:
+A&nbsp;lightweight, data-driven library for creating and consuming remote (CQRS) APIs with Clojure(Script). Key features:
 * not dependent on Ring/HTTP/REST, just your domain functions & data
 * supports multiple api styles: RPC, CQRS, HTTP & messaging
 * [Schema](https://github.com/Prismatic/schema) validation for input & output
