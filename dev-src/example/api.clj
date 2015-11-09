@@ -47,4 +47,4 @@
             :context {:components {:counter (atom 0)}}}}))
 
 (comment
-  (server/run-server #'app {:port 3000}))
+  (server/run-server #'app {:port 5000}))

@@ -3,33 +3,32 @@
 <img src="https://raw.githubusercontent.com/wiki/metosin/kekkonen/kekkonen.png" align="right"/>
 
 A&nbsp;lightweight, data-driven library for creating and consuming remote APIs with Clojure(Script). Key features:
-* not dependent on HTTP/REST, actions are plain clojure functions & data
-* supports multiple interaction modes: RPC, CQRS, HTTP & messaging
+* not dependent on Ring/HTTP/REST, just your domain functions & data
+* supports multiple api styles: RPC, CQRS, HTTP & messaging
 * [Schema](https://github.com/Prismatic/schema) validation for input & output
-* live & secure api-docs with [Swagger](http://swagger.io/)
+* live & secure external api-docs with [Swagger](http://swagger.io/)
 * api meta-data as a first-class citizen, enabling clients to:
-  * securely browse the api namespaces
-  * check & validate single or multiple handlers without executing the body
+  * securely browse the api namespaces at runtime
+  * check & validate single or multiple handlers without side-effects
   * extract public handler meta-data for client-side validation
 * extensible & overridable, with sensible defaults
 
 Some ideas for the future:
 * support for speculative transactions (+poke)
 * client-side context/action bundling (transactional writes)
+* opinionated CQRS reference implementation (+events)
 * Clojure(Script) client & project template
 * Adapter for Websockets
 
-Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto
+<sub>Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto</sub>
 
 ## Latest version
 
 [![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
 
-Currently in Alpha, targetting first production release this year.
+Currently in **Alpha**, targeting first production release this year.
 
 Quickstart: `lein new kekkonen kakkonen --snapshot`
-
-Example projects under [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples).
 
 ## Hello World (local dispatch)
 
@@ -57,8 +56,30 @@ Example projects under [`/examples`](https://github.com/metosin/kekkonen/tree/ma
       
 (server/run-server 
   (cqrs-api {:core {:handlers {:api #'hello}}})
-  {:port 6000})
+  {:port 3000})
 ```
+
+## Stateful math with Schema & Plumbing
+
+```clj
+(require '[schema.core :as s])
+(require '[plumbing.core :as p])
+
+(p/defnk ^:command inc! [counter]
+  (success (swap! counter inc)))
+  
+(p/defnk ^:query get-sum
+  "sums up parameters + the current counter value"
+  [[:data x :- s/Int, y :- s/Int] counter]
+  (success (+ x y @counter)))
+      
+(server/run-server
+  (cqrs-api {:core {:handlers {:api {:math [#'inc! #'get-sum]}}
+                    :context {:counter (atom 0)}}})
+  {:port 4000})
+```
+
+More examples at [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples).
 
 # Idea
 
@@ -129,7 +150,7 @@ More on the [Wiki](https://github.com/metosin/kekkonen/wiki/Basics).
 
 (def app
   (cqrs-api
-    {:info {:info {:title "Kekkonen example"}}
+    {:swagger {:info {:title "Kekkonen example"}}
      :core {:handlers {:api {:pizza #'echo-pizza
                              :example [#'ping #'inc! #'plus]}}
             :context {:components {:counter (atom 0)}}}}))
@@ -139,7 +160,7 @@ More on the [Wiki](https://github.com/metosin/kekkonen/wiki/Basics).
 ;;
 
 (comment
-  (server/run-server #'app {:port 3000}))
+  (server/run-server #'app {:port 5000}))
 ```
 
 Start the server and browse to http://localhost:3000 and you should see the following:
@@ -318,13 +339,19 @@ change in the interaction semantics.
 
 No.
 
+## This looks like Fnhouse?
+
+Yes, we have reused many great ideas from fnhouse, see [Special Thanks](#special-thanks). First version of Kekkonen
+was supposed to be on top of it but the idea abandoned as most of the fnhouse internals would have had to be
+overridden due to difference in opinions.
+
 # Special thanks
 
 - [Schema](https://github.com/Prismatic/schema) for everything
 - [Plumbing](https://github.com/Prismatic/plumbing) for the `fnk`y syntax
-- [Fnhouse](https://github.com/Prismatic/fnhouse) for inspiration
+- [Fnhouse](https://github.com/Prismatic/fnhouse) for inspiration and reused ideas
 - [Ring-swagger](https://github.com/metosin/ring-swagger) for the Schema2Swagger -bindings
-- [Ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format) for all the http-transports
+- [Ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format) for all the data formats
 - [Compojure-api](https://github.com/metosin/compojure-api) for some middleware goodies
 
 ## License
