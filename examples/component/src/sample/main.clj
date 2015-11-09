@@ -1,7 +1,5 @@
 (ns sample.main
-  (:require [com.stuartsierra.component :as component]
-            [reloaded.repl :refer [set-init! go]]
-            [schema.core :as s])
+  (:require [reloaded.repl :refer [set-init! go]])
   (:gen-class))
 
 (defn -main [& [port]]

@@ -1,5 +1,5 @@
 (ns sample.handler
-  (:require [plumbing.core :refer [defnk]]
+  (:require [plumbing.core :as p]
             [kekkonen.cqrs :refer :all]
             [schema.core :as s]))
 
@@ -13,32 +13,33 @@
 ;; Handlers
 ;;
 
-(defnk ^:query ping [] (success {:ping "pong"}))
+(p/defnk ^:query ping [] (success {:ping "pong"}))
 
-(defnk ^:command echo-pizza
+(p/defnk ^:command echo-pizza
   "Echoes a pizza"
   {:responses {:default {:schema Pizza}}}
   [data :- Pizza]
   (success data))
 
-(defnk ^:query plus
+(p/defnk ^:query plus
   "playing with data"
   [[:data x :- s/Int, y :- s/Int]]
-  (success {:result (+ x y)}))
+  (success (+ x y)))
 
-(defnk ^:command inc!
+(p/defnk ^:command inc!
   "a stateful counter"
-  [[:components counter]]
-  (success {:result (swap! counter inc)}))
+  [counter]
+  (success (swap! counter inc)))
 
 ;;
 ;; Application
 ;;
 
-(defn new-app [system]
+(p/defnk create [[:state counter]]
   (cqrs-api
     {:swagger {:info {:title "Kekkonen with Component"
                       :description "created with http://kekkonen.io"}}
      :core {:handlers {:api {:pizza #'echo-pizza
-                             :example [#'ping #'inc! #'plus]}}
-            :context {:components system}}}))
+                             :math [#'inc! #'plus]
+                             :ping #'ping}}
+            :context {:counter counter}}}))
