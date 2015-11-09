@@ -28,7 +28,7 @@ Some ideas for the future:
 
 Currently in **Alpha**, targeting first production release this year.
 
-Quickstart: `lein new kekkonen kakkonen --snapshot`
+Quickstart: `lein new kekkonen kakkonen`
 
 ## Hello World (local dispatch)
 
