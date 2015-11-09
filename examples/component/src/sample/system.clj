@@ -12,7 +12,7 @@
                (:http config)
                {:fn
                 (if (:dev-mode? config)
-                  ; re-create handler on every request, 2ms+ latency
-                  (fn [system] #((time (handler/create system)) %))
+                  ; re-create handler on every request
+                  (fn [system] #((handler/create system) %))
                   handler/create)})
              [:state])}))

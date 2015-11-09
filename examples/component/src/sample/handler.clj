@@ -13,7 +13,8 @@
 ;; Handlers
 ;;
 
-(p/defnk ^:query ping [] (success {:ping "pong"}))
+(p/defnk ^:query ping []
+  (success {:ping "pong"}))
 
 (p/defnk ^:command echo-pizza
   "Echoes a pizza"
