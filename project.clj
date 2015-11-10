@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo
             :comments "same as Clojure"}
-  :dependencies [[prismatic/plumbing "0.5.1"]
+  :dependencies [[prismatic/plumbing "0.5.2"]
                  [prismatic/schema "1.0.3"]
 
                  ;; http-stuff, separate module?
