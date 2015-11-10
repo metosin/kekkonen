@@ -68,7 +68,7 @@
   (reduce
     (fn [acc schema]
       (if-not (= schema s/Any)
-        (merge acc schema)
+        (deep-merge acc schema)
         acc))
     {} schemas))
 

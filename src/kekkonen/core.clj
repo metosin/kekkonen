@@ -40,8 +40,12 @@
    (s/optional-key :all-user) [KeywordMap]
 
    ;; input schemas
+   ; full input
    :input s/Any
-   :action-input s/Any
+   ; direct handler input
+   :handler-input s/Any
+   ; user-meta defined input
+   :user-input s/Any
 
    ;; output schemas
    :output s/Any
@@ -481,11 +485,15 @@
                                           (let [schema (:input (kc/extract-schema (f v)))]
                                             (kc/merge-map-schemas acc schema))
                                           acc)) {} (apply concat all-user))
-                         action-input (kc/merge-map-schemas (:input h) user-input)]
+                         input (kc/merge-map-schemas (:input h) user-input)]
                      (merge h {:ns ns
                                :ns-user ns-user
                                :all-user all-user
-                               :action-input action-input
+
+                               :handler-input (:input h)
+                               :user-input user-input
+                               :input (if (seq input) input s/Any)
+
                                :action (handler-action (:name h) ns)}))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]

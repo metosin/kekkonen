@@ -14,6 +14,7 @@ A&nbsp;lightweight, data-driven library for creating and consuming remote (CQRS)
 * extensible & overridable, with sensible defaults
 
 Some ideas for the future:
+* return pipeline transformations via middleware/interceptors (go async?)
 * support for speculative transactions (+poke)
 * client-side context/action bundling (transactional writes)
 * opinionated CQRS reference implementation (+events)

@@ -760,13 +760,24 @@
                                             2 "land of lisp"}}
                            :handlers {:api {secret-ns {doc-ns read}}}})]
 
-      (fact "user-meta handlers have contributed to action-input"
-        (k/some-handler d :api.secret.doc/read) => (contains
-                                                     {:input {:entity {:doc s/Str, s/Keyword s/Any}
-                                                              s/Keyword s/Any}
-                                                      :action-input {:entity {:doc s/Str, s/Keyword s/Any}
-                                                                     :data {:doc-id s/Int, s/Keyword s/Any}
-                                                                     s/Keyword s/Any}}))
+      (fact "input schemas have been modified"
+        (let [handler (k/some-handler d :api.secret.doc/read)]
+
+          (fact "handler-input is coming directly from handler"
+            handler => (contains
+                         {:handler-input {:entity {:doc s/Str, s/Keyword s/Any}
+                                          s/Keyword s/Any}}))
+
+          (fact "user-input is accumulated from the path"
+            handler => (contains
+                         {:user-input {:data {:doc-id s/Int, s/Keyword s/Any}
+                                       s/Keyword s/Any}}))
+
+          (fact "input is merged sum of the previous"
+            handler => (contains
+                         {:input {:entity {:doc s/Str, s/Keyword s/Any}
+                                  :data {:doc-id s/Int, s/Keyword s/Any}
+                                  s/Keyword s/Any}}))))
 
       (fact "with invalid credentials"
         (k/invoke d :api.secret.doc/read {}) => missing-route?)
@@ -902,11 +913,11 @@
                                :coercion {:input {:data (constantly nil)
                                                   :tada (constantly nil)}}})]
 
-          (fact "with invalid intpu"
+          (fact "with invalid input"
             (k/invoke d :api/plus {:data {:x 1}})
             => input-coercion-error?)
 
-          (fact "with invalid intpu"
+          (fact "with invalid input"
             (k/invoke d :api/plus {:tada {:y 1}})
             => input-coercion-error?)
 
@@ -985,13 +996,18 @@
       (let [api (k/namespace {:name :api ::load-doc true})
             d (k/dispatcher {:user {::roles require-role
                                     ::load-doc (constantly
-                                                 (p/fnk f :- {:value s/Int} [data :- {:value s/Int} :as ctx]
+                                                 (p/fnk f :- {:value s/Int} [[:data value :- s/Int] :as ctx]
                                                    ctx))}
                              :coercion {:input nil}
-                             :handlers {api (k/handler
-                                              {:name :test
-                                               :output {:value s/Int}}
-                                              (fn [context] (:data context)))}})]
+                             :handlers {api [(k/handler
+                                               {:name :test
+                                                :output {:value s/Int}}
+                                               (fn [context] (:data context)))
+                                             (k/handler
+                                               {:name :test2}
+                                               (p/fnk [[:data x :- s/Str :as data]] data))]}})]
+
+        (pr-str (:input (k/some-handler d :api/test2)))
 
         (fact "with request-coercion off"
           (k/invoke d :api/test {:data {:value "123"}}) => output-coercion-error?)
