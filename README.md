@@ -336,15 +336,15 @@ or the [226](https://github.com/metosin/ring-http-response/blob/fe13051fd89ce073
 Kekkonen tries to keep things simple. By abstracting the HTTP we can use plain clojure, websockets or queues without
 change in the interaction semantics.
 
+## Looks similar to Fnhouse?
+
+Yes, we have reused many great ideas from fnhouse, see [Special Thanks](#special-thanks). Initial version of Kekkonen
+was supposed to be built on top of fnhouse but the we realized that most of the fnhouse internals would have had to be
+overridden due to difference in opinions.
+
 ## Is this an actor lib?
 
 No.
-
-## This looks like Fnhouse?
-
-Yes, we have reused many great ideas from fnhouse, see [Special Thanks](#special-thanks). First version of Kekkonen
-was supposed to be on top of it but the idea abandoned as most of the fnhouse internals would have had to be
-overridden due to difference in opinions.
 
 # Special thanks
 
