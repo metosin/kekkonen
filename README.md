@@ -23,6 +23,8 @@ Some ideas for the future:
 
 <sub>Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto</sub>
 
+See [Live demo](https://kekkonen.herokuapp.com/).
+
 ## Latest version
 
 [![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
