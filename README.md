@@ -13,17 +13,9 @@ A&nbsp;lightweight, data-driven library for creating and consuming remote (CQRS)
   * extract public handler meta-data for client-side validation
 * extensible & overridable, with sensible defaults
 
-Some ideas for the future:
-* return pipeline transformations via middleware/interceptors (go async?)
-* support for speculative transactions (+poke)
-* client-side context/action bundling (transactional writes)
-* opinionated CQRS reference implementation (+events)
-* Clojure(Script) client & project template
-* Adapter for Websockets
-
 <sub>Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto</sub>
 
-See [Live demo](https://kekkonen.herokuapp.com/).
+See [Live demo](https://kekkonen.herokuapp.com/) & [Wiki](https://github.com/metosin/kekkonen/wiki).
 
 ## Latest version
 
@@ -83,6 +75,15 @@ Quickstart: `lein new kekkonen kakkonen`
 ```
 
 More examples at [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples).
+
+# Roadmap
+
+* return pipeline transformations via middleware/interceptors (go async?)
+* support for speculative transactions (+poke)
+* client-side context/action bundling (transactional writes)
+* opinionated CQRS reference implementation (+events)
+* Clojure(Script) client & project template
+* Adapter for Websockets
 
 # Idea
 
