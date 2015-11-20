@@ -9,6 +9,7 @@ pom.xml.asc
 /.nrepl-port
 .project
 .settings
-.idea
 bower_components
 *.log
+/kekkonen.iml
+/.idea
