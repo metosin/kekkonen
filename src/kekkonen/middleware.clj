@@ -168,13 +168,13 @@
          ring.middleware.http-response/wrap-http-response
          (wrap-not-found (:not-found options))
          (wrap-restful-params
-           (merge {:formats formats
-                   :handle-error handle-req-error}
-                  params-opts))
+           {:formats formats
+            :handle-error handle-req-error
+            :format-options params-opts})
          (wrap-exceptions exceptions)
          (wrap-restful-response
-           (merge {:formats formats}
-                  response-opts))
+           {:formats formats
+            :format-options response-opts})
          (wrap-keyword-keys [:query-params])
          wrap-keyword-params
          wrap-nested-params

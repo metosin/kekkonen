@@ -1,4 +1,4 @@
-(defproject metosin/kekkonen "0.1.0"
+(defproject metosin/kekkonen "0.1.1"
   :description "A lightweight, remote (CQRS) API library for Clojure."
   :url "https://github.com/metosin/kekkonen"
   :license {:name "Eclipse Public License"
