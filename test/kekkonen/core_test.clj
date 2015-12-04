@@ -11,8 +11,7 @@
 ;; test handlers
 ;;
 
-(p/defnk ^:handler ping
-  [] "pong")
+(p/defnk ^:handler ping [] "pong")
 
 (p/defnk ^:handler get-items :- #{s/Str}
   [[:components db]] @db)
