@@ -7,6 +7,9 @@
             [clojure.set :as set])
   (:import [kekkonen.core Dispatcher]))
 
+(background
+  (around :facts (s/with-fn-validation ?form)))
+
 ;;
 ;; test handlers
 ;;
@@ -81,19 +84,18 @@
                     :data {}}) => #{})
 
       (fact "call with wrong types succeeds without validation set"
-        (add-item! {:components {:db db}
-                    :data {:item 123}}) => #{123}
-        (reset-items! {:components {:db db}}) => #{})
+        (s/without-fn-validation
+          (add-item! {:components {:db db}
+                      :data {:item 123}}) => #{123}
+          (reset-items! {:components {:db db}}) => #{}))
 
       (fact "call with wrong types succeeds without validation set"
-        (s/with-fn-validation
-          (add-item! {:components {:db db}
-                      :data {:item 123}})) => (throws?))
+        (add-item! {:components {:db db}
+                    :data {:item 123}}) => (throws?))
 
       (fact "call with right types succeeds with validation set"
-        (s/with-fn-validation
-          (add-item! {:components {:db db}
-                      :data {:item "kikka"}})) => #{"kikka"}
+        (add-item! {:components {:db db}
+                    :data {:item "kikka"}}) => #{"kikka"}
         (get-items {:components {:db db}}) => #{"kikka"}))))
 
 ;;
@@ -109,218 +111,215 @@
     ((k/type-resolver :kikka :kukka) {}) => nil))
 
 (fact "collecting handlers"
-  (s/with-fn-validation
+  (fact "anonymous functions"
 
-    (fact "anonymous functions"
+    (fact "fn"
 
-      (fact "fn"
-
-        (fact "with default type"
-          (k/collect
-            (k/handler
-              {:name :echo
-               :input {:name s/Str}}
-              identity)
-            k/default-type-resolver) => (just
-                                          {(k/namespace {:name :echo})
-                                           (just
-                                             {:function fn?
-                                              :description ""
-                                              :user {}
-                                              :type :handler
-                                              :name :echo
-                                              :input {:name s/Str}
-                                              :output s/Any})}))
-
-        (fact "type can be overridden"
-          (k/collect
-            (k/handler
-              {:name :echo
-               :type :kikka}
-              identity)
-            k/any-type-resolver) => (just
-                                      {(k/namespace {:name :echo})
-                                       (contains
-                                         {:type :kikka})})))
-
-      (fact "fnk"
+      (fact "with default type"
         (k/collect
           (k/handler
             {:name :echo
-             :description "Echoes the user"
-             :query true
-             :roles #{:admin :user}}
-            (p/fnk f :- User [data :- User] data))
+             :input {:name s/Str}}
+            identity)
           k/default-type-resolver) => (just
                                         {(k/namespace {:name :echo})
                                          (just
                                            {:function fn?
+                                            :description ""
+                                            :user {}
                                             :type :handler
                                             :name :echo
-                                            :user {:query true
-                                                   :roles #{:admin :user}}
-                                            :description "Echoes the user"
-                                            :input {:data User
-                                                    s/Keyword s/Any}
-                                            :output User})}))
+                                            :input {:name s/Str}
+                                            :output s/Any})}))
 
-      (fact "with unresolved type"
-        (let [handler (k/handler
-                        {:name :echo
-                         :input {:name s/Str}}
-                        identity)]
-          (k/collect
-            handler
-            (k/type-resolver :ILLEGAL)) => (throws? {:target handler}))))
-
-    (fact "Var"
-      (fact "with resolved type"
+      (fact "type can be overridden"
         (k/collect
-          #'echo
-          k/default-type-resolver) => (just
-                                        {(k/namespace {:name :echo})
-                                         (just
-                                           {:function fn?
-                                            :type :handler
-                                            :name :echo
-                                            :user {:roles #{:admin :user}}
-                                            :description "Echoes the user"
-                                            :input {:data User
-                                                    s/Keyword s/Any}
-                                            :output User
-                                            :source-map (just
-                                                          {:line irrelevant
-                                                           :column irrelevant
-                                                           :file string?
-                                                           :ns 'kekkonen.core-test
-                                                           :name 'echo})})}))
+          (k/handler
+            {:name :echo
+             :type :kikka}
+            identity)
+          k/any-type-resolver) => (just
+                                    {(k/namespace {:name :echo})
+                                     (contains
+                                       {:type :kikka})})))
 
-      (fact "with unresolved type"
-        (k/collect #'echo (k/type-resolver :ILLEGAL)) => (throws? {:target #'echo})))
+    (fact "fnk"
+      (k/collect
+        (k/handler
+          {:name :echo
+           :description "Echoes the user"
+           :query true
+           :roles #{:admin :user}}
+          (p/fnk f :- User [data :- User] data))
+        k/default-type-resolver) => (just
+                                      {(k/namespace {:name :echo})
+                                       (just
+                                         {:function fn?
+                                          :type :handler
+                                          :name :echo
+                                          :user {:query true
+                                                 :roles #{:admin :user}}
+                                          :description "Echoes the user"
+                                          :input {:data User
+                                                  s/Keyword s/Any}
+                                          :output User})}))
 
-    (fact "Namespaces"
-      (let [handlers (k/collect 'kekkonen.core-test k/default-type-resolver)]
+    (fact "with unresolved type"
+      (let [handler (k/handler
+                      {:name :echo
+                       :input {:name s/Str}}
+                      identity)]
+        (k/collect
+          handler
+          (k/type-resolver :ILLEGAL)) => (throws? {:target handler}))))
 
-        (count handlers) => 6
-        handlers => (just
-                      {(k/namespace {:name :ping}) k/handler?
-                       (k/namespace {:name :get-items}) k/handler?
-                       (k/namespace {:name :add-item!}) k/handler?
-                       (k/namespace {:name :reset-items!}) k/handler?
-                       (k/namespace {:name :echo}) k/handler?
-                       (k/namespace {:name :plus}) k/handler?})))))
+  (fact "Var"
+    (fact "with resolved type"
+      (k/collect
+        #'echo
+        k/default-type-resolver) => (just
+                                      {(k/namespace {:name :echo})
+                                       (just
+                                         {:function fn?
+                                          :type :handler
+                                          :name :echo
+                                          :user {:roles #{:admin :user}}
+                                          :description "Echoes the user"
+                                          :input {:data User
+                                                  s/Keyword s/Any}
+                                          :output User
+                                          :source-map (just
+                                                        {:line irrelevant
+                                                         :column irrelevant
+                                                         :file string?
+                                                         :ns 'kekkonen.core-test
+                                                         :name 'echo})})}))
+
+    (fact "with unresolved type"
+      (k/collect #'echo (k/type-resolver :ILLEGAL)) => (throws? {:target #'echo})))
+
+  (fact "Namespaces"
+    (let [handlers (k/collect 'kekkonen.core-test k/default-type-resolver)]
+
+      (count handlers) => 6
+      handlers => (just
+                    {(k/namespace {:name :ping}) k/handler?
+                     (k/namespace {:name :get-items}) k/handler?
+                     (k/namespace {:name :add-item!}) k/handler?
+                     (k/namespace {:name :reset-items!}) k/handler?
+                     (k/namespace {:name :echo}) k/handler?
+                     (k/namespace {:name :plus}) k/handler?}))))
 
 (fact "dispatcher"
-  (s/with-fn-validation
 
-    (fact "can't be created without handlers"
-      (k/dispatcher {}) => (throws?))
+  (fact "can't be created without handlers"
+    (k/dispatcher {}) => (throws?))
 
-    (fact "can't be created with root level handlers"
-      (k/dispatcher {:handlers 'kekkonen.core-test}) => (throws?))
+  (fact "can't be created with root level handlers"
+    (k/dispatcher {:handlers 'kekkonen.core-test}) => (throws?))
 
-    (fact "can be created with namespaced handlers"
-      (k/dispatcher {:handlers {:test 'kekkonen.core-test}}) => truthy)
+  (fact "can be created with namespaced handlers"
+    (k/dispatcher {:handlers {:test 'kekkonen.core-test}}) => truthy)
 
-    (fact "with handlers and context"
-      (let [d (k/dispatcher {:context {:components {:db (atom #{})}}
-                             :handlers {:test 'kekkonen.core-test}})]
+  (fact "with handlers and context"
+    (let [d (k/dispatcher {:context {:components {:db (atom #{})}}
+                           :handlers {:test 'kekkonen.core-test}})]
 
-        (fact "all handlers"
-          (count (k/all-handlers d nil)) => 6)
+      (fact "all handlers"
+        (count (k/all-handlers d nil)) => 6)
 
-        (fact "non-existing action"
+      (fact "non-existing action"
 
-          (fact "is nil"
-            (k/some-handler d :test/non-existing) => nil)
+        (fact "is nil"
+          (k/some-handler d :test/non-existing) => nil)
 
-          (fact "can't be validated (against a context)"
-            (k/validate d :test/non-existing) => missing-route?)
+        (fact "can't be validated (against a context)"
+          (k/validate d :test/non-existing) => missing-route?)
 
-          (fact "can't be invoked (against a context)"
-            (k/invoke d :test/non-existing) => missing-route?))
+        (fact "can't be invoked (against a context)"
+          (k/invoke d :test/non-existing) => missing-route?))
 
-        (facts "existing action"
+      (facts "existing action"
 
-          (fact "contains :type, :ns and :action"
-            (k/some-handler d :test/ping) => (contains
-                                               {:ns :test
-                                                :type :handler
-                                                :action :test/ping}))
+        (fact "contains :type, :ns and :action"
+          (k/some-handler d :test/ping) => (contains
+                                             {:ns :test
+                                              :type :handler
+                                              :action :test/ping}))
 
-          (fact "can be validated (against a context)"
-            (k/validate d :test/ping) => nil)
+        (fact "can be validated (against a context)"
+          (k/validate d :test/ping) => nil)
 
-          (fact "can be invoked (against a context)"
-            (k/invoke d :test/ping) => "pong"))
+        (fact "can be invoked (against a context)"
+          (k/invoke d :test/ping) => "pong"))
 
-        (fact "crud via dispatcher"
-          (k/invoke d :test/get-items) => #{}
-          (k/invoke d :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
-          (k/invoke d :test/get-items) => #{"kikka"}
-          (k/invoke d :test/reset-items!) => #{}
-          (k/invoke d :test/get-items) => #{}
+      (fact "crud via dispatcher"
+        (k/invoke d :test/get-items) => #{}
+        (k/invoke d :test/add-item! {:data {:item "kikka"}}) => #{"kikka"}
+        (k/invoke d :test/get-items) => #{"kikka"}
+        (k/invoke d :test/reset-items!) => #{}
+        (k/invoke d :test/get-items) => #{}
 
-          (fact "context-level overrides FTW!"
-            (k/invoke d :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
+        (fact "context-level overrides FTW!"
+          (k/invoke d :test/get-items {:components {:db (atom #{"hauki"})}}) => #{"hauki"}))))
 
-    (fact "lots of handlers"
-      (let [d (k/dispatcher {:handlers
-                             {:admin
-                              {:kikka 'kekkonen.core-test
-                               :kukka 'kekkonen.core-test}
-                              :public 'kekkonen.core-test
-                              :kiss #'ping
-                              :abba [#'ping #'echo]
-                              :wasp ['kekkonen.core-test]
-                              :bon (k/handler
-                                     {:name :jovi}
-                                     (constantly :runaway))}})]
+  (fact "lots of handlers"
+    (let [d (k/dispatcher {:handlers
+                           {:admin
+                            {:kikka 'kekkonen.core-test
+                             :kukka 'kekkonen.core-test}
+                            :public 'kekkonen.core-test
+                            :kiss #'ping
+                            :abba [#'ping #'echo]
+                            :wasp ['kekkonen.core-test]
+                            :bon (k/handler
+                                   {:name :jovi}
+                                   (constantly :runaway))}})]
 
-        (fact "deeply nested"
-          (fact "namespaces can be joined with ."
-            (k/some-handler d :admin.kikka/ping) => (contains {:action :admin.kikka/ping})
-            (k/invoke d :admin.kikka/ping) => "pong")
-          (fact "ns is set to handler with ."
-            (k/some-handler d :admin.kukka/ping) => (contains {:ns :admin.kukka})))
+      (fact "deeply nested"
+        (fact "namespaces can be joined with ."
+          (k/some-handler d :admin.kikka/ping) => (contains {:action :admin.kikka/ping})
+          (k/invoke d :admin.kikka/ping) => "pong")
+        (fact "ns is set to handler with ."
+          (k/some-handler d :admin.kukka/ping) => (contains {:ns :admin.kukka})))
 
-        (fact "not nested"
-          (k/invoke d :kiss/ping) => "pong")
+      (fact "not nested"
+        (k/invoke d :kiss/ping) => "pong")
 
-        (fact "var"
-          (k/invoke d :abba/ping) => "pong")
+      (fact "var"
+        (k/invoke d :abba/ping) => "pong")
 
-        (fact "vector of vars"
-          (k/invoke d :wasp/ping) => "pong")
+      (fact "vector of vars"
+        (k/invoke d :wasp/ping) => "pong")
 
-        (fact "vector of namespaces"
-          (k/invoke d :wasp/ping) => "pong")
+      (fact "vector of namespaces"
+        (k/invoke d :wasp/ping) => "pong")
 
-        (fact "handler"
-          (k/invoke d :bon/jovi) => :runaway)))
+      (fact "handler"
+        (k/invoke d :bon/jovi) => :runaway)))
 
-    (fact "sub-context"
-      (let [d (k/dispatcher {:handlers {:api #'plus}})]
+  (fact "sub-context"
+    (let [d (k/dispatcher {:handlers {:api #'plus}})]
 
-        (k/validate d :api/plus {}) => input-coercion-error?
-        (k/invoke d :api/plus {}) => input-coercion-error?
+      (k/validate d :api/plus {}) => input-coercion-error?
+      (k/invoke d :api/plus {}) => input-coercion-error?
 
-        (k/validate d :api/plus {:data {:x 1}}) => input-coercion-error?
-        (k/invoke d :api/plus {:data {:x 1}}) => input-coercion-error?
+      (k/validate d :api/plus {:data {:x 1}}) => input-coercion-error?
+      (k/invoke d :api/plus {:data {:x 1}}) => input-coercion-error?
 
-        (k/validate d :api/plus {:data {:x 1, :y 2}}) => nil
-        (k/invoke d :api/plus {:data {:x 1, :y 2}}) => 3
+      (k/validate d :api/plus {:data {:x 1, :y 2}}) => nil
+      (k/invoke d :api/plus {:data {:x 1, :y 2}}) => 3
 
-        (let [k (k/with-context d {:data {:x 1}})]
+      (let [k (k/with-context d {:data {:x 1}})]
 
-          (k/validate k :api/plus {}) => input-coercion-error?
-          (k/invoke k :api/plus {}) => input-coercion-error?
+        (k/validate k :api/plus {}) => input-coercion-error?
+        (k/invoke k :api/plus {}) => input-coercion-error?
 
-          (k/validate k :api/plus {:data {:x 1}}) => input-coercion-error?
-          (k/invoke k :api/plus {:data {:x 1}}) => input-coercion-error?
+        (k/validate k :api/plus {:data {:x 1}}) => input-coercion-error?
+        (k/invoke k :api/plus {:data {:x 1}}) => input-coercion-error?
 
-          (k/validate k :api/plus {:data {:y 2}}) => nil
-          (k/invoke k :api/plus {:data {:y 2}}) => 3)))))
+        (k/validate k :api/plus {:data {:y 2}}) => nil
+        (k/invoke k :api/plus {:data {:y 2}}) => 3))))
 
 (fact "special keys in context"
   (let [d (k/dispatcher {:handlers {:api (k/handler
@@ -476,211 +475,210 @@
   (let [handler->action (fn [m] (p/for-map [[k v] m] (:action k) v))
         require-admin? (contains {:required #{:admin}})
         invalid-input? (contains {:type ::k/request})]
-    (s/with-fn-validation
-      (let [admin-ns (k/namespace {:name :admin, ::roles! #{:admin}})
-            secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
-            handler1 (k/handler {:name :handler1} (p/fnk [] true))
-            handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
-            d (k/dispatcher {:user {::roles! require-role!
-                                    ::roles require-role}
-                             :handlers {:api {admin-ns [handler1 handler2]
-                                              secret-ns [handler1 handler2]
-                                              :public [handler1 handler2]}}})]
-        :kekkonen.core-test/roles
+    (let [admin-ns (k/namespace {:name :admin, ::roles! #{:admin}})
+          secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
+          handler1 (k/handler {:name :handler1} (p/fnk [] true))
+          handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
+          d (k/dispatcher {:user {::roles! require-role!
+                                  ::roles require-role}
+                           :handlers {:api {admin-ns [handler1 handler2]
+                                            secret-ns [handler1 handler2]
+                                            :public [handler1 handler2]}}})]
+
+      (fact "there are 6 handlers"
+        (k/all-handlers d nil) => (n-of k/handler? 6))
+
+      (fact "4 handlers could be called (as 2 are secret)"
+        (handler->action (k/dispatch-handlers d :check nil {}))
+        => (just
+             {:api.admin/handler1 require-admin?
+              :api.admin/handler2 require-admin?
+              :api.public/handler1 nil
+              :api.public/handler2 nil}))
+
+      (fact "in namespace api"
+
         (fact "there are 6 handlers"
-          (k/all-handlers d nil) => (n-of k/handler? 6))
+          (k/all-handlers d :api) => (n-of k/handler? 6))
+
+        (fact "4 handlers are available (2 are secret)"
+          (k/available-handlers d nil {}) => (n-of k/handler? 4))
 
         (fact "4 handlers could be called (as 2 are secret)"
-          (handler->action (k/dispatch-handlers d :check nil {}))
+          (handler->action (k/dispatch-handlers d :check :api {}))
           => (just
                {:api.admin/handler1 require-admin?
                 :api.admin/handler2 require-admin?
                 :api.public/handler1 nil
-                :api.public/handler2 nil}))
+                :api.public/handler2 nil})))
 
-        (fact "in namespace api"
+      (fact "in namespace api.admin"
 
-          (fact "there are 6 handlers"
-            (k/all-handlers d :api) => (n-of k/handler? 6))
+        (fact "there are 2 handlers"
+          (k/all-handlers d :api.admin) => (n-of k/handler? 2))
 
-          (fact "4 handlers are available (2 are secret)"
-            (k/available-handlers d nil {}) => (n-of k/handler? 4))
+        (fact "2 handlers are available"
+          (k/available-handlers d :api.admin {}) => (n-of k/handler? 2))
 
-          (fact "4 handlers could be called (as 2 are secret)"
-            (handler->action (k/dispatch-handlers d :check :api {}))
-            => (just
-                 {:api.admin/handler1 require-admin?
-                  :api.admin/handler2 require-admin?
-                  :api.public/handler1 nil
-                  :api.public/handler2 nil})))
+        (fact "2 handlers could be called (with errors)"
+          (handler->action (k/dispatch-handlers d :check :api.admin {}))
+          => (just
+               {:api.admin/handler1 require-admin?
+                :api.admin/handler2 require-admin?})))
 
-        (fact "in namespace api.admin"
+      (fact "in namespace api.secret"
 
-          (fact "there are 2 handlers"
-            (k/all-handlers d :api.admin) => (n-of k/handler? 2))
+        (fact "there are 2 handlers"
+          (k/all-handlers d :api.secret) => (n-of k/handler? 2))
 
-          (fact "2 handlers are available"
-            (k/available-handlers d :api.admin {}) => (n-of k/handler? 2))
+        (fact "0 handlers are available"
+          (k/available-handlers d :api.secret {}) => [])
 
-          (fact "2 handlers could be called (with errors)"
-            (handler->action (k/dispatch-handlers d :check :api.admin {}))
-            => (just
-                 {:api.admin/handler1 require-admin?
-                  :api.admin/handler2 require-admin?})))
+        (fact "no handlers could be called"
+          (handler->action (k/dispatch-handlers d :check :api.secret {}))
+          => (just {})))
 
-        (fact "in namespace api.secret"
+      (fact "in invalid namespace"
 
-          (fact "there are 2 handlers"
-            (k/all-handlers d :api.secret) => (n-of k/handler? 2))
+        (fact "there are no handlers"
+          (k/all-handlers d :api.adm) => [])
 
-          (fact "0 handlers are available"
-            (k/available-handlers d :api.secret {}) => [])
+        (fact "0 handlers could be called"
+          (handler->action (k/dispatch-handlers d :check :api.adm {}))
+          => (just {})))
 
-          (fact "no handlers could be called"
-            (handler->action (k/dispatch-handlers d :check :api.secret {}))
-            => (just {})))
+      (facts "dispatch"
 
-        (fact "in invalid namespace"
+        (fact "for anonymous user"
+          (let [ctx {}]
 
-          (fact "there are no handlers"
-            (k/all-handlers d :api.adm) => [])
+            (fact "all apis"
 
-          (fact "0 handlers could be called"
-            (handler->action (k/dispatch-handlers d :check :api.adm {}))
-            => (just {})))
+              (k/available-handlers d nil ctx)
+              => (n-of k/handler? 4)
 
-        (facts "dispatch"
+              (handler->action (k/dispatch-handlers d :check nil ctx))
+              => (just
+                   {:api.admin/handler1 require-admin?
+                    :api.admin/handler2 require-admin?
+                    :api.public/handler1 nil
+                    :api.public/handler2 nil})
 
-          (fact "for anonymous user"
-            (let [ctx {}]
+              (handler->action
+                (k/dispatch-handlers d :validate nil ctx))
+              => (just
+                   {:api.admin/handler1 require-admin?
+                    :api.admin/handler2 require-admin?
+                    :api.public/handler1 nil
+                    :api.public/handler2 invalid-input?}))
 
-              (fact "all apis"
+            (fact "admin-apis"
 
+              (k/available-handlers d :api.admin ctx)
+              => (n-of k/handler? 2)
+
+              (handler->action (k/dispatch-handlers d :check :api.admin ctx))
+              => (just
+                   {:api.admin/handler1 require-admin?
+                    :api.admin/handler2 require-admin?})
+
+              (handler->action (k/dispatch-handlers d :validate :api.admin ctx))
+              => (just
+                   {:api.admin/handler1 require-admin?
+                    :api.admin/handler2 require-admin?}))))
+
+        (fact "for admin-user"
+          (let [ctx {::roles #{:admin}}
+                ctx2 (merge ctx {:data {:x true}})]
+
+            (fact "all handlers"
+
+              (fact "all handlers are available"
                 (k/available-handlers d nil ctx)
-                => (n-of k/handler? 4)
+                => (n-of k/handler? 6))
 
+              (fact "everything checks ok"
                 (handler->action (k/dispatch-handlers d :check nil ctx))
                 => (just
-                     {:api.admin/handler1 require-admin?
-                      :api.admin/handler2 require-admin?
+                     {:api.admin/handler1 nil
+                      :api.admin/handler2 nil
                       :api.public/handler1 nil
-                      :api.public/handler2 nil})
+                      :api.public/handler2 nil
+                      :api.secret/handler1 nil
+                      :api.secret/handler2 nil}))
 
-                (handler->action
-                  (k/dispatch-handlers d :validate nil ctx))
+              (fact "validate gives validation errors for missing parameters"
+                (handler->action (k/dispatch-handlers d :validate nil ctx))
                 => (just
-                     {:api.admin/handler1 require-admin?
-                      :api.admin/handler2 require-admin?
+                     {:api.admin/handler1 nil
+                      :api.admin/handler2 invalid-input?
                       :api.public/handler1 nil
-                      :api.public/handler2 invalid-input?}))
+                      :api.public/handler2 invalid-input?
+                      :api.secret/handler1 nil
+                      :api.secret/handler2 invalid-input?}))
 
-              (fact "admin-apis"
+              (fact "with valid input validate passes ok"
+                (handler->action (k/dispatch-handlers d :validate nil ctx2))
+                => (just
+                     {:api.admin/handler1 nil
+                      :api.admin/handler2 nil
+                      :api.public/handler1 nil
+                      :api.public/handler2 nil
+                      :api.secret/handler1 nil
+                      :api.secret/handler2 nil})))
 
+            (fact "admin apis"
+
+              (fact "all handlers are available"
                 (k/available-handlers d :api.admin ctx)
-                => (n-of k/handler? 2)
+                => (n-of k/handler? 2))
 
+              (fact "everything checks ok"
                 (handler->action (k/dispatch-handlers d :check :api.admin ctx))
                 => (just
-                     {:api.admin/handler1 require-admin?
-                      :api.admin/handler2 require-admin?})
+                     {:api.admin/handler1 nil
+                      :api.admin/handler2 nil}))
 
+              (fact "validate gives validation errors for missing parameters"
                 (handler->action (k/dispatch-handlers d :validate :api.admin ctx))
                 => (just
-                     {:api.admin/handler1 require-admin?
-                      :api.admin/handler2 require-admin?}))))
+                     {:api.admin/handler1 nil
+                      :api.admin/handler2 invalid-input?}))
 
-          (fact "for admin-user"
-            (let [ctx {::roles #{:admin}}
-                  ctx2 (merge ctx {:data {:x true}})]
+              (fact "with valid input validate passes ok"
+                (handler->action (k/dispatch-handlers d :validate :api.admin ctx2))
+                => (just
+                     {:api.admin/handler1 nil
+                      :api.admin/handler2 nil}))))
 
-              (fact "all handlers"
+          (fact "interacting with a spesific handler"
 
-                (fact "all handlers are available"
-                  (k/available-handlers d nil ctx)
-                  => (n-of k/handler? 6))
-
-                (fact "everything checks ok"
-                  (handler->action (k/dispatch-handlers d :check nil ctx))
-                  => (just
-                       {:api.admin/handler1 nil
-                        :api.admin/handler2 nil
-                        :api.public/handler1 nil
-                        :api.public/handler2 nil
-                        :api.secret/handler1 nil
-                        :api.secret/handler2 nil}))
-
-                (fact "validate gives validation errors for missing parameters"
-                  (handler->action (k/dispatch-handlers d :validate nil ctx))
-                  => (just
-                       {:api.admin/handler1 nil
-                        :api.admin/handler2 invalid-input?
-                        :api.public/handler1 nil
-                        :api.public/handler2 invalid-input?
-                        :api.secret/handler1 nil
-                        :api.secret/handler2 invalid-input?}))
-
-                (fact "with valid input validate passes ok"
-                  (handler->action (k/dispatch-handlers d :validate nil ctx2))
-                  => (just
-                       {:api.admin/handler1 nil
-                        :api.admin/handler2 nil
-                        :api.public/handler1 nil
-                        :api.public/handler2 nil
-                        :api.secret/handler1 nil
-                        :api.secret/handler2 nil})))
-
-              (fact "admin apis"
-
-                (fact "all handlers are available"
-                  (k/available-handlers d :api.admin ctx)
-                  => (n-of k/handler? 2))
-
-                (fact "everything checks ok"
-                  (handler->action (k/dispatch-handlers d :check :api.admin ctx))
-                  => (just
-                       {:api.admin/handler1 nil
-                        :api.admin/handler2 nil}))
-
-                (fact "validate gives validation errors for missing parameters"
-                  (handler->action (k/dispatch-handlers d :validate :api.admin ctx))
-                  => (just
-                       {:api.admin/handler1 nil
-                        :api.admin/handler2 invalid-input?}))
-
-                (fact "with valid input validate passes ok"
-                  (handler->action (k/dispatch-handlers d :validate :api.admin ctx2))
-                  => (just
-                       {:api.admin/handler1 nil
-                        :api.admin/handler2 nil}))))
-
-            (fact "interacting with a spesific handler"
-
-              (fact "without required role"
-                (let [ctx {}]
+            (fact "without required role"
+              (let [ctx {}]
+                (fact "with missing parameters"
                   (fact "with missing parameters"
-                    (fact "with missing parameters"
-                      (k/check d :api.secret/handler2 ctx) => missing-route?
-                      (k/validate d :api.secret/handler2 ctx) => missing-route?
-                      (k/invoke d :api.secret/handler2 ctx) => missing-route?
-
-                      (fact "with all parameters"
-                        (let [ctx (merge ctx {:data {:x true}})]
-                          (k/check d :api.secret/handler2 ctx) => missing-route?
-                          (k/validate d :api.secret/handler2 ctx) => missing-route?
-                          (k/invoke d :api.secret/handler2 ctx) => missing-route?))))))
-
-              (fact "with required role"
-                (let [ctx {::roles #{:admin}}]
-                  (fact "with missing parameters"
-                    (k/check d :api.secret/handler2 ctx) => nil
-                    (k/validate d :api.secret/handler2 ctx) => input-coercion-error?
-                    (k/invoke d :api.secret/handler2 ctx) => input-coercion-error?
+                    (k/check d :api.secret/handler2 ctx) => missing-route?
+                    (k/validate d :api.secret/handler2 ctx) => missing-route?
+                    (k/invoke d :api.secret/handler2 ctx) => missing-route?
 
                     (fact "with all parameters"
                       (let [ctx (merge ctx {:data {:x true}})]
-                        (k/check d :api.secret/handler2 ctx) => nil
-                        (k/validate d :api.secret/handler2 ctx) => nil
-                        (k/invoke d :api.secret/handler2 ctx) => true))))))))))))
+                        (k/check d :api.secret/handler2 ctx) => missing-route?
+                        (k/validate d :api.secret/handler2 ctx) => missing-route?
+                        (k/invoke d :api.secret/handler2 ctx) => missing-route?))))))
+
+            (fact "with required role"
+              (let [ctx {::roles #{:admin}}]
+                (fact "with missing parameters"
+                  (k/check d :api.secret/handler2 ctx) => nil
+                  (k/validate d :api.secret/handler2 ctx) => input-coercion-error?
+                  (k/invoke d :api.secret/handler2 ctx) => input-coercion-error?
+
+                  (fact "with all parameters"
+                    (let [ctx (merge ctx {:data {:x true}})]
+                      (k/check d :api.secret/handler2 ctx) => nil
+                      (k/validate d :api.secret/handler2 ctx) => nil
+                      (k/invoke d :api.secret/handler2 ctx) => true)))))))))))
 
 (fact "context transformations"
   (let [copy-ab-to-cd (k/context-copy [:a :b] [:c :d])
@@ -691,22 +689,21 @@
     ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
 
 (fact "transformers"
-  (s/with-fn-validation
-    (fact "transformers are executed in order"
-      (let [d (k/dispatcher
-                {:handlers {:api (k/handler {:name :test} (p/fn-> :y))}
-                 :transformers [(k/context-copy [:x] [:y])
-                                (k/context-dissoc [:x])]})]
+  (fact "transformers are executed in order"
+    (let [d (k/dispatcher
+              {:handlers {:api (k/handler {:name :test} (p/fn-> :y))}
+               :transformers [(k/context-copy [:x] [:y])
+                              (k/context-dissoc [:x])]})]
 
-        (k/invoke d :api/test {:x 1}) => 1))
+      (k/invoke d :api/test {:x 1}) => 1))
 
-    (fact "transforming to nil stops the execution"
-      (let [d (k/dispatcher
-                {:handlers {:api (k/handler {:name :test} identity)}
-                 :transformers [(constantly nil)
-                                #(assoc % :x 1)]})]
+  (fact "transforming to nil stops the execution"
+    (let [d (k/dispatcher
+              {:handlers {:api (k/handler {:name :test} identity)}
+               :transformers [(constantly nil)
+                              #(assoc % :x 1)]})]
 
-        (k/invoke d :api/test {}) => missing-route?))))
+      (k/invoke d :api/test {}) => missing-route?)))
 
 (fact "transforming handlers"
   (fact "enriching handlers"
@@ -731,76 +728,75 @@
          {:handlers {}})))
 
 (facts "transformers requiring parameters"
-  (s/with-fn-validation
-    (let [str->int-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
-          load-doc (constantly
-                     (p/fnk [[:data doc-id :- s/Int] :as ctx]
-                       (assoc-in ctx [:entity :doc] (-> ctx :docs (get doc-id)))))
-          secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
-          doc-ns (k/namespace {:name :doc ::load-doc true})
-          read (k/handler {:name :read} (p/fnk [[:entity doc :- s/Str] :as ctx]
-                                          ;; despite we haven't defined [:data :doc-id], it already coerced!
-                                          (assert (-> ctx :data :doc-id class (= Long)))
-                                          {:read doc}))
-          d (k/dispatcher {:user {::roles require-role
-                                  ::load-doc load-doc}
-                           :coercion {:input {:data str->int-matcher}}
-                           :context {:docs {1 "hello ruby"
-                                            2 "land of lisp"}}
-                           :handlers {:api {secret-ns {doc-ns read}}}})]
+  (let [str->int-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
+        load-doc (constantly
+                   (p/fnk [[:data doc-id :- s/Int] :as ctx]
+                     (assoc-in ctx [:entity :doc] (-> ctx :docs (get doc-id)))))
+        secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
+        doc-ns (k/namespace {:name :doc ::load-doc true})
+        read (k/handler {:name :read} (p/fnk [[:entity doc :- s/Str] :as ctx]
+                                        ;; despite we haven't defined [:data :doc-id], it already coerced!
+                                        (assert (-> ctx :data :doc-id class (= Long)))
+                                        {:read doc}))
+        d (k/dispatcher {:user {::roles require-role
+                                ::load-doc load-doc}
+                         :coercion {:input {:data str->int-matcher}}
+                         :context {:docs {1 "hello ruby"
+                                          2 "land of lisp"}}
+                         :handlers {:api {secret-ns {doc-ns read}}}})]
 
-      (fact "input schemas have been modified"
-        (let [handler (k/some-handler d :api.secret.doc/read)]
+    (fact "input schemas have been modified"
+      (let [handler (k/some-handler d :api.secret.doc/read)]
 
-          (fact "handler-input is coming directly from handler"
-            handler => (contains
-                         {:handler-input {:entity {:doc s/Str, s/Keyword s/Any}
-                                          s/Keyword s/Any}}))
+        (fact "handler-input is coming directly from handler"
+          handler => (contains
+                       {:handler-input {:entity {:doc s/Str, s/Keyword s/Any}
+                                        s/Keyword s/Any}}))
 
-          (fact "user-input is accumulated from the path"
-            handler => (contains
-                         {:user-input {:data {:doc-id s/Int, s/Keyword s/Any}
-                                       s/Keyword s/Any}}))
+        (fact "user-input is accumulated from the path"
+          handler => (contains
+                       {:user-input {:data {:doc-id s/Int, s/Keyword s/Any}
+                                     s/Keyword s/Any}}))
 
-          (fact "input is merged sum of the previous"
-            handler => (contains
-                         {:input {:entity {:doc s/Str, s/Keyword s/Any}
-                                  :data {:doc-id s/Int, s/Keyword s/Any}
-                                  s/Keyword s/Any}}))))
+        (fact "input is merged sum of the previous"
+          handler => (contains
+                       {:input {:entity {:doc s/Str, s/Keyword s/Any}
+                                :data {:doc-id s/Int, s/Keyword s/Any}
+                                s/Keyword s/Any}}))))
 
-      (fact "with invalid credentials"
-        (k/invoke d :api.secret.doc/read {}) => missing-route?)
+    (fact "with invalid credentials"
+      (k/invoke d :api.secret.doc/read {}) => missing-route?)
 
-      (fact "with valid credentials"
-        (fact "data in correct format"
-          (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}})
-          => {:read "hello ruby"})
+    (fact "with valid credentials"
+      (fact "data in correct format"
+        (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}})
+        => {:read "hello ruby"})
 
-        (fact "data in wrong format gets coerced already with ns metas"
-          (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}})
-          => {:read "hello ruby"})
+      (fact "data in wrong format gets coerced already with ns metas"
+        (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}})
+        => {:read "hello ruby"})
 
-        (fact "data in wrong format and can't get fixed"
-          (k/invoke d :api.secret.doc/read {:data {:doc-id true} ::roles #{:admin}})
-          => input-coercion-error?))
+      (fact "data in wrong format and can't get fixed"
+        (k/invoke d :api.secret.doc/read {:data {:doc-id true} ::roles #{:admin}})
+        => input-coercion-error?))
 
-      (fact "with input-coercion disabled"
-        (let [d (k/dispatcher {:user {::roles require-role
-                                      ::load-doc load-doc}
-                               :coercion {:input nil}
-                               :context {:docs {1 "hello ruby"
-                                                2 "land of lisp"}}
-                               :handlers {:api {secret-ns {doc-ns read}}}})]
+    (fact "with input-coercion disabled"
+      (let [d (k/dispatcher {:user {::roles require-role
+                                    ::load-doc load-doc}
+                             :coercion {:input nil}
+                             :context {:docs {1 "hello ruby"
+                                              2 "land of lisp"}}
+                             :handlers {:api {secret-ns {doc-ns read}}}})]
 
-          (fact "with valid credentials"
+        (fact "with valid credentials"
 
-            (fact "data in correct format"
-              (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}})
-              => {:read "hello ruby"})
+          (fact "data in correct format"
+            (k/invoke d :api.secret.doc/read {:data {:doc-id 1} ::roles #{:admin}})
+            => {:read "hello ruby"})
 
-            (fact "data in wrong format and can't get fixed"
-              (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}})
-              => (throws? {:type ::s/error}))))))))
+          (fact "data in wrong format and can't get fixed"
+            (k/invoke d :api.secret.doc/read {:data {:doc-id "1"} ::roles #{:admin}})
+            => (throws? {:type ::s/error})))))))
 
 (fact "invoke-time extra data"
   (let [d (k/dispatcher {:handlers
@@ -843,7 +839,8 @@
   (let [PositiveInt (s/both s/Int (s/pred pos? 'positive))
         handlers {:api [(k/handler
                           {:name :plus}
-                          (p/fnk plus :- {:result PositiveInt} [[:data x :- s/Int, y :- PositiveInt]]
+                          (p/fnk ^:never-validate plus :- {:result PositiveInt}
+                            [[:data x :- s/Int, y :- PositiveInt]]
                             {:result (+ x y)}))]}]
 
     (facts "with default settings"
@@ -960,7 +957,8 @@
     (fact "automatic endpoint coercion"
       (let [d (k/dispatcher {:handlers {:api (k/handler
                                                {:name :test}
-                                               (p/fnk f :- {:value s/Int} [data :- {:value s/Int}]
+                                               (p/fnk ^:never-validate f :- {:value s/Int}
+                                                 [data :- {:value s/Int}]
                                                  data))}
                              :coercion {:input nil}})]
 
@@ -985,7 +983,8 @@
       (let [api (k/namespace {:name :api ::load-doc true})
             d (k/dispatcher {:user {::roles require-role
                                     ::load-doc (constantly
-                                                 (p/fnk f :- {:value s/Int} [[:data value :- s/Int] :as ctx]
+                                                 (p/fnk ^:never-validate f :- {:value s/Int}
+                                                   [[:data value :- s/Int] :as ctx]
                                                    ctx))}
                              :coercion {:input nil}
                              :handlers {api [(k/handler
@@ -1016,4 +1015,4 @@
                                  ::k/coercion single-coercion}) => input-coercion-error?)))))
 
 (fact "printing it"
-  (pr-str (k/dispatcher {})) => "#<Dispatcher>")
+  (pr-str (k/dispatcher {:handlers {}})) => "#<Dispatcher>")

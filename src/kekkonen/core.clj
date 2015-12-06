@@ -451,7 +451,7 @@
 ;;
 
 (s/defschema Options
-  {:handlers KeywordMap
+  {:handlers {(s/cond-pre s/Keyword Namespace) s/Any}
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
    (s/optional-key :transformers) [Function]
