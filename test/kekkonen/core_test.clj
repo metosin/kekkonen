@@ -413,6 +413,12 @@
                  :user {::inc inc*
                         ::times times*}})]
 
+        (fact "user-meta is populated correctly"
+          (k/some-handler d :api/test)
+          => (contains {:user {::inc 1 ::times 2}
+                        :ns-user []
+                        :all-user [{::inc 1 ::times 2}]}))
+
         (fact "are executed in some order"
           (k/invoke d :api/test {:data {:x 2}}) => 6)))
 
@@ -428,6 +434,12 @@
                      :user [[::inc inc*]
                             [::times times*]]})]
 
+            (fact "user-meta is populated correctly"
+              (k/some-handler d :api/test)
+              => (contains {:user {::inc 1 ::times 2}
+                            :ns-user []
+                            :all-user [{::inc 1 ::times 2}]}))
+
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
         (fact "are executed in order 2/2"
@@ -439,6 +451,12 @@
                                        (p/fn-> :data :x))}
                      :user [[::times times*]
                             [::inc inc*]]})]
+
+            (fact "user-meta is populated correctly"
+              (k/some-handler d :api/test)
+              => (contains {:user {::inc 1 ::times 2}
+                            :ns-user []
+                            :all-user [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 5)))
 
@@ -455,6 +473,12 @@
                      :user [[::inc inc*]
                             [::times times*]]})]
 
+            (fact "user-meta is populated correctly"
+              (k/some-handler d :api/test)
+              => (contains {:user {}
+                            :ns-user [{::inc 1 ::times 2}]
+                            :all-user [{::inc 1 ::times 2}]}))
+
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
         (fact "are executed in order 1/2"
@@ -468,6 +492,12 @@
                                          (p/fn-> :data :x))}
                      :user [[::times times*]
                             [::inc inc*]]})]
+
+            (fact "user-meta is populated correctly"
+              (k/some-handler d :api/test)
+              => (contains {:user {}
+                            :ns-user [{::inc 1 ::times 2}]
+                            :all-user [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 5))))))
 
