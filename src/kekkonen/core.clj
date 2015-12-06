@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [plumbing.map :as pm]
             [kekkonen.common :as kc]
+            [linked.core :as linked]
             [clojure.walk :as walk]
             [schema.coerce :as sc]
             [schema.utils :as su])
@@ -450,13 +451,13 @@
 ;;
 
 (s/defschema Options
-  {:handlers KeywordMap
+  {:handlers {(s/cond-pre s/Keyword Namespace) s/Any}
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
    (s/optional-key :transformers) [Function]
    (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
                                (s/optional-key :output) s/Any}
-   (s/optional-key :user) KeywordMap
+   (s/optional-key :user) (s/cond-pre [[(s/one s/Keyword 'key) Function]] KeywordMap)
    s/Keyword s/Any})
 
 (s/def +default-options+ :- Options
@@ -473,12 +474,21 @@
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
         collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
+        reorder (fn [m]
+                  (let [ordered (into
+                                  (linked/map)
+                                  (keep
+                                    (fn [k]
+                                      (if-let [v (m k)]
+                                        [k v]))
+                                    (keys user)))]
+                    ordered))
         enrich (fn [h m]
                  (if (or (seq m) allow-empty-namespaces?)
                    (let [ns (handler-ns m)
                          ns-user (collect-ns-meta m)
                          user-meta (:user h)
-                         all-user (if-not (empty? user-meta) (conj ns-user user-meta) ns-user)
+                         all-user (map reorder (if-not (empty? user-meta) (conj ns-user user-meta) ns-user))
                          user-input (reduce
                                       (fn [acc [k v]]
                                         (if-let [f (user k)]
@@ -511,7 +521,12 @@
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
-  (let [options (kc/deep-merge +default-options+ options)
+  (let [options (-> options
+                    (->> (kc/deep-merge +default-options+))
+                    (update :user (fn [user]
+                                    (if-not (map? user)
+                                      (apply linked/map (apply concat user))
+                                      user))))
         handlers (->> (collect-and-enrich options false))]
     (map->Dispatcher
       (merge
