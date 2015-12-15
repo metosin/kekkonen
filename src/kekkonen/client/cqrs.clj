@@ -36,8 +36,8 @@
              :throw-exceptions false
              :content-type :transit+json}})
 
-(def query (partial action (:get +options+)))
-(def command (partial action (:post +options+)))
+(def query (partial action (:query +options+)))
+(def command (partial action (:command +options+)))
 
 (def success? hp/ok?)
 (def failure? hp/bad-request?)
