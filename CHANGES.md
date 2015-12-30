@@ -1,6 +1,7 @@
-## Next
+## 0.1.2 (30.12.2015)
 
 * Fix client using wrong keywords [#16](https://github.com/metosin/kekkonen/pull/16)
+* Deterministic order for user annotations [#15](https://github.com/metosin/kekkonen/pull/15)
 
 ```clj
 [prismatic/schema "1.0.4"] is available but we use "1.0.3"
