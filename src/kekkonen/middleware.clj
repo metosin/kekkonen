@@ -8,6 +8,7 @@
             [ring.middleware.params :refer [wrap-params]]
             [slingshot.slingshot :as slingshot]
             [kekkonen.common :as kc]
+            [kekkonen.impl.logging :as logging]
             [clojure.walk :as walk]
             [schema.utils :as su]
             [schema.core :as s])
@@ -24,7 +25,7 @@
    Error response only contains class of the Exception so that it won't accidentally
    expose secret details."
   [^Exception e _ _]
-  (.printStackTrace e)
+  (logging/log! :error e (.getMessage e))
   (r/internal-server-error {:type "unknown-exception"
                             :class (.getName (.getClass e))}))
 
