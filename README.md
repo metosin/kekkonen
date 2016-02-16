@@ -21,7 +21,7 @@ See [Live demo](https://kekkonen.herokuapp.com/) & [Wiki](https://github.com/met
 
 [![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
 
-Currently in **Alpha**, targeting first production release this year.
+Currently in **Alpha**, targeting first production release before summer.
 
 Quickstart: `lein new kekkonen kakkonen`
 
