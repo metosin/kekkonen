@@ -718,22 +718,47 @@
     (remove-ab {:a {:b 1}}) => {}
     ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
 
-(fact "transformers"
-  (fact "transformers are executed in order"
-    (let [d (k/dispatcher
-              {:handlers {:api (k/handler {:name :test} (p/fn-> :y))}
-               :transformers [(k/context-copy [:x] [:y])
-                              (k/context-dissoc [:x])]})]
+(fact "Interceptors"
+  (let [stop (constantly nil)]
+    (fact "functions can be expanded into interceptors"
+      (k/interceptor stop) => {:enter stop})
+    (fact "maps as interceptors"
+      (k/interceptor {:enter stop}) => {:enter stop}
+      (k/interceptor {:leave stop}) => {:leave stop}
+      (k/interceptor {:enter stop, :leave stop}) => {:enter stop, :leave stop}
+      (fact "invalid keys cause failure"
+        (k/interceptor {:enter stop, :whatever stop}) => throws?)
+      (fact "either enter or leave is required"
+        (k/interceptor {}) => throws?))))
 
-      (k/invoke d :api/test {:x 1}) => 1))
+(fact "Interceptors with dispatcher"
+  (let [->> (fn [x] (fn [ctx] (update ctx :x #(str % x))))
+        <<- (fn [x] (fn [ctx] (update ctx :response #(str % x))))]
 
-  (fact "transforming to nil stops the execution"
+    (fact "are executed in order"
     (let [d (k/dispatcher
-              {:handlers {:api (k/handler {:name :test} identity)}
+                {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
+                 :transformers [{:enter (->> "1"), :leave (<<- "1")}
+                                {:enter (->> "2"), :leave (<<- "2")}
+                                (->> "3")]})]
+
+        (k/invoke d :api/test) => "12321"))
+
+    (fact "returning nil on :enter stops the execution"
+    (let [d (k/dispatcher
+                {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
                :transformers [(constantly nil)
-                              #(assoc % :x 1)]})]
+                                #(throw AssertionError)]})]
 
-      (k/invoke d :api/test {}) => missing-route?)))
+        (k/invoke d :api/test) => missing-route?))
+
+    (fact "returning nil on :leave stops the execution"
+      (let [d (k/dispatcher
+                {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
+                 :transformers [{:leave #(throw AssertionError)}
+                                {:leave (constantly nil)}]})]
+
+        (k/invoke d :api/test) => missing-route?))))
 
 (fact "transforming handlers"
   (fact "enriching handlers"

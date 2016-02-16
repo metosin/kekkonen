@@ -27,6 +27,14 @@
     KeywordMap
     {(s/optional-key :data) s/Any}))
 
+(s/defschema Interceptor
+  (s/constrained
+    {(s/optional-key :name) s/Str
+     (s/optional-key :enter) Function
+     (s/optional-key :leave) Function}
+    (fn [{:keys [enter leave]}] (or enter leave))
+    'enter-or-leave-required))
+
 (s/defschema Handler
   {:function Function
    :type s/Keyword
@@ -315,19 +323,23 @@
   [dispatcher, action :- s/Keyword]
   (get-in dispatcher [:handlers action]))
 
+(defn- invalid-action! [action]
+  (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
+
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
     (let [input-matcher (-> dispatcher :coercion :input)
           context (as-> context context
 
-                        ; TODO: transformers -> middleware/interceptors
-
                         ;; base-context from Dispatcher
                         (kc/deep-merge (:context dispatcher) context)
 
-                        ;; run all the transformers
-                        ;; short-circuit execution if a transformer returns nil
-                        (reduce (fn [ctx mapper] (or (mapper ctx) (reduced nil))) context (:transformers dispatcher))
+                        ;; run all the interceptor enters, short-circuit on nil
+                        (reduce
+                          (fn [ctx {:keys [enter]}]
+                            (if enter (or (enter ctx) (reduced nil)) ctx))
+                          context
+                          (:transformers dispatcher))
 
                         ; TODO: type-transformers?
 
@@ -356,16 +368,42 @@
                                                                 ::handler handler})))]
 
       (when-not context
-        (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
+        (invalid-action! action))
 
       ;; all good, let's invoke?
       (if (#{:invoke} mode)
-        (let [response (function context)]
-          ;; response coercion
-          (if (and output (-> dispatcher :coercion :output))
-            (coerce! output (-> dispatcher :coercion :output) response nil ::response)
-            response))))
-    (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action}))))
+        (let [response (as-> (function context) response
+                             (if (and output (-> dispatcher :coercion :output))
+                               (coerce! output (-> dispatcher :coercion :output) response nil ::response)
+                               response))
+              context (as-> (assoc context :response response) context
+
+                            ;; run all the user transformers per namespace/handler
+                            ;; start from the root. a returned nil context short-circuits
+                            ;; the run an causes ::dispatch error. Apply local coercion
+                            ;; in the input is defined (using same definitions as with handlers)
+                            ; TODO: precompile for fail-fast & speed? input-coerce only tagged ones? test!
+                            #_(reduce
+                              (fn [ctx [k v]]
+                                (if-let [mapper-gen (get-in dispatcher [:user k])]
+                                  (let [mapper (mapper-gen v)
+                                        input-schema (:input (kc/extract-schema mapper))
+                                        ctx (input-coerce! ctx input-schema input-matcher)]
+                                    (or (mapper ctx) (reduced nil)))
+                                  ctx))
+                              context
+                              (apply concat all-user))
+
+                            ;; run all the interceptor leaves in reverse order, short-circuit on nil
+                            (reduce
+                              (fn [ctx {:keys [leave]}]
+                                (if leave (or (leave ctx) (reduced nil)) ctx))
+                              context
+                              (reverse (:transformers dispatcher))))]
+
+          (or (:response context)
+              (invalid-action! action)))))
+    (invalid-action! action)))
 
 (s/defn check
   "Checks an action handler with the given context."
@@ -518,6 +556,14 @@
         (->> (group-by :action)
              (p/map-vals first)))))
 
+(defn interceptor [interceptor-or-a-function]
+  (s/validate
+    Interceptor
+    (cond
+      (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
+      (map? interceptor-or-a-function) interceptor-or-a-function
+      :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
+
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
@@ -527,11 +573,13 @@
                                     (if-not (map? user)
                                       (apply linked/map (apply concat user))
                                       user))))
-        handlers (->> (collect-and-enrich options false))]
+        handlers (->> (collect-and-enrich options false))
+        transformers (mapv interceptor (:transformers options))]
     (map->Dispatcher
       (merge
-        (select-keys options [:context :transformers :coercion :user])
-        {:handlers handlers}))))
+        (select-keys options [:context :coercion :user])
+        {:handlers handlers
+         :transformers transformers}))))
 
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,
