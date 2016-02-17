@@ -27,14 +27,6 @@
     KeywordMap
     {(s/optional-key :data) s/Any}))
 
-(s/defschema Interceptor
-  (s/constrained
-    {(s/optional-key :name) s/Str
-     (s/optional-key :enter) Function
-     (s/optional-key :leave) Function}
-    (fn [{:keys [enter leave]}] (or enter leave))
-    'enter-or-leave-required))
-
 (s/defschema Handler
   {:function Function
    :type s/Keyword
@@ -65,6 +57,26 @@
                                  :ns s/Symbol
                                  :name s/Symbol}
    s/Keyword s/Any})
+
+;;
+;; Interceptors
+;;
+
+(s/defschema Interceptor
+  (s/constrained
+    {(s/optional-key :name) s/Str
+     (s/optional-key :enter) Function
+     (s/optional-key :leave) Function}
+    (fn [{:keys [enter leave]}] (or enter leave))
+    'enter-or-leave-required))
+
+(defn interceptor [interceptor-or-a-function]
+  (s/validate
+    Interceptor
+    (cond
+      (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
+      (map? interceptor-or-a-function) interceptor-or-a-function
+      :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
 
 ;;
 ;; Type Resolution
@@ -343,18 +355,21 @@
 
                         ; TODO: type-transformers?
 
-                        ;; run all the user transformers per namespace/handler
+                        ;; run all the user interceptor enters per namespace/handler
                         ;; start from the root. a returned nil context short-circuits
                         ;; the run an causes ::dispatch error. Apply local coercion
                         ;; in the input is defined (using same definitions as with handlers)
                         ; TODO: precompile for fail-fast & speed? input-coerce only tagged ones? test!
                         (reduce
                           (fn [ctx [k v]]
-                            (if-let [mapper-gen (get-in dispatcher [:user k])]
-                              (let [mapper (mapper-gen v)
-                                    input-schema (:input (kc/extract-schema mapper))
-                                    ctx (input-coerce! ctx input-schema input-matcher)]
-                                (or (mapper ctx) (reduced nil)))
+                            (if-let [interceptor-factory (get-in dispatcher [:user k])]
+                              (if-let [interceptor (interceptor (interceptor-factory v))]
+                                (if-let [enter (:enter interceptor)]
+                                  (let [input-schema (:input (kc/extract-schema enter))
+                                        ctx (input-coerce! ctx input-schema input-matcher)]
+                                    (or (enter ctx) (reduced nil)))
+                                  ctx)
+                                ctx)
                               ctx))
                           context
                           (apply concat all-user))
@@ -378,18 +393,17 @@
                                response))
               context (as-> (assoc context :response response) context
 
-                            ;; run all the user transformers per namespace/handler
+                            ;; run all the user interceptor leaves per namespace/handler
                             ;; start from the root. a returned nil context short-circuits
                             ;; the run an causes ::dispatch error. Apply local coercion
                             ;; in the input is defined (using same definitions as with handlers)
                             ; TODO: precompile for fail-fast & speed? input-coerce only tagged ones? test!
-                            #_(reduce
+                            (reduce
                               (fn [ctx [k v]]
-                                (if-let [mapper-gen (get-in dispatcher [:user k])]
-                                  (let [mapper (mapper-gen v)
-                                        input-schema (:input (kc/extract-schema mapper))
-                                        ctx (input-coerce! ctx input-schema input-matcher)]
-                                    (or (mapper ctx) (reduced nil)))
+                                (if-let [user-interceptor (get-in dispatcher [:user k :leave])]
+                                  (if-let [enter (user-interceptor v)]
+                                    (or (enter ctx) (reduced nil))
+                                    ctx)
                                   ctx))
                               context
                               (apply concat all-user))
@@ -507,6 +521,7 @@
    :type-resolver default-type-resolver
    :user {}})
 
+;; TODO: create full set of interceptors here and run them in order
 (defn- collect-and-enrich
   [{:keys [handlers type-resolver user]} allow-empty-namespaces?]
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
@@ -529,7 +544,7 @@
                          all-user (map reorder (if-not (empty? user-meta) (conj ns-user user-meta) ns-user))
                          user-input (reduce
                                       (fn [acc [k v]]
-                                        (if-let [f (user k)]
+                                        (if-let [f (:enter (interceptor (user k)))]
                                           (let [schema (:input (kc/extract-schema (f v)))]
                                             (kc/merge-map-schemas acc schema))
                                           acc)) {} (apply concat all-user))
@@ -556,23 +571,12 @@
         (->> (group-by :action)
              (p/map-vals first)))))
 
-(defn interceptor [interceptor-or-a-function]
-  (s/validate
-    Interceptor
-    (cond
-      (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
-      (map? interceptor-or-a-function) interceptor-or-a-function
-      :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
-
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
   (let [options (-> options
                     (->> (kc/deep-merge +default-options+))
-                    (update :user (fn [user]
-                                    (if-not (map? user)
-                                      (apply linked/map (apply concat user))
-                                      user))))
+                    (update :user (partial into (linked/map))))
         handlers (->> (collect-and-enrich options false))
         transformers (mapv interceptor (:transformers options))]
     (map->Dispatcher

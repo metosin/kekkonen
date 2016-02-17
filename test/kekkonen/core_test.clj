@@ -395,29 +395,37 @@
       (throw (ex-info "missing role" {:roles (::roles context)
                                       :required required})))))
 
+;; TODO: test enter & leave
 (facts "user-meta"
-  (let [inc* (constantly
-               (p/fnk [[:data x :- s/Int] :as ctx]
-                 (update-in ctx [:data :x] inc)))
-        times* (constantly
+  (let [inc* (fn [value]
+               {:enter
+                (p/fnk [[:data x :- s/Int] :as ctx]
+                  (update-in ctx [:data :x] #(+ % value)))})
+        dec* (fn [value]
+               {:enter
+                (p/fnk [[:data x :- s/Int] :as ctx]
+                  (update-in ctx [:data :x] #(- % value)))})
+        times* (fn [value]
                  (p/fnk [[:data x :- s/Int] :as ctx]
-                   (update-in ctx [:data :x] (partial * 2))))]
+                   (update-in ctx [:data :x] #(* % value))))]
 
     (facts "context-handlers via map"
       (let [d (k/dispatcher
                 {:handlers {:api (k/handler
                                    {:name :test
-                                    ::inc 1
+                                    ::inc 2
+                                    ::dec 1
                                     ::times 2}
                                    (p/fn-> :data :x))}
                  :user {::inc inc*
+                        ::dec dec*
                         ::times times*}})]
 
         (fact "user-meta is populated correctly"
           (k/some-handler d :api/test)
-          => (contains {:user {::inc 1 ::times 2}
+          => (contains {:user {::inc 2, ::dec 1, ::times 2}
                         :ns-user []
-                        :all-user [{::inc 1 ::times 2}]}))
+                        :all-user [{::inc 2, ::dec 1, ::times 2}]}))
 
         (fact "are executed in some order"
           (k/invoke d :api/test {:data {:x 2}}) => 6)))
@@ -736,7 +744,7 @@
         <<- (fn [x] (fn [ctx] (update ctx :response #(str % x))))]
 
     (fact "are executed in order"
-    (let [d (k/dispatcher
+      (let [d (k/dispatcher
                 {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
                  :transformers [{:enter (->> "1"), :leave (<<- "1")}
                                 {:enter (->> "2"), :leave (<<- "2")}
@@ -745,9 +753,9 @@
         (k/invoke d :api/test) => "12321"))
 
     (fact "returning nil on :enter stops the execution"
-    (let [d (k/dispatcher
+      (let [d (k/dispatcher
                 {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
-               :transformers [(constantly nil)
+                 :transformers [(constantly nil)
                                 #(throw AssertionError)]})]
 
         (k/invoke d :api/test) => missing-route?))
