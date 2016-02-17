@@ -78,6 +78,21 @@
       (map? interceptor-or-a-function) interceptor-or-a-function
       :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
 
+; TODO: make generic :interceptors :meta out of this
+(defn- interceptor-factory [data]
+  (assert (vector? data) "intercetors must be defined as a vector")
+  (let [interceptors (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
+        execute (fn [[first & rest] ctx]
+                  (if-let [ctx (first ctx)]
+                    (if rest
+                      (recur rest ctx)
+                      ctx)))
+        enters (seq (keep :enter interceptors))
+        leaves (seq (reverse (keep :leave interceptors)))]
+    (merge
+      (if enters {:enter (partial execute enters)})
+      (if leaves {:leave (partial execute leaves)}))))
+
 ;;
 ;; Type Resolution
 ;;

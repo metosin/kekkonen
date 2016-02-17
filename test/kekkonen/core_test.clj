@@ -395,7 +395,15 @@
       (throw (ex-info "missing role" {:roles (::roles context)
                                       :required required})))))
 
-;; TODO: test enter & leave
+(fact "interceptor-factory"
+  (let [{:keys [enter leave]} (#'k/interceptor-factory [{:enter #(update % :enter inc)
+                                                         :leave #(update % :leave dec)}
+                                                        (fn [ctx] (update ctx :enter inc))
+                                                        {:enter #(update % :enter (partial * 10))
+                                                         :leave #(update % :leave (partial * 10))}])]
+    (fact "enters are applied in order, leaves in reverse order"
+      (leave (enter {:enter 0, :leave 0})) => {:enter 20, :leave -1})))
+
 (facts "user-meta"
   (let [inc* (fn [value]
                {:enter (p/fnk [[:data x :- s/Int] :as ctx]
@@ -429,9 +437,9 @@
                                                      :all-user [{::inc 2, ::intercept [dec x10], ::times 2}]}))
 
         (fact "are executed in some order: (-> 2 (+ 2) dec (* 2) (* 10) => 60"
-          (k/invoke d :api/test {:data {:x 2}}) => 60))))
+          (k/invoke d :api/test {:data {:x 2}}) => 60)))
 
-  #_(facts "context-handlers via vector of vectors"
+    (facts "context-handlers via vector of vectors"
       (fact "handler meta"
         (fact "are executed in order 1/2"
           (let [d (k/dispatcher
@@ -508,7 +516,7 @@
                             :ns-user [{::inc 1 ::times 2}]
                             :all-user [{::inc 1 ::times 2}]}))
 
-            (k/invoke d :api/test {:data {:x 2}}) => 5))))) )
+            (k/invoke d :api/test {:data {:x 2}}) => 5))))))
 
 (facts "all-handlers, available-handlers & dispatch-handlers"
   (let [handler->action (fn [m] (p/for-map [[k v] m] (:action k) v))
