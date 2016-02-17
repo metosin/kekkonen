@@ -394,19 +394,20 @@
               context (as-> (assoc context :response response) context
 
                             ;; run all the user interceptor leaves per namespace/handler
-                            ;; start from the root. a returned nil context short-circuits
+                            ;; in reverse order start from the handler. a returned nil context short-circuits
                             ;; the run an causes ::dispatch error. Apply local coercion
                             ;; in the input is defined (using same definitions as with handlers)
-                            ; TODO: precompile for fail-fast & speed? input-coerce only tagged ones? test!
                             (reduce
                               (fn [ctx [k v]]
-                                (if-let [user-interceptor (get-in dispatcher [:user k :leave])]
-                                  (if-let [enter (user-interceptor v)]
-                                    (or (enter ctx) (reduced nil))
+                                (if-let [interceptor-factory (get-in dispatcher [:user k])]
+                                  (if-let [interceptor (interceptor (interceptor-factory v))]
+                                    (if-let [leave (:leave interceptor)]
+                                      (or (leave ctx) (reduced nil))
+                                      ctx)
                                     ctx)
                                   ctx))
                               context
-                              (apply concat all-user))
+                              (reverse (apply concat all-user)))
 
                             ;; run all the interceptor leaves in reverse order, short-circuit on nil
                             (reduce

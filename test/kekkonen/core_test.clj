@@ -398,39 +398,40 @@
 ;; TODO: test enter & leave
 (facts "user-meta"
   (let [inc* (fn [value]
-               {:enter
-                (p/fnk [[:data x :- s/Int] :as ctx]
-                  (update-in ctx [:data :x] #(+ % value)))})
-        dec* (fn [value]
-               {:enter
-                (p/fnk [[:data x :- s/Int] :as ctx]
-                  (update-in ctx [:data :x] #(- % value)))})
+               {:enter (p/fnk [[:data x :- s/Int] :as ctx]
+                         (update-in ctx [:data :x] #(+ % value)))})
+        intercept* (fn [[enter leave]]
+                     {:enter (p/fnk [[:data x :- s/Int] :as ctx]
+                               (update-in ctx [:data :x] enter))
+                      :leave (fn [ctx]
+                               (update ctx :response leave))})
         times* (fn [value]
                  (p/fnk [[:data x :- s/Int] :as ctx]
-                   (update-in ctx [:data :x] #(* % value))))]
+                   (update-in ctx [:data :x] #(* % value))))
+
+        x10 (partial * 10)]
 
     (facts "context-handlers via map"
       (let [d (k/dispatcher
                 {:handlers {:api (k/handler
                                    {:name :test
                                     ::inc 2
-                                    ::dec 1
+                                    ::intercept [dec x10]
                                     ::times 2}
                                    (p/fn-> :data :x))}
                  :user {::inc inc*
-                        ::dec dec*
+                        ::intercept intercept*
                         ::times times*}})]
 
         (fact "user-meta is populated correctly"
-          (k/some-handler d :api/test)
-          => (contains {:user {::inc 2, ::dec 1, ::times 2}
-                        :ns-user []
-                        :all-user [{::inc 2, ::dec 1, ::times 2}]}))
+          (k/some-handler d :api/test) => (contains {:user {::inc 2, ::intercept [dec x10], ::times 2}
+                                                     :ns-user []
+                                                     :all-user [{::inc 2, ::intercept [dec x10], ::times 2}]}))
 
-        (fact "are executed in some order"
-          (k/invoke d :api/test {:data {:x 2}}) => 6)))
+        (fact "are executed in some order: (-> 2 (+ 2) dec (* 2) (* 10) => 60"
+          (k/invoke d :api/test {:data {:x 2}}) => 60))))
 
-    (facts "context-handlers via vector of vectors"
+  #_(facts "context-handlers via vector of vectors"
       (fact "handler meta"
         (fact "are executed in order 1/2"
           (let [d (k/dispatcher
@@ -507,7 +508,7 @@
                             :ns-user [{::inc 1 ::times 2}]
                             :all-user [{::inc 1 ::times 2}]}))
 
-            (k/invoke d :api/test {:data {:x 2}}) => 5))))))
+            (k/invoke d :api/test {:data {:x 2}}) => 5))))) )
 
 (facts "all-handlers, available-handlers & dispatch-handlers"
   (let [handler->action (fn [m] (p/for-map [[k v] m] (:action k) v))
