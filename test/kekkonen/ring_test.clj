@@ -259,7 +259,7 @@
                                                             (contains
                                                               {:methods #{:post}})})})))
 
-(fact "global interceptors"
+(fact "global & type-level interceptors"
   (let [app (r/ring-handler
               (k/dispatcher
                 {:handlers
@@ -268,16 +268,22 @@
                     {:name :test}
                     (fn [context]
                       {:user (-> context ::user)}))}})
-              {:interceptors [{:enter (fn [context]
-                                        (let [user (get-in context [:request :header-params "user"])]
-                                          (assoc context ::user user)))
-                               :leave (fn [context]
-                                        (assoc-in context [:response :kikka] "kukka")
-                                        )}]})]
+              {:types {:handler {:interceptors [{:enter (fn [context]
+                                                          (if (::user context)
+                                                            (update context ::user #(str % "!"))
+                                                            context))
+                                                 :leave (fn [ctx]
+                                                          (assoc-in ctx [:response :handler] true))}]}}
+
+               :interceptors [{:enter (fn [ctx]
+                                        (let [user (get-in ctx [:request :header-params "user"])]
+                                          (assoc ctx ::user user)))
+                               :leave (fn [ctx]
+                                        (assoc-in ctx [:response :global] true))}]})]
 
     (app {:uri "/api/test"
-          :request-method :post}) => {:user nil, :kikka "kukka"}
+          :request-method :post}) => {:user nil, :global true, :handler true}
 
     (app {:uri "/api/test"
           :request-method :post
-          :header-params {"user" "tommi"}}) => {:user "tommi", :kikka "kukka"}))
+          :header-params {"user" "tommi"}}) => {:user "tommi!", :global true, :handler true}))
