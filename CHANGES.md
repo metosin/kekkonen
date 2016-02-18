@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Change Transformers to Interceptors in both the Dispatcher & Ring.
+
 * Updated dependencies
 
 ```clj
