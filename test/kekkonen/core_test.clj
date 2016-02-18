@@ -756,19 +756,25 @@
       (let [d (k/dispatcher
                 {:handlers
                  {:api
-                  (k/handler
-                    {:name :test
-                     :interceptors [{:enter (->> "4"), :leave (<<- "4")}
-                                    {:enter (->> "5"), :leave (<<- "5")}
-                                    (->> "6")
-                                    {:leave (<<- "6")}]}
-                    (p/fn-> :x (str "-")))}
+                  {(k/namespace
+                     {:name :ipa
+                      :interceptors [{:enter (->> "4"), :leave (<<- "4")}
+                                     {:enter (->> "5"), :leave (<<- "5")}
+                                     (->> "6")
+                                     {:leave (<<- "6")}]})
+                   (k/handler
+                     {:name :test
+                      :interceptors [{:enter (->> "7"), :leave (<<- "7")}
+                                     {:enter (->> "8"), :leave (<<- "8")}
+                                     (->> "9")
+                                     {:leave (<<- "9")}]}
+                     (p/fn-> :x (str "-")))}}
                  :interceptors [{:enter (->> "1"), :leave (<<- "1")}
                                 {:enter (->> "2"), :leave (<<- "2")}
                                 (->> "3")
                                 {:leave (<<- "3")}]})]
 
-        (k/invoke d :api/test) => "123456-654321"))
+        (k/invoke d :api.ipa/test) => "123456789-987654321"))
 
     (fact "returning nil on :enter stops the execution"
       (let [d (k/dispatcher
