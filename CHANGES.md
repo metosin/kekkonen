@@ -1,12 +1,14 @@
 ## Unreleased
 
+* Change Transformers to Interceptors in both the Dispatcher & Ring.
+
 * Updated dependencies
 
 ```clj
 [prismatic/schema "1.0.5"] is available but we use "1.0.4"
 [metosin/ring-swagger "0.22.4"] is available but we use "0.22.1"
 [metosin/ring-swagger-ui "2.1.4-0"] is available but we use "2.1.3-4"
-[clj-http "2.0.1"] is available but we use "2.0.0"
+[clj-http "2.1.0"] is available but we use "2.0.0"
 ```
 
 ## 0.1.2 (30.12.2015)

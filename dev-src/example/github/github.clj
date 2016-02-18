@@ -129,7 +129,7 @@
                                                  compojure-api})
                                    :counter (atom 0)}}
             :user {:roles security/require-roles}}
-     :ring {:transformers [security/api-key-authenticator]}}))
+     :ring {:interceptors [security/api-key-authenticator]}}))
 
 (comment
   (server/run-server #'app {:port 3000}))

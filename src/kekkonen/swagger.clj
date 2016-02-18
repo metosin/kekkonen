@@ -59,7 +59,7 @@
     (fn [context]
       (let [dispatcher (k/get-dispatcher context)
             ns (some-> context :request :query-params :ns str keyword)
-            handlers (k/available-handlers dispatcher ns (@#'r/clean-context context))]
+            handlers (k/available-handlers dispatcher ns (#'r/clean-context context))]
         (ok (swagger-object
               (ring-swagger handlers swagger)
               options))))))

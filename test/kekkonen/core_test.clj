@@ -395,32 +395,49 @@
       (throw (ex-info "missing role" {:roles (::roles context)
                                       :required required})))))
 
+(fact "interceptor-factory"
+  (let [{:keys [enter leave]} (#'k/interceptor-factory [{:enter #(update % :enter inc)
+                                                         :leave #(update % :leave dec)}
+                                                        (fn [ctx] (update ctx :enter inc))
+                                                        {:enter #(update % :enter (partial * 10))
+                                                         :leave #(update % :leave (partial * 10))}])]
+    (fact "enters are applied in order, leaves in reverse order"
+      (leave (enter {:enter 0, :leave 0})) => {:enter 20, :leave -1})))
+
 (facts "user-meta"
-  (let [inc* (constantly
-               (p/fnk [[:data x :- s/Int] :as ctx]
-                 (update-in ctx [:data :x] inc)))
-        times* (constantly
+  (let [inc* (fn [value]
+               {:enter (p/fnk [[:data x :- s/Int] :as ctx]
+                         (update-in ctx [:data :x] #(+ % value)))})
+        intercept* (fn [[enter leave]]
+                     {:enter (p/fnk [[:data x :- s/Int] :as ctx]
+                               (update-in ctx [:data :x] enter))
+                      :leave (fn [ctx]
+                               (update ctx :response leave))})
+        times* (fn [value]
                  (p/fnk [[:data x :- s/Int] :as ctx]
-                   (update-in ctx [:data :x] (partial * 2))))]
+                   (update-in ctx [:data :x] #(* % value))))
+
+        x10 (partial * 10)]
 
     (facts "context-handlers via map"
       (let [d (k/dispatcher
                 {:handlers {:api (k/handler
                                    {:name :test
-                                    ::inc 1
+                                    ::inc 2
+                                    ::intercept [dec x10]
                                     ::times 2}
                                    (p/fn-> :data :x))}
                  :user {::inc inc*
+                        ::intercept intercept*
                         ::times times*}})]
 
         (fact "user-meta is populated correctly"
-          (k/some-handler d :api/test)
-          => (contains {:user {::inc 1 ::times 2}
-                        :ns-user []
-                        :all-user [{::inc 1 ::times 2}]}))
+          (k/some-handler d :api/test) => (contains {:user {::inc 2, ::intercept [dec x10], ::times 2}
+                                                     :ns-user []
+                                                     :all-user [{::inc 2, ::intercept [dec x10], ::times 2}]}))
 
-        (fact "are executed in some order"
-          (k/invoke d :api/test {:data {:x 2}}) => 6)))
+        (fact "are executed in some order: (-> 2 (+ 2) dec (* 2) (* 10) => 60"
+          (k/invoke d :api/test {:data {:x 2}}) => 60)))
 
     (facts "context-handlers via vector of vectors"
       (fact "handler meta"
@@ -718,22 +735,62 @@
     (remove-ab {:a {:b 1}}) => {}
     ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
 
-(fact "transformers"
-  (fact "transformers are executed in order"
-    (let [d (k/dispatcher
-              {:handlers {:api (k/handler {:name :test} (p/fn-> :y))}
-               :transformers [(k/context-copy [:x] [:y])
-                              (k/context-dissoc [:x])]})]
+(fact "Interceptors"
+  (let [stop (constantly nil)]
+    (fact "functions can be expanded into interceptors"
+      (k/interceptor stop) => {:enter stop})
+    (fact "maps as interceptors"
+      (k/interceptor {:enter stop}) => {:enter stop}
+      (k/interceptor {:leave stop}) => {:leave stop}
+      (k/interceptor {:enter stop, :leave stop}) => {:enter stop, :leave stop}
+      (fact "invalid keys cause failure"
+        (k/interceptor {:enter stop, :whatever stop}) => throws?)
+      (fact "either enter or leave is required"
+        (k/interceptor {}) => throws?))))
 
-      (k/invoke d :api/test {:x 1}) => 1))
+(fact "Interceptors"
+  (let [->> (fn [x] (fn [ctx] (update ctx :x #(str % x))))
+        <<- (fn [x] (fn [ctx] (update ctx :response #(str % x))))]
 
-  (fact "transforming to nil stops the execution"
-    (let [d (k/dispatcher
-              {:handlers {:api (k/handler {:name :test} identity)}
-               :transformers [(constantly nil)
-                              #(assoc % :x 1)]})]
+    (fact "are executed in order"
+      (let [d (k/dispatcher
+                {:handlers
+                 {:api
+                  {(k/namespace
+                     {:name :ipa
+                      :interceptors [{:enter (->> "4"), :leave (<<- "4")}
+                                     {:enter (->> "5"), :leave (<<- "5")}
+                                     (->> "6")
+                                     {:leave (<<- "6")}]})
+                   (k/handler
+                     {:name :test
+                      :interceptors [{:enter (->> "7"), :leave (<<- "7")}
+                                     {:enter (->> "8"), :leave (<<- "8")}
+                                     (->> "9")
+                                     {:leave (<<- "9")}]}
+                     (p/fn-> :x (str "-")))}}
+                 :interceptors [{:enter (->> "1"), :leave (<<- "1")}
+                                {:enter (->> "2"), :leave (<<- "2")}
+                                (->> "3")
+                                {:leave (<<- "3")}]})]
 
-      (k/invoke d :api/test {}) => missing-route?)))
+        (k/invoke d :api.ipa/test) => "123456789-987654321"))
+
+    (fact "returning nil on :enter stops the execution"
+      (let [d (k/dispatcher
+                {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
+                 :interceptors [(constantly nil)
+                                #(throw AssertionError)]})]
+
+        (k/invoke d :api/test) => missing-route?))
+
+    (fact "returning nil on :leave stops the execution"
+      (let [d (k/dispatcher
+                {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
+                 :interceptors [{:leave #(throw AssertionError)}
+                                {:leave (constantly nil)}]})]
+
+        (k/invoke d :api/test) => missing-route?))))
 
 (fact "transforming handlers"
   (fact "enriching handlers"
@@ -757,7 +814,7 @@
     => (contains
          {:handlers {}})))
 
-(facts "transformers requiring parameters"
+(facts "interceptors requiring parameters"
   (let [str->int-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
         load-doc (constantly
                    (p/fnk [[:data doc-id :- s/Int] :as ctx]

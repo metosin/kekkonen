@@ -113,7 +113,7 @@
                                    :ids (atom 0)
                                    :counter (atom 0)}}
             :user {::roles require-roles}}
-     :ring {:transformers [api-key-authenticator]}}))
+     :ring {:interceptors [api-key-authenticator]}}))
 
 (comment
   (server/run-server #'app {:port 3000}))
