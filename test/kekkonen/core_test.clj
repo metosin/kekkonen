@@ -395,12 +395,12 @@
       (throw (ex-info "missing role" {:roles (::roles context)
                                       :required required})))))
 
-(fact "interceptor-factory"
-  (let [{:keys [enter leave]} (#'k/interceptor-factory [{:enter #(update % :enter inc)
-                                                         :leave #(update % :leave dec)}
-                                                        (fn [ctx] (update ctx :enter inc))
-                                                        {:enter #(update % :enter (partial * 10))
-                                                         :leave #(update % :leave (partial * 10))}])]
+(fact "interceptors"
+  (let [{:keys [enter leave]} (k/interceptors [{:enter #(update % :enter inc)
+                                                :leave #(update % :leave dec)}
+                                               (fn [ctx] (update ctx :enter inc))
+                                               {:enter #(update % :enter (partial * 10))
+                                                :leave #(update % :leave (partial * 10))}])]
     (fact "enters are applied in order, leaves in reverse order"
       (leave (enter {:enter 0, :leave 0})) => {:enter 20, :leave -1})))
 
@@ -450,6 +450,11 @@
                                        (p/fn-> :data :x))}
                      :user [[::inc inc*]
                             [::times times*]]})]
+
+            (fact "default :user is before client set :user"
+              (->> d :user (map identity)) => [[:interceptors k/interceptors]
+                                               [::inc inc*]
+                                               [::times times*]])
 
             (fact "user-meta is populated correctly"
               (k/some-handler d :api/test)

@@ -81,7 +81,7 @@
       (map? interceptor-or-a-function) interceptor-or-a-function
       :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
 
-(defn- interceptor-factory [data]
+(defn interceptors [data]
   (assert (vector? data) "intercetors must be defined as a vector")
   (let [interceptors (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
         execute (fn [[first & rest] ctx]
@@ -355,6 +355,7 @@
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
 
+; TODO: precompile whole interceptor chain
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [function all-user input output] :as handler} (some-handler dispatcher action)]
     (let [input-matcher (-> dispatcher :coercion :input)
@@ -376,11 +377,10 @@
                         ;; start from the root. a returned nil context short-circuits
                         ;; the run an causes ::dispatch error. Apply local coercion
                         ;; in the input is defined (using same definitions as with handlers)
-                        ; TODO: precompile for fail-fast & speed? input-coerce only tagged ones? test!
                         (reduce
                           (fn [ctx [k v]]
-                            (if-let [interceptor-factory (get-in dispatcher [:user k])]
-                              (if-let [interceptor (interceptor (interceptor-factory v))]
+                            (if-let [interceptors (get-in dispatcher [:user k])]
+                              (if-let [interceptor (interceptor (interceptors v))]
                                 (if-let [enter (:enter interceptor)]
                                   (let [input-schema (:input (kc/extract-schema enter))
                                         ctx (input-coerce! ctx input-schema input-matcher)]
@@ -537,7 +537,7 @@
    :coercion {:input {:data (constantly nil)}
               :output (constantly nil)}
    :type-resolver default-type-resolver
-   :user {:interceptors interceptor-factory}})
+   :user {:interceptors interceptors}})
 
 ;; TODO: create full set of interceptors here and run them in order
 (defn- collect-and-enrich
@@ -593,8 +593,12 @@
   "Creates a Dispatcher"
   [options :- Options]
   (let [options (-> options
-                    (update :user (partial into (linked/map)))
-                    (->> (kc/deep-merge +default-options+)))
+                    (->> (kc/deep-merge (dissoc +default-options+ :user)))
+                    (assoc :user (into
+                                   (linked/map)
+                                   (into
+                                     (vec (map identity (:user +default-options+)))
+                                     (map identity (:user options))))))
         handlers (->> (collect-and-enrich options false))
         interceptors (mapv interceptor (:interceptors options))]
     (map->Dispatcher
