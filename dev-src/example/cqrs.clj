@@ -1,7 +1,7 @@
 (ns example.cqrs
   (:require [org.httpkit.server :as server]
             [kekkonen.cqrs :refer :all]
-            [plumbing.core :as p]
+            [plumbing.core :refer [defnk]]
             [schema.core :as s]
             [clojure.set :as set]))
 
@@ -27,7 +27,7 @@
       (if (seq (set/intersection roles required))
         context))))
 
-(p/defnk ^:query get-user
+(defnk ^:query get-user
   {:responses {:default {:schema (s/maybe User)}}}
   [user] (success user))
 
@@ -50,13 +50,13 @@
 ;; Commands & Queries
 ;;
 
-(p/defnk ^:query get-items
+(defnk ^:query get-items
   "Retrieves all items"
   {:responses {:default {:schema [Item]}}}
   [[:components db]]
   (success (vals @db)))
 
-(p/defnk ^:command add-item!
+(defnk ^:command add-item
   "Adds an item to database"
   {:responses {:default {:schema Item}}}
   [[:components db ids]
@@ -66,7 +66,8 @@
     (success
       (get (swap! db assoc id item) id))))
 
-(p/defnk ^:command reset-items!
+
+(defnk ^:command reset-items
   "Resets the database"
   {::roles #{:boss}}
   [[:components db]
@@ -76,24 +77,24 @@
       (swap! db empty)
       @db)))
 
-(p/defnk ^:query ping [] (success {:ping "pong"}))
-(p/defnk ^:query pong [] (success {:pong "ping"}))
+(defnk ^:query ping [] (success {:ping "pong"}))
+(defnk ^:query pong [] (success {:pong "ping"}))
 
 ;;
 ;; parameters
 ;;
 
-(p/defnk ^:query plus
+(defnk ^:query plus
   {:responses {:default {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
 
-(p/defnk ^:query times
+(defnk ^:query times
   {:responses {:default {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (* x y)}))
 
-(p/defnk ^:command inc!
+(defnk ^:command increment
   {:responses {:default {:schema {:result s/Int}}}}
   [[:components counter]]
   (success {:result (swap! counter inc)}))
@@ -105,8 +106,8 @@
 (def app
   (cqrs-api
     {:swagger {:info {:title "Kekkonen"}}
-     :core {:handlers {:api {:item [#'get-items #'add-item! #'reset-items!]
-                             :calculator [#'plus #'times #'inc!]
+     :core {:handlers {:api {:item [#'get-items #'add-item #'reset-items]
+                             :calculator [#'plus #'times #'increment]
                              :security #'get-user
                              :system [#'ping #'pong]}}
             :context {:components {:db (atom {})
