@@ -16,11 +16,11 @@
                  [ring-middleware-format "0.7.0"]
 
                  ;; client stuff, separate module?
-                 [clj-http "2.0.1"]]
+                 [clj-http "2.1.0"]]
   :profiles {:dev {:plugins [[lein-midje "3.2"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.8.0"]
-                                  [criterium "0.4.3"]
+                                  [criterium "0.4.4"]
                                   [http-kit "2.1.19"]
                                   ; required when working with Java 1.6
                                   [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
