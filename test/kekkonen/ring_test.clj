@@ -8,17 +8,17 @@
             [plumbing.core :as p]))
 
 (facts "uri->action"
-  (@#'r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
-  (@#'r/uri->action "/api") => :api
-  (@#'r/uri->action "/") => nil)
+  (#'r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
+  (#'r/uri->action "/api") => :api
+  (#'r/uri->action "/") => nil)
 
 (fact "handler-uri"
-  (@#'r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!"
-  (@#'r/handler-uri {:ns :api.user, :name :swagger.json}) => "/api/user/swagger.json"
-  (@#'r/handler-uri {:ns nil, :name :swagger.json}) => "/swagger.json")
+  (#'r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!"
+  (#'r/handler-uri {:ns :api.user, :name :swagger.json}) => "/api/user/swagger.json"
+  (#'r/handler-uri {:ns nil, :name :swagger.json}) => "/swagger.json")
 
 (fact "ring-input-schema"
-  (@#'r/ring-input-schema
+  (#'r/ring-input-schema
     {:data {:d s/Str}
      :request {:query-params {:q s/Str}
                :body-params {:b s/Str}}}
@@ -216,11 +216,10 @@
             :request-method :post
             :body-params {:kikka "kukka"}}) => (contains {:data {:kikka "kukka"}})))
 
-  (fact "custom query-params -> query via transformer"
+  (fact "custom query-params -> query via interceptor"
     (let [app (r/ring-handler
                 (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
-                {:types {:handler {:transformers [(k/context-copy [:request :query-params]
-                                                                  [:query])]}}})]
+                {:types {:handler {:interceptors [(k/context-copy [:request :query-params] [:query])]}}})]
 
       (app {:uri "/api/test"
             :request-method :post
@@ -260,7 +259,7 @@
                                                             (contains
                                                               {:methods #{:post}})})})))
 
-(fact "global transformers"
+(fact "global interceptors"
   (let [app (r/ring-handler
               (k/dispatcher
                 {:handlers
@@ -269,7 +268,7 @@
                     {:name :test}
                     (fn [context]
                       {:user (-> context ::user)}))}})
-              {:transformers [(fn [context]
+              {:interceptors [(fn [context]
                                 (let [user (get-in context [:request :header-params "user"])]
                                   (assoc context ::user user)))]})]
 

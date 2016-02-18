@@ -70,6 +70,9 @@
     (fn [{:keys [enter leave]}] (or enter leave))
     'enter-or-leave-required))
 
+(s/defschema FunctionOrInterceptor
+  (s/conditional fn? Function :else Interceptor))
+
 (defn interceptor [interceptor-or-a-function]
   (s/validate
     Interceptor
@@ -522,7 +525,7 @@
   {:handlers {(s/cond-pre s/Keyword Namespace) s/Any}
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
-   (s/optional-key :interceptors) [Function]
+   (s/optional-key :interceptors) [FunctionOrInterceptor]
    (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
                                (s/optional-key :output) s/Any}
    (s/optional-key :user) (s/cond-pre [[(s/one s/Keyword 'key) Function]] KeywordMap)

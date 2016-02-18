@@ -16,9 +16,9 @@
   {:types {s/Keyword {:methods #{s/Keyword}
                       (s/optional-key :parameters) {[s/Keyword] [s/Keyword]}
                       (s/optional-key :allow-method-override?) s/Bool
-                      (s/optional-key :transformers) [k/Function]}}
+                      (s/optional-key :interceptors) [k/FunctionOrInterceptor]}}
    :coercion {s/Keyword k/Function}
-   :transformers [k/Function]})
+   :interceptors [k/FunctionOrInterceptor]})
 
 (s/def +default-options+ :- Options
   ; TODO: no types in default bindings?
@@ -33,7 +33,7 @@
               :form-params rsc/query-schema-coercion-matcher
               :header-params rsc/query-schema-coercion-matcher
               :body-params rsc/json-schema-coercion-matcher}
-   :transformers []})
+   :interceptors []})
 
 ;;
 ;; Internals
@@ -112,7 +112,13 @@
   ([dispatcher :- Dispatcher]
     (ring-handler dispatcher {}))
   ([dispatcher :- Dispatcher, options :- k/KeywordMap]
-    (let [options (kc/deep-merge +default-options+ options)
+    (let [options (-> (kc/deep-merge +default-options+ options)
+                      (update :interceptors (partial mapv k/interceptor))
+                      (update :types (fn [types]
+                                       (p/for-map [[k v] types]
+                                         k (if (:interceptors v)
+                                             (update v :interceptors (partial mapv k/interceptor))
+                                             v)))))
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method uri] :as request}]
@@ -129,16 +135,27 @@
                                 ;; map parameters from ring-request into common keys
                                 (reduce kc/deep-merge-to-from context (:parameters type-config))
 
-                                ;; global transformers first
-                                (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers options))
+                                ;; global interceptors first
+                                (reduce
+                                  (fn [ctx {:keys [enter]}]
+                                    (if enter (or (enter ctx) (reduced nil)) ctx))
+                                  context
+                                  (:interceptors options))
 
-                                ;; type-level transformers
-                                (reduce (fn [ctx mapper] (mapper ctx)) context (:transformers type-config)))]
+                                ;; type-level interceptors
+                                (reduce
+                                  (fn [ctx {:keys [enter]}]
+                                    (if enter (or (enter ctx) (reduced nil)) ctx))
+                                  context
+                                  (:interceptors type-config)))]
 
               (if (is-validate-request? request)
                 (ok (k/validate dispatcher action context))
                 (let [response (k/invoke dispatcher action context)]
-                  (coerce-response! response handler options))))))))))
+                  (coerce-response! response handler options)))
+
+              ;; leave-pipeline
+              )))))))
 
 ;;
 ;; Routing

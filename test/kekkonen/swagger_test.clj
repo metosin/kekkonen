@@ -22,7 +22,7 @@
 (fact "swagger-docs"
   (let [dispatcher (k/transform-handlers
                      (k/dispatcher {:handlers {:api {:admin #'echo}}})
-                     (partial @#'r/attach-ring-meta r/+default-options+))
+                     (partial #'r/attach-ring-meta r/+default-options+))
         handlers (k/available-handlers dispatcher nil {})
 
         swagger (ks/ring-swagger
