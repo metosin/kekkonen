@@ -268,13 +268,16 @@
                     {:name :test}
                     (fn [context]
                       {:user (-> context ::user)}))}})
-              {:interceptors [(fn [context]
-                                (let [user (get-in context [:request :header-params "user"])]
-                                  (assoc context ::user user)))]})]
+              {:interceptors [{:enter (fn [context]
+                                        (let [user (get-in context [:request :header-params "user"])]
+                                          (assoc context ::user user)))
+                               :leave (fn [context]
+                                        (assoc-in context [:response :kikka] "kukka")
+                                        )}]})]
 
     (app {:uri "/api/test"
-          :request-method :post}) => {:user nil}
+          :request-method :post}) => {:user nil, :kikka "kukka"}
 
     (app {:uri "/api/test"
           :request-method :post
-          :header-params {"user" "tommi"}}) => {:user "tommi"}))
+          :header-params {"user" "tommi"}}) => {:user "tommi", :kikka "kukka"}))

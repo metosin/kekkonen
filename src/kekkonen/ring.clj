@@ -135,27 +135,43 @@
                                 ;; map parameters from ring-request into common keys
                                 (reduce kc/deep-merge-to-from context (:parameters type-config))
 
-                                ;; global interceptors first
+                                ;; global interceptors enter
                                 (reduce
                                   (fn [ctx {:keys [enter]}]
                                     (if enter (or (enter ctx) (reduced nil)) ctx))
                                   context
                                   (:interceptors options))
 
-                                ;; type-level interceptors
+                                ;; type-level interceptors enter
                                 (reduce
                                   (fn [ctx {:keys [enter]}]
                                     (if enter (or (enter ctx) (reduced nil)) ctx))
                                   context
-                                  (:interceptors type-config)))]
+                                  (reverse (:interceptors type-config))))
 
-              (if (is-validate-request? request)
-                (ok (k/validate dispatcher action context))
-                (let [response (k/invoke dispatcher action context)]
-                  (coerce-response! response handler options)))
+                  response (if (is-validate-request? request)
+                             (ok (k/validate dispatcher action context))
+                             (let [response (k/invoke dispatcher action context)]
+                               (coerce-response! response handler options)))
 
-              ;; leave-pipeline
-              )))))))
+                  context (as-> (assoc context :response response) context
+
+                                ;; type-level interceptor leave
+                                (reduce
+                                  (fn [ctx {:keys [leave]}]
+                                    (if leave (or (leave ctx) (reduced nil)) ctx))
+                                  context
+                                  (:interceptors type-config))
+
+
+                                ;; global interceptors leave
+                                (reduce
+                                  (fn [ctx {:keys [leave]}]
+                                    (if leave (or (leave ctx) (reduced nil)) ctx))
+                                  context
+                                  (reverse (:interceptors options))))]
+
+              (:response context))))))))
 
 ;;
 ;; Routing
