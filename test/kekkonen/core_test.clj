@@ -754,17 +754,21 @@
 
     (fact "are executed in order"
       (let [d (k/dispatcher
-                {:handlers {:api (k/handler
-                                   {:name :test
-                                    :interceptors [{:enter (->> "4"), :leave (<<- "4")}
-                                                   {:enter (->> "5"), :leave (<<- "5")}
-                                                   (->> "6")]
-                                    } (p/fn-> :x (str "-")))}
+                {:handlers
+                 {:api
+                  (k/handler
+                    {:name :test
+                     :interceptors [{:enter (->> "4"), :leave (<<- "4")}
+                                    {:enter (->> "5"), :leave (<<- "5")}
+                                    (->> "6")
+                                    {:leave (<<- "6")}]}
+                    (p/fn-> :x (str "-")))}
                  :interceptors [{:enter (->> "1"), :leave (<<- "1")}
                                 {:enter (->> "2"), :leave (<<- "2")}
-                                (->> "3")]})]
+                                (->> "3")
+                                {:leave (<<- "3")}]})]
 
-        (k/invoke d :api/test) => "123456-5421"))
+        (k/invoke d :api/test) => "123456-654321"))
 
     (fact "returning nil on :enter stops the execution"
       (let [d (k/dispatcher
