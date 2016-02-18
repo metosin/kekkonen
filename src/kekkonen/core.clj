@@ -254,7 +254,7 @@
    context :- KeywordMap
    coercion :- {:input (s/maybe KeywordMap)
                 :output s/Any}
-   transformers :- [Function]
+   interceptors :- [Interceptor]
    user :- KeywordMap])
 
 (defmethod clojure.core/print-method Dispatcher
@@ -321,7 +321,7 @@
 
 (defn input-coerce!
   ([context schema]
-    ;; TODO: ensure that dispatcher is always present, also for transformers.
+    ;; TODO: ensure that dispatcher is always present, also for interceptors.
    (if-let [dispatcher (get-dispatcher context)]
      (input-coerce! context schema (-> dispatcher :coercion :input))
      (throw (ex-info "no attached dispatcher." {}))))
@@ -366,9 +366,9 @@
                           (fn [ctx {:keys [enter]}]
                             (if enter (or (enter ctx) (reduced nil)) ctx))
                           context
-                          (:transformers dispatcher))
+                          (:interceptors dispatcher))
 
-                        ; TODO: type-transformers?
+                        ; TODO: type-interceptors?
 
                         ;; run all the user interceptor enters per namespace/handler
                         ;; start from the root. a returned nil context short-circuits
@@ -429,7 +429,7 @@
                               (fn [ctx {:keys [leave]}]
                                 (if leave (or (leave ctx) (reduced nil)) ctx))
                               context
-                              (reverse (:transformers dispatcher))))]
+                              (reverse (:interceptors dispatcher))))]
 
           (or (:response context)
               (invalid-action! action)))))
@@ -522,7 +522,7 @@
   {:handlers {(s/cond-pre s/Keyword Namespace) s/Any}
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
-   (s/optional-key :transformers) [Function]
+   (s/optional-key :interceptors) [Function]
    (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
                                (s/optional-key :output) s/Any}
    (s/optional-key :user) (s/cond-pre [[(s/one s/Keyword 'key) Function]] KeywordMap)
@@ -531,7 +531,7 @@
 (s/def +default-options+ :- Options
   {:handlers {}
    :context {}
-   :transformers []
+   :interceptors []
    :coercion {:input {:data (constantly nil)}
               :output (constantly nil)}
    :type-resolver default-type-resolver
@@ -594,12 +594,12 @@
                     (->> (kc/deep-merge +default-options+))
                     (update :user (partial into (linked/map))))
         handlers (->> (collect-and-enrich options false))
-        transformers (mapv interceptor (:transformers options))]
+        interceptors (mapv interceptor (:interceptors options))]
     (map->Dispatcher
       (merge
         (select-keys options [:context :coercion :user])
         {:handlers handlers
-         :transformers transformers}))))
+         :interceptors interceptors}))))
 
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,

@@ -755,7 +755,7 @@
     (fact "are executed in order"
       (let [d (k/dispatcher
                 {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
-                 :transformers [{:enter (->> "1"), :leave (<<- "1")}
+                 :interceptors [{:enter (->> "1"), :leave (<<- "1")}
                                 {:enter (->> "2"), :leave (<<- "2")}
                                 (->> "3")]})]
 
@@ -764,7 +764,7 @@
     (fact "returning nil on :enter stops the execution"
       (let [d (k/dispatcher
                 {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
-                 :transformers [(constantly nil)
+                 :interceptors [(constantly nil)
                                 #(throw AssertionError)]})]
 
         (k/invoke d :api/test) => missing-route?))
@@ -772,7 +772,7 @@
     (fact "returning nil on :leave stops the execution"
       (let [d (k/dispatcher
                 {:handlers {:api (k/handler {:name :test} (p/fn-> :x))}
-                 :transformers [{:leave #(throw AssertionError)}
+                 :interceptors [{:leave #(throw AssertionError)}
                                 {:leave (constantly nil)}]})]
 
         (k/invoke d :api/test) => missing-route?))))
@@ -799,7 +799,7 @@
     => (contains
          {:handlers {}})))
 
-(facts "transformers requiring parameters"
+(facts "interceptors requiring parameters"
   (let [str->int-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
         load-doc (constantly
                    (p/fnk [[:data doc-id :- s/Int] :as ctx]
