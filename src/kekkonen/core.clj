@@ -81,7 +81,6 @@
       (map? interceptor-or-a-function) interceptor-or-a-function
       :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
 
-; TODO: make generic :interceptors :meta out of this
 (defn- interceptor-factory [data]
   (assert (vector? data) "intercetors must be defined as a vector")
   (let [interceptors (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
@@ -538,7 +537,7 @@
    :coercion {:input {:data (constantly nil)}
               :output (constantly nil)}
    :type-resolver default-type-resolver
-   :user {}})
+   :user {:interceptors interceptor-factory}})
 
 ;; TODO: create full set of interceptors here and run them in order
 (defn- collect-and-enrich
@@ -594,8 +593,8 @@
   "Creates a Dispatcher"
   [options :- Options]
   (let [options (-> options
-                    (->> (kc/deep-merge +default-options+))
-                    (update :user (partial into (linked/map))))
+                    (update :user (partial into (linked/map)))
+                    (->> (kc/deep-merge +default-options+)))
         handlers (->> (collect-and-enrich options false))
         interceptors (mapv interceptor (:interceptors options))]
     (map->Dispatcher
