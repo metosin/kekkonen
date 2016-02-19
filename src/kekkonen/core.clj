@@ -90,8 +90,10 @@
                       (recur rest ctx)
                       ctx)))
         enters (seq (keep :enter interceptors))
+        input (apply kc/deep-merge (keep :input (map kc/extract-schema enters)))
         leaves (seq (reverse (keep :leave interceptors)))]
     (merge
+      (if (not= input KeywordMap) {:input input})
       (if enters {:enter (partial execute enters)})
       (if leaves {:leave (partial execute leaves)}))))
 

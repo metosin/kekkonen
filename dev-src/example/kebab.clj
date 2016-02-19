@@ -1,45 +1,15 @@
-(ns example.pets
+(ns example.kebab
   (:require [org.httpkit.server :as server]
             [kekkonen.cqrs :refer :all]
             [plumbing.core :refer [defnk fnk]]
+            [example.security :as security]
+            example.math
             [schema.core :as s]
             [kekkonen.core :as k]))
 
 ;;
-;; Schemas
+;; Tx
 ;;
-
-(s/defschema Pet
-  {:id s/Int
-   :name s/Str
-   :species s/Str
-   :size (s/enum :S :M :L)})
-
-(s/defschema NewPet
-  (dissoc Pet :id))
-
-;;
-;; Commands & Queries
-;;
-
-(defnk ^:query get-pets
-  "Retrieves all pets"
-  {:responses {:default {:schema [Pet]}}}
-  [[:system db]]
-  (success (vals @db)))
-
-(defnk ^:command add-pet
-  "Adds an pet to database"
-  {:responses {:default {:schema Pet}}}
-  [[:system db ids]
-   data :- NewPet]
-
-  (if (-> data :size (= :L))
-    (failure "Can't have large pets")
-    (let [item (assoc data :id (swap! ids inc))]
-      (swap! db assoc (:id item) item)
-      (success item))))
-
 
 (defn- forward [dispatcher action ctx data]
   (try
@@ -92,23 +62,71 @@
                :failed failed})))
 
 ;;
+;; Schemas
+;;
+
+(s/defschema Kebab
+  {:id s/Int
+   :name s/Str
+   :type (s/enum :doner :sish :souvlaki :mustamakkara)})
+
+(s/defschema NewKebab
+  (dissoc Kebab :id))
+
+;;
+;; Commands & Queries
+;;
+
+(defnk ^:query get-kebabs
+  "Retrieves all kebabs"
+  {:responses {:default {:schema [Kebab]}}}
+  [[:system db]]
+  (success (vals @db)))
+
+(defnk ^:command add-kebab
+  "Adds an kebab to database"
+  {:responses {:default {:schema Kebab}}}
+  [[:system db ids]
+   data :- NewKebab]
+
+  (if (-> data :type (= :mustamakkara))
+    (failure "Oh nous, not a Kebab!")
+    (let [item (assoc data :id (swap! ids inc))]
+      (swap! db assoc (:id item) item)
+      (success item))))
+
+(defnk ^:command reset-kebabs
+  "Deletes all kebabs"
+  {:roles #{:admin}}
+  [[:system db]]
+  (reset! db nil)
+  (success))
+
+;;
 ;; Application
 ;;
 
 (def app
   (cqrs-api
-    {:core {:handlers {:pets [#'get-pets #'add-pet]
+    {:core {:handlers {:kebab [#'get-kebabs #'add-kebab #'reset-kebabs]
+                       :math 'example.math
                        :tx [#'transact #'speculative]}
             :context {:system {:db (atom {})
                                :ids (atom 0)
-                               :counter (atom 0)}}}}))
+                               :counter (atom 0)}}
+            :user {:roles security/require-roles}}
+     :ring {:interceptors [security/api-key-authenticator]}}))
 
 (comment
-  (server/run-server #'app {:port 4000}))
+  (server/run-server #'app {:port 7000}))
 
 (comment
+
+  {:action :kebab/add-kebab
+   :data {:name "Abu Fuad", :type :doner}}
+
   {:commands
-   [{:action :pets/add-pet
-     :data {:name "Ruusu", :species "Cow", :size :L}}
-    {:action :pets/add-pet
-     :data {:name "Anselmi", :species "SpaceMonkey" :size :M}}]})
+   [{:action :kebab/add-kebab
+     :data {:name "Abu Fuad", :type :doner}}
+    {:action :kebab/add-kebab
+     :data {:name "Kuningaskebab", :type :mustamakkara}}]})

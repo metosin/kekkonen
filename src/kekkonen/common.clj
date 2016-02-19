@@ -91,4 +91,6 @@
             (pfnk? @x) (pfnk-schema @x)
             :else (or (-> x meta k) s/Any))
           (or (and (-> x meta :schema) (pfnk-schema x))
+              ;; TODO: maek it better
+              (and (= :input k) (:input x))
               (-> x meta k) s/Any)))))
