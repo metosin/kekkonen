@@ -178,7 +178,7 @@
 ;;
 
 (s/defn routes :- k/Function
-  "Creates a ring handler of multiples handlers, matches in orcer."
+  "Creates a ring handler of multiples handlers, matches in order."
   [ring-handlers :- [k/Function]]
   (apply some-fn ring-handlers))
 
@@ -247,7 +247,8 @@
        ::disable-mode true
        ::method :post
        :input {:request
-               {:query-params
+               {:body-params {s/Keyword s/Any}
+                :query-params
                 {(s/optional-key :kekkonen.ns) s/Keyword
                  (s/optional-key :kekkonen.mode) (with-meta
                                                    (s/enum :check :validate)
