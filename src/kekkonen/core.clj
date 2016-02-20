@@ -65,6 +65,7 @@
 (s/defschema Interceptor
   (s/constrained
     {(s/optional-key :name) s/Str
+     (s/optional-key :input) s/Any
      (s/optional-key :enter) Function
      (s/optional-key :leave) Function}
     (fn [{:keys [enter leave]}] (or enter leave))
