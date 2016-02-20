@@ -11,22 +11,23 @@
 ;; Tx
 ;;
 
-(defn- forward [dispatcher action ctx data]
+(defn forward [dispatcher action ctx data]
   (try
     (k/invoke dispatcher action (assoc ctx :data data))
     (catch Exception e
       (ex-data e))))
 
 (defnk ^:command speculative
-  "Dummy implementation. In real life, use a real TX system such as the RDB"
+  "Dummy implementation. In real life, use a real TX system such as the RDB\n\n
+  **{:action :kebab/add-kebab, :data {:name \"Abu Fuad\", :type :doner}}**"
   {:summary "Runs a speculative transaction."}
-  [[:system db ids]
+  [db ids
    [:data action :- s/Keyword, data :- s/Any]
    :as ctx]
 
   (let [db' (atom @db)
         ids' (atom @ids)
-        ctx' (assoc ctx :system {:db db', :ids ids'})
+        ctx' (merge ctx {:db db', :ids ids'})
 
         dispatcher (k/get-dispatcher ctx)
         response (forward dispatcher action ctx' data)]
@@ -34,15 +35,17 @@
     response))
 
 (defnk ^:command transact
-  "Dummy implementation. In real life, use a real TX system such as the RDB"
+  "Dummy implementation. In real life, use a real TX system such as the RDB.\n\n
+  **{:commands [{:action :kebab/add-kebab, :data {:name \"Abu Fuad\", :type :doner}}
+                {:action :kebab/add-kebab, :data {:name \"Kuningaskebab\", :type :mustamakkara}}]}**"
   {:summary "Runs multiple commands in a single transaction."}
-  [[:system db ids]
+  [db ids
    [:data commands :- [{:action s/Keyword
                         :data s/Any}]] :as ctx]
 
   (let [db' (atom @db)
         ids' (atom @ids)
-        ctx' (assoc ctx :system {:db db', :ids ids'})
+        ctx' (merge ctx {:db db', :ids ids'})
 
         dispatcher (k/get-dispatcher ctx)
         responses (map
@@ -68,7 +71,7 @@
 (s/defschema Kebab
   {:id s/Int
    :name s/Str
-   :type (s/enum :doner :sish :souvlaki :mustamakkara)})
+   :type (s/enum :doner :shish :souvlaki :mustamakkara)})
 
 (s/defschema NewKebab
   (dissoc Kebab :id))
@@ -80,14 +83,13 @@
 (defnk ^:query get-kebabs
   "Retrieves all kebabs"
   {:responses {:default {:schema [Kebab]}}}
-  [[:system db]]
+  [db]
   (success (vals @db)))
 
 (defnk ^:command add-kebab
   "Adds an kebab to database"
   {:responses {:default {:schema Kebab}}}
-  [[:system db ids]
-   data :- NewKebab]
+  [db, ids, data :- NewKebab]
 
   (if (-> data :type (= :mustamakkara))
     (failure "Oh nous, not a Kebab!")
@@ -98,7 +100,7 @@
 (defnk ^:command reset-kebabs
   "Deletes all kebabs"
   {:roles #{:admin}}
-  [[:system db]]
+  [db]
   (reset! db nil)
   (success))
 
@@ -111,14 +113,14 @@
     {:core {:handlers {:kebab [#'get-kebabs #'add-kebab #'reset-kebabs]
                        :math 'example.math
                        :tx [#'transact #'speculative]}
-            :context {:system {:db (atom {})
-                               :ids (atom 0)
-                               :counter (atom 0)}}
+            :context {:db (atom {})
+                      :ids (atom 0)
+                      :counter (atom 0)}
             :user {:roles security/require-roles}}
      :ring {:interceptors [security/api-key-authenticator]}}))
 
 (comment
-  (server/run-server #'app {:port 7000}))
+  (server/run-server #'app {:port 7001}))
 
 (comment
 

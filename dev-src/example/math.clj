@@ -11,5 +11,5 @@
   (success (+ x y)))
 
 (defnk ^:command increment
-  [[:system counter]]
+  [counter]
   (success (swap! counter inc)))
