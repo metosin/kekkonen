@@ -116,7 +116,7 @@
             :context {:db (atom {})
                       :ids (atom 0)
                       :counter (atom 0)}
-            :user {:roles security/require-roles}}
+            :meta {:roles security/require-roles}}
      :ring {:interceptors [security/api-key-authenticator]}}))
 
 (comment

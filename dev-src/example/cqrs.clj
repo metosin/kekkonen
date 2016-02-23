@@ -113,7 +113,7 @@
             :context {:components {:db (atom {})
                                    :ids (atom 0)
                                    :counter (atom 0)}}
-            :user {::roles require-roles}}
+            :meta {::roles require-roles}}
      :ring {:interceptors [api-key-authenticator]}}))
 
 (comment

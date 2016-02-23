@@ -1,6 +1,7 @@
 ## Unreleased
 
 * Change Transformers to Interceptors in both the Dispatcher & Ring.
+* `:user` is now `:meta`.
 
 * Updated dependencies
 

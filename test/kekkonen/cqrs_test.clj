@@ -13,7 +13,7 @@
 
 (defn require-roles [required]
   (fn [context]
-    (let [roles (-> context :user :roles)]
+    (let [roles (-> context :meta :roles)]
       (if (seq (set/intersection roles required))
         context))))
 
@@ -50,7 +50,7 @@
                 :handlers {:api {:items [#'get-items
                                          #'add-item!]
                                  :items2 #'reset-items!}}
-                :user {::roles require-roles}}})]
+                :meta {::roles require-roles}}})]
 
     (fact "get-items"
       (let [response (app {:uri "/api/items/get-items"

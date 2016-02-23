@@ -62,7 +62,7 @@
         coercions))))
 
 (defn- coerce-response! [response handler options]
-  (if-let [responses (-> handler :user :responses)]
+  (if-let [responses (-> handler :meta :responses)]
     (let [status (or (:status response) 200)
           schema (get-in responses [status :schema])
           matcher (get-in options [:coercion :body-params])
@@ -90,13 +90,13 @@
 (defn- attach-ring-meta [options handler]
   (let [{:keys [parameters allow-method-override?] :as type-config} (get (:types options) (:type handler))
         coercion (:coercion options)
-        method (some-> handler :user ::method)
+        method (some-> handler :meta ::method)
         methods (if (and allow-method-override? method)
                   (conj #{} method)
                   (:methods type-config))
         input-schema (-> (:input handler)
                          (ring-input-schema parameters)
-                         (cond-> (not (get-in handler [:user ::disable-mode])) attach-mode-parameter))]
+                         (cond-> (not (get-in handler [:meta ::disable-mode])) attach-mode-parameter))]
     (assoc handler :ring {:type-config type-config
                           :methods methods
                           :coercion (ring-coercion parameters coercion)
@@ -239,7 +239,7 @@
                  (p/<- (k/available-handlers ns (clean-context context)))
                  (filter (p/fn-> :ring))
                  (remove (p/fn-> :ns (= :kekkonen)))
-                 (remove (p/fn-> :user :no-doc))
+                 (remove (p/fn-> :meta :no-doc))
                  (map k/public-handler)))))
     (k/handler
       {:name "actions"
@@ -263,6 +263,6 @@
                  (p/<- (k/dispatch-handlers (or mode :check) ns (clean-context context)))
                  (filter (p/fn-> first :ring))
                  (remove (p/fn-> first :ns (= :kekkonen)))
-                 (remove (p/fn-> first :user :no-doc))
+                 (remove (p/fn-> first :meta :no-doc))
                  (map (fn [[k v]] [(:action k) (k/stringify-schema v)]))
                  (into {})))))]})
