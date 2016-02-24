@@ -15,7 +15,9 @@
    (s/optional-key :swagger-ui) k/KeywordMap})
 
 (s/def +default-options+ :- Options
-  {:core (assoc k/+default-options+ :coercion {:input nil, :output nil})
+  {:core (-> k/+default-options+
+             (assoc :coercion {:input nil, :output nil})
+             (update :meta merge r/+ring-meta+))
    :api {:handlers r/+kekkonen-handlers+}
    :ring r/+default-options+
    :mw mw/+default-options+

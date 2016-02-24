@@ -42,7 +42,6 @@
 
 (p/defnk ^:handler echo :- User
   "Echoes the user"
-  {:roles #{:admin :user}}
   [data :- User]
   data)
 
@@ -183,7 +182,7 @@
                                          {:function fn?
                                           :type :handler
                                           :name :echo
-                                          :meta {:roles #{:admin :user}}
+                                          :meta {}
                                           :description "Echoes the user"
                                           :input {:data User
                                                   s/Keyword s/Any}
@@ -404,7 +403,13 @@
     (fact "enters are applied in order, leaves in reverse order"
       (leave (enter {:enter 0, :leave 0})) => {:enter 20, :leave -1})))
 
-(facts "user-meta"
+(facts "meta"
+
+  (facts "undefined meta"
+    (k/dispatcher
+      {:handlers {:api (k/handler {:kikka :kukka :name :abba} identity)}})
+    => (throws? {:meta {:kikka :kukka}}))
+
   (let [inc* (fn [value]
                {:enter (p/fnk [[:data x :- s/Int] :as ctx]
                          (update-in ctx [:data :x] #(+ % value)))})
@@ -453,6 +458,10 @@
 
             (fact "default :meta is before client set :meta"
               (->> d :meta (map identity)) => [[:interceptors k/interceptors]
+                                               [:summary nil]
+                                               [:description nil]
+                                               [:no-doc nil]
+                                               [:responses nil]
                                                [::inc inc*]
                                                [::times times*]])
 

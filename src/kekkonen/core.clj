@@ -7,7 +7,8 @@
             [linked.core :as linked]
             [clojure.walk :as walk]
             [schema.coerce :as sc]
-            [schema.utils :as su])
+            [schema.utils :as su]
+            [clojure.set :as set])
   (:import [clojure.lang Var IPersistentMap Symbol PersistentVector AFunction Keyword]
            [java.io Writer])
   (:refer-clojure :exclude [namespace]))
@@ -157,7 +158,9 @@
     ; clojure var meta
     :line :column :file :name :ns :doc
     ; plumbing details
-    :schema :plumbing.fnk.impl/positional-info))
+    :schema :plumbing.fnk.impl/positional-info
+    ; arglist
+    :arglists))
 
 (s/defn handler
   [meta :- KeywordMap, f :- Function]
@@ -383,12 +386,12 @@
                         (reduce
                           (fn [ctx [k v]]
                             (if-let [interceptors (get-in dispatcher [:meta k])]
-                              (if-let [interceptor (interceptor (interceptors v))]
-                                (if-let [enter (:enter interceptor)]
-                                  (let [input-schema (:input (kc/extract-schema enter))
-                                        ctx (input-coerce! ctx input-schema input-matcher)]
-                                    (or (enter ctx) (reduced nil)))
-                                  ctx)
+                                (if-let [interceptor (interceptor (interceptors v))]
+                                  (if-let [enter (:enter interceptor)]
+                                    (let [input-schema (:input (kc/extract-schema enter))
+                                          ctx (input-coerce! ctx input-schema input-matcher)]
+                                      (or (enter ctx) (reduced nil)))
+                                    ctx)
                                 ctx)
                               ctx))
                           context
@@ -540,7 +543,12 @@
    :coercion {:input {:data (constantly nil)}
               :output (constantly nil)}
    :type-resolver default-type-resolver
-   :meta {:interceptors interceptors}})
+   :meta {:interceptors interceptors
+          :summary nil
+          :description nil
+          :no-doc nil
+          ;; TODO: should this be defined in kekkonen.ring?
+          :responses nil}})
 
 ;; TODO: create full set of interceptors here and run them in order
 (defn- collect-and-enrich
@@ -548,27 +556,31 @@
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
         collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
-        reorder (fn [m]
-                  (let [ordered (into
-                                  (linked/map)
-                                  (keep
-                                    (fn [k]
-                                      (if-let [v (m k)]
-                                        [k v]))
-                                    (keys meta)))]
-                    ordered))
+        reorder (fn [h m]
+                  (if-let [invalid-keys (seq (set/difference (set (keys m)) (set (keys meta))))]
+                    (throw (ex-info "invalid meta-data" {:handler (:name h), :meta (select-keys m (vec invalid-keys))}))
+                    (into
+                      (linked/map)
+                      (keep
+                        (fn [k]
+                          (if-let [v (m k)]
+                            [k v]))
+                        (keys meta)))))
         enrich (fn [h m]
                  (if (or (seq m) allow-empty-namespaces?)
                    (let [ns (handler-ns m)
                          ns-meta (collect-ns-meta m)
                          user-meta (:meta h)
-                         all-meta (map reorder (if-not (empty? user-meta) (conj ns-meta user-meta) ns-meta))
+                         all-meta (map (partial reorder h) (if-not (empty? user-meta) (conj ns-meta user-meta) ns-meta))
                          user-input (reduce
                                       (fn [acc [k v]]
-                                        (if-let [f (:enter (interceptor (meta k)))]
-                                          (let [schema (:input (kc/extract-schema (f v)))]
-                                            (kc/merge-map-schemas acc schema))
-                                          acc)) {} (apply concat all-meta))
+                                        (if-let [i (some-> k meta interceptor)]
+                                          (if-let [enter (:enter i)]
+                                            (let [schema (:input (kc/extract-schema (enter v)))]
+                                              (kc/merge-map-schemas acc schema))
+                                            acc)))
+                                      {}
+                                      (apply concat all-meta))
                          input (kc/merge-map-schemas (:input h) user-input)]
                      (merge h {:ns ns
                                :ns-meta ns-meta

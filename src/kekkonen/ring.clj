@@ -35,6 +35,10 @@
               :body-params rsc/json-schema-coercion-matcher}
    :interceptors []})
 
+(def +ring-meta+
+  {::disable-mode nil
+   ::method nil})
+
 ;;
 ;; Internals
 ;;
