@@ -22,7 +22,7 @@
   (k/handler
     {:description "this is a handler for echoing data"
      :name :echo
-     :summery "echoes data"}
+     :summary "echoes data"}
     (fn [{:keys [data]}]
       data)))
 
@@ -42,7 +42,6 @@
 ; defnk
 (p/defnk ^:handler multiply
   "multiply x with y"
-  {:responses {200 {:schema {:result s/Int}}}}
   [[:data x :- s/Int, y :- s/Int]]
   {:result (* x y)})
 

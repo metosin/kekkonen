@@ -128,7 +128,7 @@
             :context {:components {:repos (atom {(:id compojure-api)
                                                  compojure-api})
                                    :counter (atom 0)}}
-            :user {:roles security/require-roles}}
+            :meta {:roles security/require-roles}}
      :ring {:interceptors [security/api-key-authenticator]}}))
 
 (comment

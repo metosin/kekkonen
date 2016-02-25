@@ -42,7 +42,6 @@
 
 (p/defnk ^:handler echo :- User
   "Echoes the user"
-  {:roles #{:admin :user}}
   [data :- User]
   data)
 
@@ -126,7 +125,7 @@
                                          (just
                                            {:function fn?
                                             :description ""
-                                            :user {}
+                                            :meta {}
                                             :type :handler
                                             :name :echo
                                             :input {:name s/Str}
@@ -157,7 +156,7 @@
                                          {:function fn?
                                           :type :handler
                                           :name :echo
-                                          :user {:query true
+                                          :meta {:query true
                                                  :roles #{:admin :user}}
                                           :description "Echoes the user"
                                           :input {:data User
@@ -183,7 +182,7 @@
                                          {:function fn?
                                           :type :handler
                                           :name :echo
-                                          :user {:roles #{:admin :user}}
+                                          :meta {}
                                           :description "Echoes the user"
                                           :input {:data User
                                                   s/Keyword s/Any}
@@ -404,7 +403,13 @@
     (fact "enters are applied in order, leaves in reverse order"
       (leave (enter {:enter 0, :leave 0})) => {:enter 20, :leave -1})))
 
-(facts "user-meta"
+(facts "meta"
+
+  (facts "undefined meta"
+    (k/dispatcher
+      {:handlers {:api (k/handler {:kikka :kukka :name :abba} identity)}})
+    => (throws? {:meta {:kikka :kukka}}))
+
   (let [inc* (fn [value]
                {:enter (p/fnk [[:data x :- s/Int] :as ctx]
                          (update-in ctx [:data :x] #(+ % value)))})
@@ -427,14 +432,14 @@
                                     ::intercept [dec x10]
                                     ::times 2}
                                    (p/fn-> :data :x))}
-                 :user {::inc inc*
+                 :meta {::inc inc*
                         ::intercept intercept*
                         ::times times*}})]
 
         (fact "user-meta is populated correctly"
-          (k/some-handler d :api/test) => (contains {:user {::inc 2, ::intercept [dec x10], ::times 2}
-                                                     :ns-user []
-                                                     :all-user [{::inc 2, ::intercept [dec x10], ::times 2}]}))
+          (k/some-handler d :api/test) => (contains {:meta {::inc 2, ::intercept [dec x10], ::times 2}
+                                                     :ns-meta []
+                                                     :all-meta [{::inc 2, ::intercept [dec x10], ::times 2}]}))
 
         (fact "are executed in some order: (-> 2 (+ 2) dec (* 2) (* 10) => 60"
           (k/invoke d :api/test {:data {:x 2}}) => 60)))
@@ -448,19 +453,23 @@
                                         ::inc 1
                                         ::times 2}
                                        (p/fn-> :data :x))}
-                     :user [[::inc inc*]
+                     :meta [[::inc inc*]
                             [::times times*]]})]
 
-            (fact "default :user is before client set :user"
-              (->> d :user (map identity)) => [[:interceptors k/interceptors]
+            (fact "default :meta is before client set :meta"
+              (->> d :meta (map identity)) => [[:interceptors k/interceptors]
+                                               [:summary nil]
+                                               [:description nil]
+                                               [:no-doc nil]
+                                               [:responses nil]
                                                [::inc inc*]
                                                [::times times*]])
 
             (fact "user-meta is populated correctly"
               (k/some-handler d :api/test)
-              => (contains {:user {::inc 1 ::times 2}
-                            :ns-user []
-                            :all-user [{::inc 1 ::times 2}]}))
+              => (contains {:meta {::inc 1 ::times 2}
+                            :ns-meta []
+                            :all-meta [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
@@ -471,14 +480,14 @@
                                         ::inc 1
                                         ::times 2}
                                        (p/fn-> :data :x))}
-                     :user [[::times times*]
+                     :meta [[::times times*]
                             [::inc inc*]]})]
 
             (fact "user-meta is populated correctly"
               (k/some-handler d :api/test)
-              => (contains {:user {::inc 1 ::times 2}
-                            :ns-user []
-                            :all-user [{::inc 1 ::times 2}]}))
+              => (contains {:meta {::inc 1 ::times 2}
+                            :ns-meta []
+                            :all-meta [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 5)))
 
@@ -492,14 +501,14 @@
                     {:handlers {api-ns (k/handler
                                          {:name :test}
                                          (p/fn-> :data :x))}
-                     :user [[::inc inc*]
+                     :meta [[::inc inc*]
                             [::times times*]]})]
 
             (fact "user-meta is populated correctly"
               (k/some-handler d :api/test)
-              => (contains {:user {}
-                            :ns-user [{::inc 1 ::times 2}]
-                            :all-user [{::inc 1 ::times 2}]}))
+              => (contains {:meta {}
+                            :ns-meta [{::inc 1 ::times 2}]
+                            :all-meta [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
@@ -512,14 +521,14 @@
                     {:handlers {api-ns (k/handler
                                          {:name :test}
                                          (p/fn-> :data :x))}
-                     :user [[::times times*]
+                     :meta [[::times times*]
                             [::inc inc*]]})]
 
             (fact "user-meta is populated correctly"
               (k/some-handler d :api/test)
-              => (contains {:user {}
-                            :ns-user [{::inc 1 ::times 2}]
-                            :all-user [{::inc 1 ::times 2}]}))
+              => (contains {:meta {}
+                            :ns-meta [{::inc 1 ::times 2}]
+                            :all-meta [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 5))))))
 
@@ -531,7 +540,7 @@
           secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
           handler1 (k/handler {:name :handler1} (p/fnk [] true))
           handler2 (k/handler {:name :handler2} (p/fnk [[:data x :- s/Bool]] x))
-          d (k/dispatcher {:user {::roles! require-role!
+          d (k/dispatcher {:meta {::roles! require-role!
                                   ::roles require-role}
                            :handlers {:api {admin-ns [handler1 handler2]
                                             secret-ns [handler1 handler2]
@@ -830,7 +839,7 @@
                                         ;; despite we haven't defined [:data :doc-id], it already coerced!
                                         (assert (-> ctx :data :doc-id class (= Long)))
                                         {:read doc}))
-        d (k/dispatcher {:user {::roles require-role
+        d (k/dispatcher {:meta {::roles require-role
                                 ::load-doc load-doc}
                          :coercion {:input {:data str->int-matcher}}
                          :context {:docs {1 "hello ruby"
@@ -873,7 +882,7 @@
         => input-coercion-error?))
 
     (fact "with input-coercion disabled"
-      (let [d (k/dispatcher {:user {::roles require-role
+      (let [d (k/dispatcher {:meta {::roles require-role
                                     ::load-doc load-doc}
                              :coercion {:input nil}
                              :context {:docs {1 "hello ruby"
@@ -1073,7 +1082,7 @@
 
     (fact "automatic path coercion"
       (let [api (k/namespace {:name :api ::load-doc true})
-            d (k/dispatcher {:user {::roles require-role
+            d (k/dispatcher {:meta {::roles require-role
                                     ::load-doc (constantly
                                                  (p/fnk ^:never-validate f :- {:value s/Int}
                                                    [[:data value :- s/Int] :as ctx]

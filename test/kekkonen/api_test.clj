@@ -22,7 +22,7 @@
   (let [secret (k/namespace {:name :secret ::role :admin})
         app (api {:core {:handlers {:api {:public [#'plus #'nada]
                                           secret #'plus}}
-                         :user {::role require-role}}})]
+                         :meta {::role require-role}}})]
 
     (facts "without required roles"
 
