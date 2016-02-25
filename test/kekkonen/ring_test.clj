@@ -287,3 +287,11 @@
     (app {:uri "/api/test"
           :request-method :post
           :header-params {"user" "tommi"}}) => {:user "tommi!", :global true, :handler true}))
+
+(fact "dispatcher context is available for ring interceptors, fixes #26"
+  (let [app (r/ring-handler
+              (k/dispatcher
+                {:context {:secret 42}
+                 :handlers {:api (k/handler {:name :ipa} (fn [ctx] (::value ctx)))}})
+              {:interceptors [(fn [ctx] (assoc ctx ::value (:secret ctx)))]})]
+    (app {:uri "/api/ipa" :request-method :post}) => 42))

@@ -133,6 +133,9 @@
             ;; TODO: create an interceptor chain
             (let [context (as-> {:request request} context
 
+                                ;; base-context from Dispatcher
+                                (kc/deep-merge (:context dispatcher) context)
+
                                 ;; add lazy-coercion
                                 (assoc context ::k/coercion coercion)
 

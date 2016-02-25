@@ -3,6 +3,7 @@
 * Change Transformers to Interceptors in both the Dispatcher & Ring.
 * `:user` is now `:meta`.
 * Defined `:meta` keys are checked at dispatcher creation time.
+* Ring-adapter interceptors can use the dispatcher context, fixes [#26](https://github.com/metosin/kekkonen/issues/26)
 
 * Updated dependencies
 
