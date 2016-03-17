@@ -97,7 +97,7 @@
 (defnk ^:command increment
   {:responses {:default {:schema {:result s/Int}}}}
   [[:components counter]]
-  (success {:result (swap! counter inc)}))
+  (success {:result (swap! counter (partial + 10))}))
 
 ;;
 ;; Application

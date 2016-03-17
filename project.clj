@@ -10,7 +10,7 @@
                  [frankiesardo/linked "1.2.6"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.4"]
+                 [metosin/ring-swagger "0.22.5"]
                  [metosin/ring-swagger-ui "2.1.4-0"]
                  [metosin/ring-http-response "0.6.5"]
                  [ring-middleware-format "0.7.0"]
