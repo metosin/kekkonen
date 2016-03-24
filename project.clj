@@ -6,7 +6,7 @@
             :distribution :repo
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.2"]
-                 [prismatic/schema "1.0.5"]
+                 [prismatic/schema "1.1.0"]
                  [frankiesardo/linked "1.2.6"]
 
                  ;; http-stuff, separate module?
