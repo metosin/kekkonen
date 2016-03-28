@@ -408,7 +408,7 @@
   (facts "undefined meta"
     (k/dispatcher
       {:handlers {:api (k/handler {:kikka :kukka :name :abba} identity)}})
-    => (throws? {:meta {:kikka :kukka}}))
+    => (throws? {:name :abba, :invalid-keys [:kikka]}))
 
   (let [inc* (fn [value]
                {:enter (p/fnk [[:data x :- s/Int] :as ctx]

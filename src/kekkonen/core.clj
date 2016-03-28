@@ -558,7 +558,9 @@
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
         reorder (fn [h m]
                   (if-let [invalid-keys (seq (set/difference (set (keys m)) (set (keys meta))))]
-                    (throw (ex-info "invalid meta-data" {:handler (:name h), :meta (select-keys m (vec invalid-keys))}))
+                    (throw (ex-info "invalid meta-data on handler" {:name (:name h)
+                                                                    :invalid-keys invalid-keys
+                                                                    :allowed-keys (keys meta)}))
                     (into
                       (linked/map)
                       (keep
