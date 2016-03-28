@@ -1,10 +1,39 @@
 ## 0.2.0-SNAPSHOT
 
-* Change Transformers to Interceptors in both the Dispatcher & Ring.
+* Change Transformers to (initial version of) Interceptors in both the Dispatcher & Ring.
   * `:transformers`-key is replaced with `:interceptors`
+  * Interceptors are either functions `context => context` (just like the old transformers) or maps
+  with keys `:enter` and `:leave`. Will be later merged to use the [Pedestal](http://pedestal.io/) defined
+  interceptors.
 * User defined context-handers are now under `:meta` instead of `:user`.
 * Defined `:meta` keys are checked at dispatcher creation time.
+* By default, dispatcher will have a  `:interceptors` meta-key registered.
+  * It takes an vector of interceptors as value, applied first to the namespace/handler
 * Ring-adapter interceptors can use the dispatcher context, fixes [#26](https://github.com/metosin/kekkonen/issues/26)
+
+#### Old syntax
+
+```clj
+(cqrs-api
+  {:swagger {:info {:title "Kekkonen"}}
+   :core {:handlers {:api {:math 'math
+                           :system [#'ping #'pong]}}
+          :transformers [log-commands]
+          :user {::roles require-roles}}
+   :ring {:transformers [api-key-authenticator]}})
+```
+
+#### New syntax
+
+```clj
+(cqrs-api
+  {:swagger {:info {:title "Kekkonen"}}
+   :core {:handlers {:api {:math 'math
+                           :system [#'ping #'pong]}}
+          :interceptors [log-commands]
+          :meta {::roles require-roles}}
+   :ring {:interceptors [api-key-authenticator]}})
+```
 
 * Updated dependencies
 
