@@ -2,10 +2,34 @@
   (:require [midje.sweet :refer :all]
             [kekkonen.common :as kc]
             [schema.core :as s]
+            [linked.core :as linked]
             [plumbing.core :as p]))
 
+(defrecord ARecord [])
+
+(fact "map-like?"
+  (kc/map-like? {:a 1}) => true
+  (kc/map-like? [[:a 1]]) => true
+  (kc/map-like? [[:a 1] [:b 2]]) => true
+  (kc/map-like? [[:a 1] [:b 2] [:c 3 3]]) => false
+  (kc/map-like? (->ARecord)) => true)
+
+(fact "merge-map-like"
+  (kc/merge-map-like {:a 1 :b 2} [[:c 3] [:d 4]] {:e 5 :f 6} [[:g 7] [:h 8]])
+  => (linked/map :a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7 :h 8)
+
+  (kc/merge-map-like [[:a 1] [:b 2]] {:c 3 :d 4} [[:e 5] [:f 6]] {:g 7 :h 8})
+  => (linked/map :a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7 :h 8))
+
+(fact "deep-merge-map-like"
+  (kc/deep-merge-map-like {:a 1 :b {:c [1] :d 2}} {:b {:c [2] :d 3 :e 4}}) => {:a 1 :b {:c [2] :d 3 :e 4}}
+  (fact "can merge map-like values, keeping order"
+    (kc/deep-merge-map-like {:a {:b 1 :c 2}} {:a [[:b 2] [:d 2]]}) => {:a {:b 2 :c 2 :d 2}}))
+
 (fact "deep-merge"
-  (kc/deep-merge {:a 1 :b {:c [1] :d 2}} {:b {:c [2] :d 3 :e 4}}) => {:a 1 :b {:c [2] :d 3 :e 4}})
+  (kc/deep-merge {:a 1 :b {:c [1] :d 2}} {:b {:c [2] :d 3 :e 4}}) => {:a 1 :b {:c [2] :d 3 :e 4}}
+  (fact "can't merge map-like values"
+    (kc/deep-merge {:a {:b 1 :c 2}} {:a [[:b 2] [:d 2]]}) => {:a [[:b 2] [:d 2]]}))
 
 (fact "deep-merge-from-to"
   (kc/deep-merge-from-to

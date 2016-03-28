@@ -2,7 +2,27 @@
   (:require [clojure.walk :as walk]
             [schema.core :as s]
             [plumbing.core :as p]
+            [linked.core :as linked]
             [plumbing.fnk.pfnk :as pfnk]))
+
+(defn map-like?
+  "Checks wether x is a map or vector of tuples"
+  [x]
+  (boolean
+    (or (map? x)
+        (and (vector? x)
+             (seq x)
+             (every? vector? x)
+             (every? #(= (count %) 2) x)))))
+
+(defn merge-map-like
+  "Merges map-like collections into a linked map"
+  [& cols]
+  (into (linked/map) (apply concat cols)))
+
+;;
+;; Deep Merge: fast
+;;
 
 (defn- deep-merge* [& maps]
   (let [f (fn [old new]
@@ -13,10 +33,36 @@
       (apply merge-with f maps)
       (last maps))))
 
-(defn deep-merge [& maps]
+(defn deep-merge
+  "Deep-merges map together, non-maps are overridden"
+  [& maps]
   (let [maps (filter identity maps)]
     (assert (every? map? maps))
     (apply merge-with deep-merge* maps)))
+
+;;
+;; Deep Merge: slower, merges all map-like forms
+;;
+
+(defn- deep-merge-map-like* [& maps]
+  (let [f (fn [old new]
+            (if (and (map-like? old) (map-like? new))
+              (merge-with deep-merge-map-like* (merge-map-like old) (merge-map-like new))
+              new))]
+    (if (every? map-like? maps)
+      (apply merge-with f (map merge-map-like maps))
+      (last maps))))
+
+(defn deep-merge-map-like
+  "Deep-merges maps together, non-map-likes are overridden"
+  [& maps]
+  (let [maps (filter identity maps)]
+    (assert (every? map? maps))
+    (apply merge-with deep-merge-map-like* maps)))
+
+;;
+;; Others
+;;
 
 (defn dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
