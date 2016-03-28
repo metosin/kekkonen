@@ -17,7 +17,7 @@
 (s/def +default-options+ :- Options
   {:core (-> k/+default-options+
              (assoc :coercion {:input nil, :output nil})
-             (update :meta merge r/+ring-meta+))
+             (update :meta kc/merge-map-like r/+ring-meta+))
    :api {:handlers r/+kekkonen-handlers+}
    :ring r/+default-options+
    :mw mw/+default-options+
@@ -26,7 +26,7 @@
 
 (defn api [options]
   (s/with-fn-validation
-    (let [options (s/validate Options (kc/deep-merge +default-options+ options))
+    (let [options (s/validate Options (kc/deep-merge-map-like +default-options+ options))
           swagger (merge (:swagger options) (mw/api-info (:mw options)))
           dispatcher (-> (k/dispatcher (:core options))
                          (k/inject (-> options :api :handlers))

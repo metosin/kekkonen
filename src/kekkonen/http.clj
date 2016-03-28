@@ -7,7 +7,7 @@
 
 (s/defn http-api [options]
   (ka/api
-    (kc/deep-merge
+    (kc/deep-merge-map-like
       {:core {:type-resolver (k/type-resolver :get :head :patch :delete :options :post :put :any)}
        :swagger {:info {:title "Kekkonen HTTP API"}}
        :ring {:types {:get {:methods #{:get}}

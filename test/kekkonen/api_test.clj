@@ -13,15 +13,16 @@
 
 (p/defnk ^:handler nada [] (ok))
 
+(def secret-ns (k/namespace {:name :secret ::role :admin}))
+
 (defn require-role [role]
   (fn [context]
     (if (= (-> context :request :query-params ::role) role)
       context)))
 
 (facts "api-test"
-  (let [secret (k/namespace {:name :secret ::role :admin})
-        app (api {:core {:handlers {:api {:public [#'plus #'nada]
-                                          secret #'plus}}
+  (let [app (api {:core {:handlers {:api {:public [#'plus #'nada]
+                                          secret-ns #'plus}}
                          :meta {::role require-role}}})]
 
     (facts "without required roles"
@@ -299,3 +300,10 @@
                        :body ""
                        :headers (contains
                                   {"Location" "/index.html"})})))))
+
+(facts "api-meta"
+  (fact "meta can be presented as maps or vector of tuples"
+    (api {:core {:handlers {secret-ns [#'nada]}, :meta {::role require-role}}})
+    (api {:core {:handlers {secret-ns [#'nada]}, :meta [[::role require-role]]}}))
+  (fact "invalid meta causes creation-time exception"
+    (api {:core {:handlers {secret-ns [#'nada]}, :meta {}}}) => (throws? {:name :nada, :invalid-keys [::role]})))

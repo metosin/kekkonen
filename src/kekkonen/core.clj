@@ -386,12 +386,12 @@
                         (reduce
                           (fn [ctx [k v]]
                             (if-let [interceptors (get-in dispatcher [:meta k])]
-                                (if-let [interceptor (interceptor (interceptors v))]
-                                  (if-let [enter (:enter interceptor)]
-                                    (let [input-schema (:input (kc/extract-schema enter))
-                                          ctx (input-coerce! ctx input-schema input-matcher)]
-                                      (or (enter ctx) (reduced nil)))
-                                    ctx)
+                              (if-let [interceptor (interceptor (interceptors v))]
+                                (if-let [enter (:enter interceptor)]
+                                  (let [input-schema (:input (kc/extract-schema enter))
+                                        ctx (input-coerce! ctx input-schema input-matcher)]
+                                    (or (enter ctx) (reduced nil)))
+                                  ctx)
                                 ctx)
                               ctx))
                           context
@@ -609,13 +609,7 @@
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
-  (let [options (-> options
-                    (->> (kc/deep-merge (dissoc +default-options+ :meta)))
-                    (assoc :meta (into
-                                   (linked/map)
-                                   (into
-                                     (vec (map identity (:meta +default-options+)))
-                                     (map identity (:meta options))))))
+  (let [options (kc/deep-merge-map-like +default-options+ options)
         handlers (->> (collect-and-enrich options false))
         interceptors (mapv interceptor (:interceptors options))]
     (map->Dispatcher
