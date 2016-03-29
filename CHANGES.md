@@ -1,4 +1,4 @@
-## 0.2.0-SNAPSHOT
+## 0.2.0 (29.3.2016)
 
 * Change Transformers to (initial version of) Interceptors in both the Dispatcher & Ring.
   * `:transformers`-key is replaced with `:interceptors`
