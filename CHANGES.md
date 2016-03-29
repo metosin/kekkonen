@@ -1,5 +1,7 @@
 ## 0.2.0 (29.3.2016)
 
+**[compare](https://github.com/metosin/kekkonen/compare/0.1.2...0.2.0)**
+
 * Change Transformers to (initial version of) Interceptors in both the Dispatcher & Ring.
   * `:transformers`-key is replaced with `:interceptors`
   * Interceptors are either functions `context => context` (just like the old transformers) or maps
