@@ -1,3 +1,11 @@
+## Unreleased
+
+* updated dependencies:
+
+```clj
+[prismatic/plumbing "0.5.3"] is available but we use "0.5.2"
+```
+
 ## 0.2.0 (29.3.2016)
 
 **[compare](https://github.com/metosin/kekkonen/compare/0.1.2...0.2.0)**
