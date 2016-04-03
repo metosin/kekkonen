@@ -402,13 +402,15 @@
                                 response)))]
          (assoc context :response response))))})
 
+(defn- intercept [context interceptors]
+  (as-> context context
+        (reduce intercept-enter context interceptors)
+        (reduce intercept-leave context (reverse interceptors))))
+
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
     (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
-          context (as-> (initialize-context dispatcher handler context) ctx
-                        (reduce intercept-enter ctx interceptors)
-                        (reduce intercept-leave ctx (reverse interceptors)))]
-
+          context (-> (initialize-context dispatcher handler context) (intercept interceptors))]
       (if (contains? context :response)
         (:response context)
         (invalid-action! action)))
