@@ -125,10 +125,8 @@
           ;; only allow calls to ring-mapped handlers with matching method
           (if (and ring (methods request-method))
             ;; TODO: create an interceptor chain
-            (let [context (assoc (:context dispatcher)
-                            :request request
-                            ::k/coercion coercion)
-                  context (as-> context context
+            (let [ring-context {::k/coercion coercion, :request request}
+                  context (as-> (k/initialize-context dispatcher handler ring-context) context
 
                                 ;; map parameters from ring-request into common keys
                                 (reduce kc/deep-merge-to-from context (:parameters type-config))

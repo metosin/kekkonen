@@ -349,6 +349,13 @@
              context))
      context)))
 
+(defn initialize-context [dispatcher handler context]
+  (kc/deep-merge
+    (:context dispatcher)
+    context
+    {::dispatcher dispatcher
+     ::handler handler}))
+
 ;;
 ;; Dispatching to handlers
 ;;
@@ -365,10 +372,7 @@
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [function all-meta input output] :as handler} (some-handler dispatcher action)]
     (let [input-matcher (-> dispatcher :coercion :input)
-          context (as-> context context
-
-                        ;; base-context from Dispatcher
-                        (kc/deep-merge (:context dispatcher) context)
+          context (as-> (initialize-context dispatcher handler context) context
 
                         ;; run all the interceptor enters, short-circuit on nil
                         (reduce
@@ -397,11 +401,7 @@
 
                         ;; run context coercion for :validate|:invoke and if context coercion is set
                         (cond-> context (and context (#{:validate :invoke} mode))
-                                ((fn [ctx] (input-coerce! ctx input input-matcher))))
-
-                        ;; inject in stuff the context if not nil
-                        (cond-> context context (merge context {::dispatcher dispatcher
-                                                                ::handler handler})))]
+                                ((fn [ctx] (input-coerce! ctx input input-matcher)))))]
 
       (when-not context
         (invalid-action! action))
