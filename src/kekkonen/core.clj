@@ -378,14 +378,8 @@
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [function interceptors input output] :as handler} (some-handler dispatcher action)]
     (let [input-matcher (-> dispatcher :coercion :input)
+          interceptors (concat (:interceptors dispatcher) interceptors)
           context (as-> (initialize-context dispatcher handler context) context
-
-                        ;; run all the interceptor enters, short-circuit on nil
-                        (reduce
-                          (fn [ctx {:keys [enter]}]
-                            (if enter (or (enter ctx) (reduced nil)) ctx))
-                          context
-                          (:interceptors dispatcher))
 
                         ;; run all the user interceptor enters per namespace/handler
                         ;; start from the root. a returned nil context short-circuits
@@ -426,14 +420,7 @@
                                   (or (leave ctx) (reduced nil))
                                   ctx))
                               context
-                              (reverse interceptors))
-
-                            ;; run all the interceptor leaves in reverse order, short-circuit on nil
-                            (reduce
-                              (fn [ctx {:keys [leave]}]
-                                (if leave (or (leave ctx) (reduced nil)) ctx))
-                              context
-                              (reverse (:interceptors dispatcher))))]
+                              (reverse interceptors)))]
 
           (or (:response context)
               (invalid-action! action)))))
