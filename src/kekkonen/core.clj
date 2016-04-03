@@ -376,7 +376,7 @@
 
 ; TODO: precompile whole interceptor chain
 (defn- dispatch [dispatcher mode action context]
-  (if-let [{:keys [function all-meta input output] :as handler} (some-handler dispatcher action)]
+  (if-let [{:keys [function interceptors input output] :as handler} (some-handler dispatcher action)]
     (let [input-matcher (-> dispatcher :coercion :input)
           context (as-> (initialize-context dispatcher handler context) context
 
@@ -392,18 +392,14 @@
                         ;; the run an causes ::dispatch error. Apply local coercion
                         ;; in the input is defined (using same definitions as with handlers)
                         (reduce
-                          (fn [ctx [k v]]
-                            (if-let [interceptors (get-in dispatcher [:meta k])]
-                              (if-let [interceptor (interceptor (interceptors v))]
-                                (if-let [enter (:enter interceptor)]
-                                  (let [input-schema (:input (kc/extract-schema enter))
-                                        ctx (input-coerce! ctx input-schema input-matcher)]
-                                    (or (enter ctx) (reduced nil)))
-                                  ctx)
-                                ctx)
+                          (fn [ctx interceptor]
+                            (if-let [enter (:enter interceptor)]
+                              (let [input-schema (:input (kc/extract-schema enter))
+                                    ctx (input-coerce! ctx input-schema input-matcher)]
+                                (or (enter ctx) (reduced nil)))
                               ctx))
                           context
-                          (apply concat all-meta))
+                          interceptors)
 
                         ;; run context coercion for :validate|:invoke and if context coercion is set
                         (cond-> context (and context (#{:validate :invoke} mode))
@@ -425,16 +421,12 @@
                             ;; the run an causes ::dispatch error. Apply local coercion
                             ;; in the input is defined (using same definitions as with handlers)
                             (reduce
-                              (fn [ctx [k v]]
-                                (if-let [interceptor-factory (get-in dispatcher [:meta k])]
-                                  (if-let [interceptor (interceptor (interceptor-factory v))]
-                                    (if-let [leave (:leave interceptor)]
-                                      (or (leave ctx) (reduced nil))
-                                      ctx)
-                                    ctx)
+                              (fn [ctx interceptor]
+                                (if-let [leave (:leave interceptor)]
+                                  (or (leave ctx) (reduced nil))
                                   ctx))
                               context
-                              (reverse (apply concat all-meta)))
+                              (reverse interceptors))
 
                             ;; run all the interceptor leaves in reverse order, short-circuit on nil
                             (reduce
@@ -542,8 +534,7 @@
     (apply concat metas)))
 
 ;; TODO: create full set of interceptors here and run them in order
-(defn- collect-and-enrich
-  [{:keys [handlers type-resolver meta]} allow-empty-namespaces?]
+(defn- collect-and-enrich [{:keys [handlers type-resolver meta]} allow-empty-namespaces?]
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
         collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
