@@ -530,7 +530,30 @@
                             :ns-meta [{::inc 1 ::times 2}]
                             :all-meta [{::inc 1 ::times 2}]}))
 
-            (k/invoke d :api/test {:data {:x 2}}) => 5))))))
+            (k/invoke d :api/test {:data {:x 2}}) => 5))
+
+        (fact "interceptors are populated correctly"
+          (let [api-ns (k/namespace
+                         {:name :api
+                          ::inc 1
+                          :interceptors [[times* 2]]})
+                d (k/dispatcher
+                    {:handlers {api-ns (k/handler
+                                         {:name :test
+                                          ::times 3
+                                          :interceptors [[inc* 100]]}
+                                         (p/fn-> :data :x))}
+                     :meta [[::times times*]
+                            [::inc inc*]]})]
+
+            (fact "are populated correctly"
+              (k/some-handler d :api/test)
+              => (contains {:interceptors (contains [map?   ;; the interceptor doesn't have a name yet
+                                                     (contains {:enter inc*})
+                                                     map?   ;; the interceptor doesn't have a name yet
+                                                     (contains {:enter times*})])}))
+
+            (k/invoke d :api/test {:data {:x 2}}) => 315))))))
 
 (facts "all-handlers, available-handlers & dispatch-handlers"
   (let [handler->action (fn [m] (p/for-map [[k v] m] (:action k) v))

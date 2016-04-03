@@ -14,7 +14,7 @@
   (:refer-clojure :exclude [namespace]))
 
 ;;
-;; Definitions
+;; Common
 ;;
 
 (s/defschema Function
@@ -22,42 +22,6 @@
 
 (s/defschema KeywordMap
   {s/Keyword s/Any})
-
-(s/defschema Context
-  (merge
-    KeywordMap
-    {(s/optional-key :data) s/Any}))
-
-(s/defschema Handler
-  {:function Function
-   :type s/Keyword
-   :name s/Keyword
-   :ns (s/maybe s/Keyword)
-   :action s/Keyword
-   :description (s/maybe s/Str)
-
-   ;; extra meta-data
-   :meta KeywordMap
-   (s/optional-key :ns-meta) [KeywordMap]
-   (s/optional-key :all-meta) [KeywordMap]
-
-   ;; input schemas
-   ; full input
-   :input s/Any
-   ; direct handler input
-   :handler-input s/Any
-   ; user-meta defined input
-   :user-input s/Any
-
-   ;; output schemas
-   :output s/Any
-
-   (s/optional-key :source-map) {:line s/Int
-                                 :column s/Int
-                                 :file s/Str
-                                 :ns s/Symbol
-                                 :name s/Symbol}
-   s/Keyword s/Any})
 
 ;;
 ;; Interceptors
@@ -84,7 +48,7 @@
       :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
 
 (defn interceptors [data]
-  (assert (vector? data) "intercetors must be defined as a vector")
+  (assert (vector? data) "interceptors must be defined as a vector")
   (let [interceptors (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
         execute (fn [[first & rest] ctx]
                   (if-let [ctx (first ctx)]
@@ -98,6 +62,49 @@
       (if (not= input KeywordMap) {:input input})
       (if enters {:enter (partial execute enters)})
       (if leaves {:leave (partial execute leaves)}))))
+
+;;
+;; Context & Handler
+;;
+
+(s/defschema Context
+  (merge
+    KeywordMap
+    {(s/optional-key :data) s/Any}))
+
+(s/defschema Handler
+  {:function Function
+   :type s/Keyword
+   :name s/Keyword
+   :ns (s/maybe s/Keyword)
+   :action s/Keyword
+   :description (s/maybe s/Str)
+
+   ;; extra meta-data
+   :meta KeywordMap
+   (s/optional-key :ns-meta) [KeywordMap]
+   (s/optional-key :all-meta) [KeywordMap]
+
+   ;; interceptors
+   :interceptors [Interceptor]
+
+   ;; input schemas
+   ; full input
+   :input s/Any
+   ; direct handler input
+   :handler-input s/Any
+   ; user-meta defined input
+   :user-input s/Any
+
+   ;; output schemas
+   :output s/Any
+
+   (s/optional-key :source-map) {:line s/Int
+                                 :column s/Int
+                                 :file s/Str
+                                 :ns s/Symbol
+                                 :name s/Symbol}
+   s/Keyword s/Any})
 
 ;;
 ;; Type Resolution
@@ -523,29 +530,16 @@
 ;; Creating a Dispatcher
 ;;
 
-(s/defschema Options
-  {:handlers {(s/cond-pre s/Keyword Namespace) s/Any}
-   (s/optional-key :context) KeywordMap
-   (s/optional-key :type-resolver) Function
-   (s/optional-key :interceptors) [FunctionOrInterceptor]
-   (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
-                               (s/optional-key :output) s/Any}
-   (s/optional-key :meta) (s/cond-pre [[(s/one s/Keyword 'key) Function]] KeywordMap)
-   s/Keyword s/Any})
-
-(s/def +default-options+ :- Options
-  {:handlers {}
-   :context {}
-   :interceptors []
-   :coercion {:input {:data (constantly nil)}
-              :output (constantly nil)}
-   :type-resolver default-type-resolver
-   :meta {:interceptors interceptors
-          :summary nil
-          :description nil
-          :no-doc nil
-          ;; TODO: should this be defined in kekkonen.ring?
-          :responses nil}})
+(defn- interceptor-chain [meta metas]
+  (reduce
+    (fn [acc [k v]]
+      (if-let [factory (get meta k)]
+        (if-let [interceptor (interceptor (factory v))]
+          (conj acc interceptor)
+          acc)
+        acc))
+    []
+    (apply concat metas)))
 
 ;; TODO: create full set of interceptors here and run them in order
 (defn- collect-and-enrich
@@ -580,10 +574,12 @@
                                             acc)))
                                       {}
                                       (apply concat all-meta))
-                         input (kc/merge-map-schemas (:input h) user-input)]
+                         input (kc/merge-map-schemas (:input h) user-input)
+                         interceptors (interceptor-chain meta all-meta)]
                      (merge h {:ns ns
                                :ns-meta ns-meta
                                :all-meta all-meta
+                               :interceptors interceptors
 
                                :handler-input (:input h)
                                :user-input user-input
@@ -603,6 +599,33 @@
         (->> (group-by :action)
              (p/map-vals first)))))
 
+;;
+;; Public API
+;;
+
+(s/defschema Options
+  {:handlers {(s/cond-pre s/Keyword Namespace) s/Any}
+   (s/optional-key :context) KeywordMap
+   (s/optional-key :type-resolver) Function
+   (s/optional-key :interceptors) [FunctionOrInterceptor]
+   (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
+                               (s/optional-key :output) s/Any}
+   (s/optional-key :meta) (s/cond-pre [[(s/one s/Keyword 'key) Function]] KeywordMap)
+   s/Keyword s/Any})
+
+(s/def +default-options+ :- Options
+  {:handlers {}
+   :context {}
+   :interceptors []
+   :coercion {:input {:data (constantly nil)}
+              :output (constantly nil)}
+   :type-resolver default-type-resolver
+   :meta {:interceptors interceptors
+          :summary nil
+          :description nil
+          :no-doc nil
+          ;; TODO: should this be defined in kekkonen.ring?
+          :responses nil}})
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
