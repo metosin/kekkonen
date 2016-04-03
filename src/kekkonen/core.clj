@@ -388,56 +388,30 @@
     (or (leave context) (reduced nil))
     context))
 
-(defn- intercept-handler [mode context]
-  (let [{:keys [function input output]} (::handler context)
-        dispatcher (::dispatcher context)
-        input-matcher (-> dispatcher :coercion :input)]
-    (if (and context (#{:validate :invoke} mode))
-      (let [context (input-coerce! context input input-matcher)
-            response (if (#{:invoke} mode)
-                       (as-> (function context) response
-                             (if (and output (-> dispatcher :coercion :output))
-                               (coerce! output (-> dispatcher :coercion :output) response nil ::response)
-                               response)))]
-        (assoc context :response response)))))
+(defn- intercept-handler [mode]
+  {:enter
+   (fn [context]
+     (let [{:keys [function input output]} (::handler context)
+           dispatcher (::dispatcher context)
+           input-matcher (-> dispatcher :coercion :input)]
+       (let [context (if (#{:validate :invoke} mode) (input-coerce! context input input-matcher) context)
+             response (if (#{:invoke} mode)
+                        (as-> (function context) response
+                              (if (and output (-> dispatcher :coercion :output))
+                                (coerce! output (-> dispatcher :coercion :output) response nil ::response)
+                                response)))]
+         (assoc context :response response))))})
 
-; TODO: precompile whole interceptor chain
 (defn- dispatch [dispatcher mode action context]
-  (if-let [{:keys [function interceptors input output] :as handler} (some-handler dispatcher action)]
-    (let [input-matcher (-> dispatcher :coercion :input)
-          interceptors (concat (:interceptors dispatcher) interceptors)
-          context (initialize-context dispatcher handler context)
-          context (as-> context context
+  (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
+    (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
+          context (as-> (initialize-context dispatcher handler context) ctx
+                        (reduce intercept-enter ctx interceptors)
+                        (reduce intercept-leave ctx (reverse interceptors)))]
 
-                        ;; run all the user interceptor enters per namespace/handler
-                        ;; start from the root. a returned nil context short-circuits
-                        ;; the run an causes ::dispatch error. Apply local coercion
-                        ;; in the input is defined (using same definitions as with handlers)
-                        (reduce intercept-enter context interceptors)
-
-                        ;; run context coercion for :validate|:invoke and if context coercion is set
-                        (cond-> context (and context (#{:validate :invoke} mode))
-                                ((fn [ctx] (input-coerce! ctx input input-matcher)))))]
-
-      (when-not context
-        (invalid-action! action))
-
-      ;; all good, let's invoke?
-      (if (#{:invoke} mode)
-        (let [response (as-> (function context) response
-                             (if (and output (-> dispatcher :coercion :output))
-                               (coerce! output (-> dispatcher :coercion :output) response nil ::response)
-                               response))
-              context (as-> (assoc context :response response) context
-
-                            ;; run all the meta interceptor leaves per namespace/handler
-                            ;; in reverse order start from the handler. a returned nil context short-circuits
-                            ;; the run an causes ::dispatch error. Apply local coercion
-                            ;; in the input is defined (using same definitions as with handlers)
-                            (reduce intercept-leave context (reverse interceptors)))]
-
-          (or (:response context)
-              (invalid-action! action)))))
+      (if (contains? context :response)
+        (:response context)
+        (invalid-action! action)))
     (invalid-action! action)))
 
 (s/defn check
