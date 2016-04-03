@@ -1,5 +1,7 @@
 ## Unreleased
 
+* *BREAKING*: Removed type-level interceptors from ring-adapter.
+
 * updated dependencies:
 
 ```clj
