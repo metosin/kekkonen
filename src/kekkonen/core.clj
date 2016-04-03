@@ -329,7 +329,6 @@
 
 (defn input-coerce!
   ([context schema]
-    ;; TODO: ensure that dispatcher is always present, also for interceptors.
    (if-let [dispatcher (get-dispatcher context)]
      (input-coerce! context schema (-> dispatcher :coercion :input))
      (throw (ex-info "no attached dispatcher." {}))))
