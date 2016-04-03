@@ -15,8 +15,7 @@
 (s/defschema Options
   {:types {s/Keyword {:methods #{s/Keyword}
                       (s/optional-key :parameters) {[s/Keyword] [s/Keyword]}
-                      (s/optional-key :allow-method-override?) s/Bool
-                      (s/optional-key :interceptors) [k/FunctionOrInterceptor]}}
+                      (s/optional-key :allow-method-override?) s/Bool}}
    :coercion {s/Keyword k/Function}
    :interceptors [k/FunctionOrInterceptor]})
 
@@ -124,12 +123,7 @@
     (ring-handler dispatcher {}))
   ([dispatcher :- Dispatcher, options :- k/KeywordMap]
     (let [options (-> (kc/deep-merge +default-options+ options)
-                      (update :interceptors (partial mapv k/interceptor))
-                      (update :types (fn [types]
-                                       (p/for-map [[k v] types]
-                                         k (if (:interceptors v)
-                                             (update v :interceptors (partial mapv k/interceptor))
-                                             v)))))
+                      (update :interceptors (partial mapv k/interceptor)))
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method] :as request}]
@@ -138,13 +132,10 @@
           ;; only allow calls to ring-mapped handlers with matching method
           (if (and ring (methods request-method))
             ;; TODO: create an interceptor chain
-            (let [context (as-> {:request request} context
-
-                                ;; base-context from Dispatcher
-                                (kc/deep-merge (:context dispatcher) context)
-
-                                ;; add lazy-coercion
-                                (assoc context ::k/coercion coercion)
+            (let [context (assoc (:context dispatcher)
+                            :request request
+                            ::k/coercion coercion)
+                  context (as-> context context
 
                                 ;; map parameters from ring-request into common keys
                                 (reduce kc/deep-merge-to-from context (:parameters type-config))
@@ -154,14 +145,7 @@
                                   (fn [ctx {:keys [enter]}]
                                     (if enter (or (enter ctx) (reduced nil)) ctx))
                                   context
-                                  (:interceptors options))
-
-                                ;; type-level interceptors enter
-                                (reduce
-                                  (fn [ctx {:keys [enter]}]
-                                    (if enter (or (enter ctx) (reduced nil)) ctx))
-                                  context
-                                  (reverse (:interceptors type-config))))
+                                  (:interceptors options)))
 
                   response (if (is-validate-request? request)
                              (ok (k/validate dispatcher action context))
@@ -169,14 +153,6 @@
                                (coerce-response! response handler options)))
 
                   context (as-> (assoc context :response response) context
-
-                                ;; type-level interceptor leave
-                                (reduce
-                                  (fn [ctx {:keys [leave]}]
-                                    (if leave (or (leave ctx) (reduced nil)) ctx))
-                                  context
-                                  (:interceptors type-config))
-
 
                                 ;; global interceptors leave
                                 (reduce

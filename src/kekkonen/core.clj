@@ -377,8 +377,6 @@
                           context
                           (:interceptors dispatcher))
 
-                        ; TODO: type-interceptors?
-
                         ;; run all the user interceptor enters per namespace/handler
                         ;; start from the root. a returned nil context short-circuits
                         ;; the run an causes ::dispatch error. Apply local coercion

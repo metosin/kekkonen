@@ -223,7 +223,7 @@
   (fact "custom query-params -> query via interceptor"
     (let [app (r/ring-handler
                 (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
-                {:types {:handler {:interceptors [(k/context-copy [:request :query-params] [:query])]}}})]
+                {:interceptors [(k/context-copy [:request :query-params] [:query])]})]
 
       (app {:uri "/api/test"
             :request-method :post
@@ -263,7 +263,7 @@
                                                             (contains
                                                               {:methods #{:post}})})})))
 
-(fact "global & type-level interceptors"
+(fact "interceptors"
   (let [app (r/ring-handler
               (k/dispatcher
                 {:handlers
@@ -272,25 +272,24 @@
                     {:name :test}
                     (fn [context]
                       {:user (-> context ::user)}))}})
-              {:types {:handler {:interceptors [{:enter (fn [context]
-                                                          (if (::user context)
-                                                            (update context ::user #(str % "!"))
-                                                            context))
-                                                 :leave (fn [ctx]
-                                                          (assoc-in ctx [:response :handler] true))}]}}
-
-               :interceptors [{:enter (fn [ctx]
+              {:interceptors [{:enter (fn [ctx]
                                         (let [user (get-in ctx [:request :header-params "user"])]
                                           (assoc ctx ::user user)))
                                :leave (fn [ctx]
-                                        (assoc-in ctx [:response :global] true))}]})]
+                                        (assoc-in ctx [:response :leave1] true))}
+                              {:enter (fn [context]
+                                        (if (::user context)
+                                          (update context ::user #(str % "!"))
+                                          context))
+                               :leave (fn [ctx]
+                                        (assoc-in ctx [:response :leave2] true))}]})]
 
     (app {:uri "/api/test"
-          :request-method :post}) => {:user nil, :global true, :handler true}
+          :request-method :post}) => {:user nil, :leave1 true, :leave2 true}
 
     (app {:uri "/api/test"
           :request-method :post
-          :header-params {"user" "tommi"}}) => {:user "tommi!", :global true, :handler true}))
+          :header-params {"user" "tommi"}}) => {:user "tommi!", :leave1 true, :leave2 true}))
 
 (fact "dispatcher context is available for ring interceptors, fixes #26"
   (let [app (r/ring-handler
