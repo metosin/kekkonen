@@ -374,26 +374,46 @@
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
 
+(defn- intercept-enter [context interceptor]
+  (if-let [enter (:enter interceptor)]
+    (let [input-schema (:input (kc/extract-schema enter))
+          dispatcher (::dispatcher context)
+          input-matcher (-> dispatcher :coercion :input)
+          ctx (input-coerce! context input-schema input-matcher)]
+      (or (enter ctx) (reduced nil)))
+    context))
+
+(defn- intercept-leave [context interceptor]
+  (if-let [leave (:leave interceptor)]
+    (or (leave context) (reduced nil))
+    context))
+
+(defn- intercept-handler [mode context]
+  (let [{:keys [function input output]} (::handler context)
+        dispatcher (::dispatcher context)
+        input-matcher (-> dispatcher :coercion :input)]
+    (if (and context (#{:validate :invoke} mode))
+      (let [context (input-coerce! context input input-matcher)
+            response (if (#{:invoke} mode)
+                       (as-> (function context) response
+                             (if (and output (-> dispatcher :coercion :output))
+                               (coerce! output (-> dispatcher :coercion :output) response nil ::response)
+                               response)))]
+        (assoc context :response response)))))
+
 ; TODO: precompile whole interceptor chain
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [function interceptors input output] :as handler} (some-handler dispatcher action)]
     (let [input-matcher (-> dispatcher :coercion :input)
           interceptors (concat (:interceptors dispatcher) interceptors)
-          context (as-> (initialize-context dispatcher handler context) context
+          context (initialize-context dispatcher handler context)
+          context (as-> context context
 
                         ;; run all the user interceptor enters per namespace/handler
                         ;; start from the root. a returned nil context short-circuits
                         ;; the run an causes ::dispatch error. Apply local coercion
                         ;; in the input is defined (using same definitions as with handlers)
-                        (reduce
-                          (fn [ctx interceptor]
-                            (if-let [enter (:enter interceptor)]
-                              (let [input-schema (:input (kc/extract-schema enter))
-                                    ctx (input-coerce! ctx input-schema input-matcher)]
-                                (or (enter ctx) (reduced nil)))
-                              ctx))
-                          context
-                          interceptors)
+                        (reduce intercept-enter context interceptors)
 
                         ;; run context coercion for :validate|:invoke and if context coercion is set
                         (cond-> context (and context (#{:validate :invoke} mode))
@@ -414,13 +434,7 @@
                             ;; in reverse order start from the handler. a returned nil context short-circuits
                             ;; the run an causes ::dispatch error. Apply local coercion
                             ;; in the input is defined (using same definitions as with handlers)
-                            (reduce
-                              (fn [ctx interceptor]
-                                (if-let [leave (:leave interceptor)]
-                                  (or (leave ctx) (reduced nil))
-                                  ctx))
-                              context
-                              (reverse interceptors)))]
+                            (reduce intercept-leave context (reverse interceptors)))]
 
           (or (:response context)
               (invalid-action! action)))))
