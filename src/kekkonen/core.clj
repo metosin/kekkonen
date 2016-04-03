@@ -47,6 +47,7 @@
       (map? interceptor-or-a-function) interceptor-or-a-function
       :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
 
+;; TODO: should return a vector of interceptors, not a combined one
 (defn interceptors [data]
   (assert (vector? data) "interceptors must be defined as a vector")
   (let [interceptors (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
@@ -510,7 +511,6 @@
     []
     (apply concat metas)))
 
-;; TODO: create full set of interceptors here and run them in order
 (defn- collect-and-enrich [{:keys [handlers type-resolver meta]} allow-empty-namespaces?]
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
         collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
