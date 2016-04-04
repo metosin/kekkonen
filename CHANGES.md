@@ -1,6 +1,7 @@
-## Unreleased
+## 0.3.0-SNAPSHOT
 
 * *BREAKING*: Removed type-level interceptors from ring-adapter.
+* Support for Context-based urls, thanks to [Wout Neirynck](https://github.com/wneirynck).
 
 * updated dependencies:
 
