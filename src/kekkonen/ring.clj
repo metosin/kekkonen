@@ -107,6 +107,13 @@
 ;; Ring-handler
 ;;
 
+(defn- uri-without-context
+  "Extracts the uri from the request but dropping the context"
+  [{:keys [uri context]}]
+  (if (and context (.startsWith uri context))
+    (.substring uri (.length context))
+    uri))
+
 (s/defn ring-handler
   "Creates a ring handler from Dispatcher and options."
   ([dispatcher :- Dispatcher]
@@ -121,9 +128,9 @@
                                              v)))))
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
-      (fn [{:keys [request-method uri] :as request}]
-        ;; match a handlers based on uri
-        (if-let [{{:keys [type-config methods coercion] :as ring} :ring action :action :as handler} (router uri)]
+      (fn [{:keys [request-method] :as request}]
+        ;; match a handlers based on uri and context
+        (if-let [{{:keys [type-config methods coercion] :as ring} :ring action :action :as handler} (router (uri-without-context request))]
           ;; only allow calls to ring-mapped handlers with matching method
           (if (and ring (methods request-method))
             ;; TODO: create an interceptor chain

@@ -50,16 +50,23 @@
   [options]
   (apply ui/swagger-ui (into [(:path options)] (apply concat (dissoc options :path)))))
 
+(defn- add-base-path
+  "Extracts the base path from the context and adds it to the swagger map as basePath"
+  [{:keys [context]} swagger]
+  (if context
+    (assoc swagger :basePath context)
+    swagger))
+
 (defn swagger-handler [swagger options]
   (k/handler
     {:type :kekkonen.ring/handler
      :kekkonen.ring/method :get
      :name "swagger.json"
      :no-doc true}
-    (fn [context]
+    (fn [{:keys [request] :as context}]
       (let [dispatcher (k/get-dispatcher context)
             ns (some-> context :request :query-params :ns str keyword)
             handlers (k/available-handlers dispatcher ns (#'r/clean-context context))]
         (ok (swagger-object
-              (ring-swagger handlers swagger)
+              (add-base-path request (ring-swagger handlers swagger))
               options))))))

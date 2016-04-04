@@ -43,7 +43,11 @@
 
     (fact "request can be read as-is"
       (let [request {:uri "/api/snoop" :request-method :post}]
-        (app request) => (ok request)))))
+        (app request) => (ok request)))
+    
+    (fact "handles request within context"
+      (let [request {:uri "/somecontext/api/ping" :request-method :post :context "/somecontext"}]
+        (app request) => "pong"))))
 
 (p/defnk ^:handler plus
   [[:request [:query-params x :- s/Int, y :- s/Int]]]
