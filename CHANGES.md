@@ -7,6 +7,7 @@
 
 ```clj
 [prismatic/plumbing "0.5.3"] is available but we use "0.5.2"
+[clj-http "3.0.1"] is available but we use "2.1.0"
 ```
 
 ## 0.2.0 (29.3.2016)
