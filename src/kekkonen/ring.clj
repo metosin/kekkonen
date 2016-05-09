@@ -167,8 +167,8 @@
 
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in order."
-  [ring-handlers :- [k/Function]]
-  (apply some-fn ring-handlers))
+  [ring-handlers :- [(s/maybe k/Function)]]
+  (apply some-fn (keep identity ring-handlers)))
 
 (s/defn match
   "Creates a ring-handler for given uri & request-method"

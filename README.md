@@ -137,7 +137,7 @@ Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest 
   (success {:result (+ x y)}))
 
 (defnk ^:command inc!
-  [[:components counter]]
+  [counter]
   (success {:result (swap! counter inc)}))
 
 ;;
@@ -146,10 +146,12 @@ Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest 
 
 (def app
   (cqrs-api
-    {:swagger {:info {:title "Kekkonen example"}}
+    {:swagger {:ui "/api-docs"
+               :spec "/swagger.json"
+               :data {:info {:title "Kekkonen example"}}}
      :core {:handlers {:api {:pizza #'echo-pizza
                              :example [#'ping #'inc! #'plus]}}
-            :context {:components {:counter (atom 0)}}}}))
+            :context {:counter (atom 0)}}}))
 
 ;;
 ;; Start it

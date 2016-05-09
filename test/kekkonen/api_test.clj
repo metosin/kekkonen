@@ -301,6 +301,28 @@
                        :headers (contains
                                   {"Location" "/index.html"})})))))
 
+(facts "swagger-options"
+
+  (fact "ui & spec are set to /swagger.json & / by default"
+    (let [app (api {:core {:handlers {:api #'plus}}})]
+
+      (app {:uri "/swagger.json", :request-method :get}) => ok?
+      (app {:uri "/index.html", :request-method :get}) => ok?))
+
+  (fact "without ui & spec"
+    (let [app (api {:swagger {:spec nil, :ui nil}
+                    :core {:handlers {:api #'plus}}})]
+
+      (app {:uri "/swagger.json", :request-method :get}) => not-found?
+      (app {:uri "/", :request-method :get}) => not-found?))
+
+  (fact "with ui & spec"
+    (let [app (api {:swagger {:spec "/swagger.json", :ui "/api-docs"}
+                    :core {:handlers {:api #'plus}}})]
+
+      (app {:uri "/swagger.json", :request-method :get}) => ok?
+      (app {:uri "/api-docs/index.html", :request-method :get}) => ok?)))
+
 (facts "api-meta"
   (fact "meta can be presented as maps or vector of tuples"
     (api {:core {:handlers {secret-ns [#'nada]}, :meta {::role require-role}}})

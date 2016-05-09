@@ -51,22 +51,21 @@
 
     (fact "swagger-json can be generated"
       (s/with-fn-validation
-        (ks/swagger-object swagger {}) => truthy))))
+        (ks/swagger-object swagger {}) => some?))))
 
 (facts "swagger-handler"
   (let [dispatcher (k/transform-handlers
                      (k/dispatcher {:handlers {:api {:admin #'echo}}})
                      (partial #'r/attach-ring-meta r/+default-options+))
-        ctx {}
-        h (ks/swagger-handler {} {:info {:version "1.2.3"}})]
+        swagger-handler (ks/swagger-handler {} {:spec "swagger.json", :info {:version "1.2.3"}})]
     (against-background [(k/get-dispatcher anything) => dispatcher]
-                        
-	    (fact "generates swagger json"
-	      (:body (h ctx)) => (contains {:paths (as-checker not-empty)})))
-    
-      (fact "extracts swagger basePath from request context"
-        (let [context-path "/testpath"]
-          (:body (h {:request {:context context-path}})) => (contains {:basePath context-path})))
-      
-      (fact "does not add basePath if no context"
-        (-> (h {:request {}}) :body :basePath) => nil?)))
+
+                        (fact "generates swagger json"
+                          (swagger-handler {}) => (contains {:body (contains {:paths seq})})))
+
+    (fact "extracts swagger basePath from request context"
+      (let [context-path "/testpath"]
+        (:body (swagger-handler {:request {:context context-path}})) => (contains {:basePath context-path})))
+
+    (fact "does not add basePath if no context"
+      (-> (swagger-handler {:request {}}) :body :basePath) => nil)))

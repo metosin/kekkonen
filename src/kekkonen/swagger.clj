@@ -6,10 +6,15 @@
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
             [plumbing.core :as p]
-            [kekkonen.ring :as r]))
+            [kekkonen.ring :as r]
+            [clojure.string :as str]))
 
-(def +default-swagger-ui-options+
-  {:path "/"})
+(s/defschema Options
+  {(s/optional-key :ui) (s/maybe s/Str)
+   (s/optional-key :spec) (s/maybe s/Str)
+   (s/optional-key :data) k/KeywordMap
+   (s/optional-key :options) {(s/optional-key :ui) k/KeywordMap
+                              (s/optional-key :spec) k/KeywordMap}})
 
 (defn transform-handler
   "Transforms a handler into ring-swagger path->method->operation map."
@@ -47,8 +52,11 @@
 
 (s/defn swagger-ui
   "Ring handler for the Swagger UI"
-  [options]
-  (apply ui/swagger-ui (into [(:path options)] (apply concat (dissoc options :path)))))
+  [{:keys [ui spec] :as options}]
+  (when ui
+    (apply ui/swagger-ui (into [ui] (apply concat (merge
+                                                    {:swagger-docs spec}
+                                                    (-> options :options :ui)))))))
 
 (defn- add-base-path
   "Extracts the base path from the context and adds it to the swagger map as basePath"
@@ -58,15 +66,16 @@
     swagger))
 
 (defn swagger-handler [swagger options]
-  (k/handler
-    {:type :kekkonen.ring/handler
-     :kekkonen.ring/method :get
-     :name "swagger.json"
-     :no-doc true}
-    (fn [{:keys [request] :as context}]
-      (let [dispatcher (k/get-dispatcher context)
-            ns (some-> context :request :query-params :ns str keyword)
-            handlers (k/available-handlers dispatcher ns (#'r/clean-context context))]
-        (ok (swagger-object
-              (add-base-path request (ring-swagger handlers swagger))
-              options))))))
+  (if-let [spec (:spec options)]
+    (k/handler
+      {:type :kekkonen.ring/handler
+       :kekkonen.ring/method :get
+       :name spec
+       :no-doc true}
+      (fn [{:keys [request] :as context}]
+        (let [dispatcher (k/get-dispatcher context)
+              ns (some-> context :request :query-params :ns str keyword)
+              handlers (k/available-handlers dispatcher ns (#'r/clean-context context))]
+          (ok (swagger-object
+                (add-base-path request (ring-swagger handlers swagger))
+                (-> options :options :spec))))))))
