@@ -65,7 +65,9 @@
     (assoc swagger :basePath context)
     swagger))
 
-(defn swagger-handler [swagger options]
+(defn swagger-handler
+  "Creates a handler, that serves the swagger-spec"
+  [swagger options]
   (if-let [spec (:spec options)]
     (k/handler
       {:type :kekkonen.ring/handler
