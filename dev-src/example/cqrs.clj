@@ -105,8 +105,8 @@
 
 (def app
   (cqrs-api
-    {:swagger {:spec "/swagger.json"
-               :ui "/api-docs"
+    {:swagger {:ui "/api-docs"
+               :spec "/swagger.json"
                :data {:info {:title "Kekkonen"}}}
      :core {:handlers {:api {:item [#'get-items #'add-item #'reset-items]
                              :calculator [#'plus #'times #'increment]

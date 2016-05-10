@@ -41,7 +41,9 @@
 
 (def app
   (cqrs-api
-    {:swagger {:data {:info {:title "Kekkonen example"}}}
+    {:swagger {:ui "/api-docs"
+               :spec "/swagger.json"
+               :data {:info {:title "Kekkonen example"}}}
      :core {:handlers {:api {:pizza #'echo-pizza
                              :sample [#'ping #'inc! #'plus]}}
             :context {:components {:counter (atom 0)}}}}))

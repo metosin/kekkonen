@@ -20,10 +20,7 @@
    :api {:handlers r/+kekkonen-handlers+}
    :ring r/+default-options+
    :mw mw/+default-options+
-   ;; TODO: don't bind swagger.json & swagger-ui by default?
-   :swagger {:spec "/swagger.json"
-             :ui "/"
-             :data {:info {:title "Kekkonen API"
+   :swagger {:data {:info {:title "Kekkonen API"
                            :version "0.0.1"}}}})
 
 (defn api [options]

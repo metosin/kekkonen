@@ -112,7 +112,9 @@
 
 (def app
   (cqrs-api
-    {:swagger {:data {:info {:title "Kekkonen"
+    {:swagger {:ui "/api-docs"
+               :spec "/swagger.json"
+               :data {:info {:title "Kekkonen"
                              :version "1.0"}}}
      :core {:handlers {:api {:github [#'get-repository
                                       #'list-repositorys
