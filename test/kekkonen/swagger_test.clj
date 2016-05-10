@@ -58,10 +58,10 @@
                      (k/dispatcher {:handlers {:api {:admin #'echo}}})
                      (partial #'r/attach-ring-meta r/+default-options+))
         swagger-handler (ks/swagger-handler {} {:spec "swagger.json", :info {:version "1.2.3"}})]
-    (against-background [(k/get-dispatcher anything) => dispatcher]
 
-                        (fact "generates swagger json"
-                          (swagger-handler {}) => (contains {:body (contains {:paths seq})})))
+    (against-background [(k/get-dispatcher anything) => dispatcher]
+      (fact "generates swagger json"
+        (swagger-handler {}) => (contains {:body (contains {:paths seq})})))
 
     (fact "extracts swagger basePath from request context"
       (let [context-path "/testpath"]
