@@ -9,7 +9,7 @@
   (ka/api
     (kc/deep-merge-map-like
       {:core {:type-resolver (k/type-resolver :get :head :patch :delete :options :post :put :any)}
-       :swagger {:info {:title "Kekkonen HTTP API"}}
+       :swagger {:data {:info {:title "Kekkonen HTTP API"}}}
        :ring {:types {:get {:methods #{:get}}
                       :head {:methods #{:head}}
                       :patch {:methods #{:patch}}

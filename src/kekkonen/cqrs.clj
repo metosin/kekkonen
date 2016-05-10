@@ -47,7 +47,7 @@
   (ka/api
     (kc/deep-merge-map-like
       {:core {:type-resolver (k/type-resolver :command :query)}
-       :swagger {:info {:title "Kekkonen CQRS API"}}
+       :swagger {:data {:info {:title "Kekkonen CQRS API"}}}
        :ring {:types {:query {:methods #{:get}
                               :parameters {[:data] [:request :query-params]}}
                       :command {:methods #{:post}

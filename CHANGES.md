@@ -1,7 +1,28 @@
 ## 0.3.0-SNAPSHOT
 
-* *BREAKING*: Removed type-level interceptors from ring-adapter.
+* **BREAKING**: Removed type-level interceptors from ring-adapter.
 * Support for Context-based urls, thanks to [Wout Neirynck](https://github.com/wneirynck).
+* **BREAKING**: top-level swagger options are now in align to the compojure-api:
+  * Fixes [#22](https://github.com/metosin/kekkonen/issues/22)
+  * By default, `api`s don't bind swagger-spec & swagger-ui, use `:spec` & `:ui` options
+
+### Old
+
+```clj
+{:swagger {:info {:title "Kekkonen"}}
+ :swagger-ui {:jsonEdit true}})
+```
+
+### New
+
+```clj
+{:swagger
+ {:spec "/swagger.json"
+  :ui "/api-docs"
+  :options {:ui {:jsonEdit true}
+            :spec {:ignore-missing-mappings? false}}
+  :data {:info {:title "Kekkonen"}}}}
+```
 
 * updated dependencies:
 

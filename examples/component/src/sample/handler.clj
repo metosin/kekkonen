@@ -38,8 +38,10 @@
 
 (p/defnk create [[:state counter]]
   (cqrs-api
-    {:swagger {:info {:title "Kekkonen with Component"
-                      :description "created with http://kekkonen.io"}}
+    {:swagger {:ui "/api-docs"
+               :spec "/swagger.json"
+               :data {:info {:title "Kekkonen with Component"
+                             :description "created with http://kekkonen.io"}}}
      :core {:handlers {:api {:pizza #'echo-pizza
                              :math [#'inc! #'plus]
                              :ping #'ping}}

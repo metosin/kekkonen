@@ -594,6 +594,7 @@
           :no-doc nil
           ;; TODO: should this be defined in kekkonen.ring?
           :responses nil}})
+
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
@@ -618,7 +619,7 @@
 
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
-  [dispatcher :- Dispatcher, handlers]
+  [dispatcher :- Dispatcher, handlers :- (s/constrained s/Any (complement nil?) 'not-nil)]
   (if handlers
     (let [handler (collect-and-enrich
                     (merge dispatcher {:handlers handlers :type-resolver any-type-resolver}) true)]

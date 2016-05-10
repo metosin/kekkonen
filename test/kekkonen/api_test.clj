@@ -21,7 +21,9 @@
       context)))
 
 (facts "api-test"
-  (let [app (api {:core {:handlers {:api {:public [#'plus #'nada]
+  (let [app (api {:swagger {:ui "/api-docs"
+                            :spec "/swagger.json"}
+                  :core {:handlers {:api {:public [#'plus #'nada]
                                           secret-ns #'plus}}
                          :meta {::role require-role}}})]
 
@@ -294,12 +296,27 @@
                        {:/api/secret/plus anything})}))))
 
     (fact "swagger-ui"
-      (let [response (app {:uri "/" :request-method :get})]
+      (let [response (app {:uri "/api-docs" :request-method :get})]
         response => (contains
                       {:status 302
                        :body ""
                        :headers (contains
-                                  {"Location" "/index.html"})})))))
+                                  {"Location" "/api-docs/index.html"})})))))
+
+(facts "swagger-options"
+
+  (fact "ui & spec are not set by default"
+    (let [app (api {:core {:handlers {:api #'plus}}})]
+
+      (app {:uri "/swagger.json", :request-method :get}) => not-found?
+      (app {:uri "/", :request-method :get}) => not-found?))
+
+  (fact "with ui & spec"
+    (let [app (api {:swagger {:spec "/swagger.json", :ui "/api-docs"}
+                    :core {:handlers {:api #'plus}}})]
+
+      (app {:uri "/swagger.json", :request-method :get}) => ok?
+      (app {:uri "/api-docs/index.html", :request-method :get}) => ok?)))
 
 (facts "api-meta"
   (fact "meta can be presented as maps or vector of tuples"

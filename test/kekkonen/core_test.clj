@@ -950,14 +950,20 @@
     (fact "going meta boing boing"
       (k/invoke d :api/names) => #{:dispatcher :handler :names})))
 
-(fact "handlers can be injected into existing dispatcher"
-  (let [d (-> (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
-              (k/inject (k/handler {:name :ping} identity)))]
-    d => (contains
-           {:handlers
-            (just
-              {:api/test anything
-               :ping anything})})))
+(fact "injecting handlers"
+
+  (fact "handlers can be injected"
+    (let [d (-> (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
+                (k/inject (k/handler {:name :ping} identity)))]
+      d => (contains
+             {:handlers
+              (just
+                {:api/test anything
+                 :ping anything})})))
+
+  (fact "injecting nil handlers fails"
+    (-> (k/dispatcher {:handlers {:api (k/handler {:name :test} identity)}})
+        (k/inject nil)) => schema-error?))
 
 (facts "coercion-matcher"
   (let [PositiveInt (s/both s/Int (s/pred pos? 'positive))

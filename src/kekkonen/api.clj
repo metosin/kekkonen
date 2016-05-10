@@ -11,8 +11,7 @@
    (s/optional-key :api) {:handlers k/KeywordMap}
    (s/optional-key :ring) r/Options
    (s/optional-key :mw) k/KeywordMap
-   (s/optional-key :swagger) k/KeywordMap
-   (s/optional-key :swagger-ui) k/KeywordMap})
+   (s/optional-key :swagger) ks/Options})
 
 (s/def +default-options+ :- Options
   {:core (-> k/+default-options+
@@ -21,18 +20,21 @@
    :api {:handlers r/+kekkonen-handlers+}
    :ring r/+default-options+
    :mw mw/+default-options+
-   :swagger {:info {:title "Kekkonen API"}}
-   :swagger-ui ks/+default-swagger-ui-options+})
+   :swagger {:data {:info {:title "Kekkonen API"
+                           :version "0.0.1"}}}})
 
 (defn api [options]
   (s/with-fn-validation
     (let [options (s/validate Options (kc/deep-merge-map-like +default-options+ options))
-          swagger (merge (:swagger options) (mw/api-info (:mw options)))
-          dispatcher (-> (k/dispatcher (:core options))
-                         (k/inject (-> options :api :handlers))
-                         (k/inject (ks/swagger-handler swagger options)))]
+          api-handlers (-> options :api :handlers)
+          swagger-data (merge (-> options :swagger :data) (mw/api-info (:mw options)))
+          swagger-options (-> options :swagger)
+          swagger-handler (ks/swagger-handler swagger-data swagger-options)
+          dispatcher (cond-> (k/dispatcher (:core options))
+                             api-handlers (k/inject api-handlers)
+                             swagger-handler (k/inject swagger-handler))]
       (mw/wrap-api
         (r/routes
           [(r/ring-handler dispatcher (:ring options))
-           (ks/swagger-ui (:swagger-ui options))])
+           (ks/swagger-ui swagger-options)])
         (:mw options)))))
