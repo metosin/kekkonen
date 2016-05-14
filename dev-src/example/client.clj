@@ -11,9 +11,9 @@
 ; simplest thing that works
 (def hello-world
   (k/handler
-    {:name "hello-world"}
-    (fn [_]
-      "hello world.")))
+    {:name "hello-world"
+     :handler (fn [_]
+                "hello world.")}))
 
 (hello-world {})
 
@@ -22,9 +22,9 @@
   (k/handler
     {:description "this is a handler for echoing data"
      :name :echo
-     :summary "echoes data"}
-    (fn [{:keys [data]}]
-      data)))
+     :summary "echoes data"
+     :handler (fn [{:keys [data]}]
+                data)}))
 
 (echo {:data {:name "tommi"}})
 
@@ -33,9 +33,9 @@
   (k/handler
     {:description "fnk echo"
      :name :fnkecho
-     :summery "echoes data"}
-    (p/fnk [[:data x :- s/Int, y :- s/Int]]
-      (+ x y))))
+     :summery "echoes data"
+     :handler (p/fnk [[:data x :- s/Int, y :- s/Int]]
+                (+ x y))}))
 
 (plus {:data {:x 1, :y 2}})
 
@@ -66,14 +66,13 @@
                            :others [echo
                                     hello-world]
                            :public (k/handler
-                                     {:name :ping}
-                                     (p/fnk []
-                                       :pong))}}
+                                     {:name :ping
+                                      :handler (p/fnk [] :pong)})}}
           :context {:components {:counter (atom 0)}}}))
 
 ; get a handler
 (k/some-handler d :api/nill)
-(k/some-handler d :api/stateful/inc!)
+(k/some-handler d :api.stateful/inc!)
 
 ; invoke a handler
 (k/invoke d :api.stateful/inc!)

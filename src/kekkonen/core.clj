@@ -171,9 +171,11 @@
     :arglists))
 
 (s/defn handler
-  [meta :- KeywordMap, f :- Function]
-  (assert (:name meta) "handler should have :name")
-  (vary-meta f merge {:type :handler} meta))
+  ([meta :- KeywordMap]
+    (handler (dissoc meta :handler) (:handler meta)))
+  ([meta :- KeywordMap, f :- Function]
+    (assert (:name meta) "handler should have :name")
+    (vary-meta f merge {:type :handler} meta)))
 
 (defn handler? [x]
   (and (map? x) (:function x) (:type x)))
