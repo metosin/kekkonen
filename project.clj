@@ -16,7 +16,7 @@
                  [ring-middleware-format "0.7.0"]
 
                  ;; client stuff, separate module?
-                 [clj-http "3.0.1"]]
+                 [clj-http "3.1.0"]]
   :profiles {:dev {:plugins [[lein-midje "3.2"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.8.0"]

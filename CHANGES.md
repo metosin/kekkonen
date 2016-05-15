@@ -24,13 +24,22 @@
   :data {:info {:title "Kekkonen"}}}}
 ```
 
+* **BREAKING**: Handler dispatch function is now `:handle` instead of `:function`
+* Handlers can be defined via a single map with `:handle` key for the dispatch
+
+```clj
+(k/handler
+  {:name "hello"
+   :handle (constantly "hello")})
+```
+
 * updated dependencies:
 
 ```clj
 [prismatic/schema "1.1.1"] is available but we use "1.1.0"
 [prismatic/plumbing "0.5.3"] is available but we use "0.5.2"
 [metosin/ring-swagger "0.22.7"] is available but we use "0.22.6"
-[clj-http "3.0.1"] is available but we use "2.1.0"
+[clj-http "3.1.0"] available but we use "2.1.0"
 ```
 
 ## 0.2.0 (29.3.2016)
