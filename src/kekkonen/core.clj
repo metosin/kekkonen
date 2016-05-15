@@ -74,7 +74,7 @@
     {(s/optional-key :data) s/Any}))
 
 (s/defschema Handler
-  {:function Function
+  {:handle Function
    :type s/Keyword
    :name s/Keyword
    :ns (s/maybe s/Keyword)
@@ -178,7 +178,7 @@
     (vary-meta f merge {:type :handler} meta)))
 
 (defn handler? [x]
-  (and (map? x) (:function x) (:type x)))
+  (and (map? x) (:handle x) (:type x)))
 
 ;;
 ;; Namespaces
@@ -204,7 +204,7 @@
         (if name
           {(namespace
              {:name (keyword name)})
-           {:function this
+           {:handle this
             :type type
             :name (keyword name)
             :meta (user-meta meta)
@@ -220,7 +220,7 @@
       (let [{:keys [input output]} (kc/extract-schema this)]
         {(namespace
            {:name (keyword name)})
-         {:function @this
+         {:handle @this
           :type type
           :name (keyword name)
           :meta (user-meta meta)
@@ -394,12 +394,12 @@
 (defn- intercept-handler [mode]
   {:enter
    (fn [context]
-     (let [{:keys [function input output]} (::handler context)
+     (let [{:keys [handle input output]} (::handler context)
            dispatcher (::dispatcher context)
            input-matcher (-> dispatcher :coercion :input)]
        (let [context (if (#{:validate :invoke} mode) (input-coerce! context input input-matcher) context)
              response (if (#{:invoke} mode)
-                        (as-> (function context) response
+                        (as-> (handle context) response
                               (if (and output (-> dispatcher :coercion :output))
                                 (coerce! output (-> dispatcher :coercion :output) response nil ::response)
                                 response)))]

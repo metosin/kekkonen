@@ -128,7 +128,7 @@
           k/default-type-resolver) => (just
                                         {(k/namespace {:name :echo})
                                          (just
-                                           {:function fn?
+                                           {:handle fn?
                                             :description ""
                                             :meta {}
                                             :type :handler
@@ -158,7 +158,7 @@
         k/default-type-resolver) => (just
                                       {(k/namespace {:name :echo})
                                        (just
-                                         {:function fn?
+                                         {:handle fn?
                                           :type :handler
                                           :name :echo
                                           :meta {:query true
@@ -184,7 +184,7 @@
         k/default-type-resolver) => (just
                                       {(k/namespace {:name :echo})
                                        (just
-                                         {:function fn?
+                                         {:handle fn?
                                           :type :handler
                                           :name :echo
                                           :meta {}
