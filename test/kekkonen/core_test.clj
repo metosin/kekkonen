@@ -111,7 +111,7 @@
 
 (fact "handler generation"
   (let [handler1 (k/handler {:name "kikka"} identity)
-        handler2 (k/handler {:name "kikka" :handler identity})]
+        handler2 (k/handler {:name "kikka" :handle identity})]
     handler1 => handler2))
 
 (fact "collecting handlers"
@@ -124,7 +124,7 @@
           (k/handler
             {:name :echo
              :input {:name s/Str}
-             :handler identity})
+             :handle identity})
           k/default-type-resolver) => (just
                                         {(k/namespace {:name :echo})
                                          (just
@@ -141,7 +141,7 @@
           (k/handler
             {:name :echo
              :type :kikka
-             :handler identity})
+             :handle identity})
           k/any-type-resolver) => (just
                                     {(k/namespace {:name :echo})
                                      (contains
@@ -154,7 +154,7 @@
            :description "Echoes the user"
            :query true
            :roles #{:admin :user}
-           :handler (p/fnk f :- User [data :- User] data)})
+           :handle (p/fnk f :- User [data :- User] data)})
         k/default-type-resolver) => (just
                                       {(k/namespace {:name :echo})
                                        (just
@@ -172,7 +172,7 @@
       (let [handler (k/handler
                       {:name :echo
                        :input {:name s/Str}
-                       :handler identity})]
+                       :handle identity})]
         (k/collect
           handler
           (k/type-resolver :ILLEGAL)) => (throws? {:target handler}))))
@@ -278,7 +278,7 @@
                             :wasp ['kekkonen.core-test]
                             :bon (k/handler
                                    {:name :jovi
-                                    :handler (constantly :runaway)})}})]
+                                    :handle (constantly :runaway)})}})]
 
       (fact "deeply nested"
         (fact "namespaces can be joined with ."
@@ -328,7 +328,7 @@
 (fact "special keys in context"
   (let [d (k/dispatcher {:handlers {:api (k/handler
                                            {:name :echo
-                                            :handler identity})}})]
+                                            :handle identity})}})]
     (k/invoke d :api/echo) => (contains
                                 {::k/dispatcher d
                                  ::k/handler (k/some-handler d :api/echo)})))
@@ -354,14 +354,14 @@
                                              :type ::input-output-schemas
                                              :input {:data {:x s/Int, :y s/Int}}
                                              :output {:result s/Int}
-                                             :handler (fn [{{:keys [x y]} :data}]
-                                                        {:result (+ x y)})})
+                                             :handle (fn [{{:keys [x y]} :data}]
+                                                       {:result (+ x y)})})
                                           (k/handler
                                             {:name :fnk-plus
                                              :type ::input-output-schemas
-                                             :handler (p/fnk f :- {:result s/Int}
-                                                        [[:data x :- s/Int, y :- s/Int]]
-                                                        {:result (+ x y)})})]}
+                                             :handle (p/fnk f :- {:result s/Int}
+                                                       [[:data x :- s/Int, y :- s/Int]]
+                                                       {:result (+ x y)})})]}
                          :type-resolver (k/type-resolver ::input-output-schemas)})]
 
     (fact "handlers are registered ok"
@@ -412,7 +412,7 @@
 
   (facts "undefined meta"
     (k/dispatcher
-      {:handlers {:api (k/handler {:kikka :kukka :name :abba :handler identity})}})
+      {:handlers {:api (k/handler {:kikka :kukka :name :abba :handle identity})}})
     => (throws? {:name :abba, :invalid-keys [:kikka]}))
 
   (let [inc* (fn [value]
@@ -436,7 +436,7 @@
                                     ::inc 2
                                     ::intercept [dec x10]
                                     ::times 2
-                                    :handler (p/fn-> :data :x)})}
+                                    :handle (p/fn-> :data :x)})}
                  :meta {::inc inc*
                         ::intercept intercept*
                         ::times times*}})]
@@ -457,7 +457,7 @@
                                        {:name :test
                                         ::inc 1
                                         ::times 2
-                                        :handler (p/fn-> :data :x)})}
+                                        :handle (p/fn-> :data :x)})}
                      :meta [[::inc inc*]
                             [::times times*]]})]
 
@@ -484,7 +484,7 @@
                                        {:name :test
                                         ::inc 1
                                         ::times 2
-                                        :handler (p/fn-> :data :x)})}
+                                        :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
 
@@ -505,7 +505,7 @@
                 d (k/dispatcher
                     {:handlers {api-ns (k/handler
                                          {:name :test
-                                          :handler (p/fn-> :data :x)})}
+                                          :handle (p/fn-> :data :x)})}
                      :meta [[::inc inc*]
                             [::times times*]]})]
 
@@ -525,7 +525,7 @@
                 d (k/dispatcher
                     {:handlers {api-ns (k/handler
                                          {:name :test
-                                          :handler (p/fn-> :data :x)})}
+                                          :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
 
@@ -547,7 +547,7 @@
                                          {:name :test
                                           ::times 3
                                           :interceptors [[inc* 100]]
-                                          :handler (p/fn-> :data :x)})}
+                                          :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
 
@@ -566,8 +566,8 @@
         invalid-input? (contains {:type ::k/request})]
     (let [admin-ns (k/namespace {:name :admin, ::roles! #{:admin}})
           secret-ns (k/namespace {:name :secret, ::roles #{:admin}})
-          handler1 (k/handler {:name :handler1 :handler (p/fnk [] true)})
-          handler2 (k/handler {:name :handler2 :handler (p/fnk [[:data x :- s/Bool]] x)})
+          handler1 (k/handler {:name :handler1 :handle (p/fnk [] true)})
+          handler2 (k/handler {:name :handler2 :handle (p/fnk [[:data x :- s/Bool]] x)})
           d (k/dispatcher {:meta {::roles! require-role!
                                   ::roles require-role}
                            :handlers {:api {admin-ns [handler1 handler2]
@@ -810,7 +810,7 @@
                                      {:enter (->> "8"), :leave (<<- "8")}
                                      (->> "9")
                                      {:leave (<<- "9")}]
-                      :handler (p/fn-> :x (str "-"))})}}
+                      :handle (p/fn-> :x (str "-"))})}}
                  :interceptors [{:enter (->> "1"), :leave (<<- "1")}
                                 {:enter (->> "2"), :leave (<<- "2")}
                                 (->> "3")
@@ -820,7 +820,7 @@
 
     (fact "returning nil on :enter stops the execution"
       (let [d (k/dispatcher
-                {:handlers {:api (k/handler {:name :test :handler (p/fn-> :x)})}
+                {:handlers {:api (k/handler {:name :test :handle (p/fn-> :x)})}
                  :interceptors [(constantly nil)
                                 #(throw AssertionError)]})]
 
@@ -828,7 +828,7 @@
 
     (fact "returning nil on :leave stops the execution"
       (let [d (k/dispatcher
-                {:handlers {:api (k/handler {:name :test :handler (p/fn-> :x)})}
+                {:handlers {:api (k/handler {:name :test :handle (p/fn-> :x)})}
                  :interceptors [{:leave #(throw AssertionError)}
                                 {:leave (constantly nil)}]})]
 
@@ -837,7 +837,7 @@
 (fact "transforming handlers"
   (fact "enriching handlers"
     (k/transform-handlers
-      (k/dispatcher {:handlers {:api (k/handler {:name :test :handler identity})}})
+      (k/dispatcher {:handlers {:api (k/handler {:name :test :handle identity})}})
       (fn [handler]
         (assoc handler :kikka :kukka)))
 
@@ -850,7 +850,7 @@
 
   (fact "stripping handlers"
     (k/transform-handlers
-      (k/dispatcher {:handlers {:api (k/handler {:name :test :handler identity})}})
+      (k/dispatcher {:handlers {:api (k/handler {:name :test :handle identity})}})
       (constantly nil))
 
     => (contains
@@ -865,10 +865,10 @@
         doc-ns (k/namespace {:name :doc ::load-doc true})
         read (k/handler
                {:name :read
-                :handler (p/fnk [[:entity doc :- s/Str] :as ctx]
-                           ;; despite we haven't defined [:data :doc-id], it already coerced!
-                           (assert (-> ctx :data :doc-id class (= Long)))
-                           {:read doc})})
+                :handle (p/fnk [[:entity doc :- s/Str] :as ctx]
+                          ;; despite we haven't defined [:data :doc-id], it already coerced!
+                          (assert (-> ctx :data :doc-id class (= Long)))
+                          {:read doc})})
         d (k/dispatcher
             {:meta {::roles require-role
                     ::load-doc load-doc}
@@ -935,19 +935,19 @@
                          {:api
                           [(k/handler
                              {:name :dispatcher
-                              :handler (partial k/get-dispatcher)})
+                              :handle (partial k/get-dispatcher)})
                            (k/handler
                              {:name :handler
                               :description "metameta"
-                              :handler (partial k/get-handler)})
+                              :handle (partial k/get-handler)})
                            (k/handler
                              {:name :names
-                              :handler (fn [context]
-                                         (->> context
-                                              k/get-dispatcher
-                                              (p/<- (k/all-handlers nil))
-                                              (map :name)
-                                              set))})]}})]
+                              :handle (fn [context]
+                                        (->> context
+                                             k/get-dispatcher
+                                             (p/<- (k/all-handlers nil))
+                                             (map :name)
+                                             set))})]}})]
 
     (fact "::dispatcher"
       (s/validate Dispatcher (k/invoke d :api/dispatcher)) => (partial instance? Dispatcher))
@@ -961,8 +961,8 @@
 (fact "injecting handlers"
 
   (fact "handlers can be injected"
-    (let [d (-> (k/dispatcher {:handlers {:api (k/handler {:name :test :handler identity})}})
-                (k/inject (k/handler {:name :ping, :handler identity})))]
+    (let [d (-> (k/dispatcher {:handlers {:api (k/handler {:name :test :handle identity})}})
+                (k/inject (k/handler {:name :ping, :handle identity})))]
       d => (contains
              {:handlers
               (just
@@ -970,16 +970,16 @@
                  :ping anything})})))
 
   (fact "injecting nil handlers fails"
-    (-> (k/dispatcher {:handlers {:api (k/handler {:name :test, :handler identity})}})
+    (-> (k/dispatcher {:handlers {:api (k/handler {:name :test, :handle identity})}})
         (k/inject nil)) => schema-error?))
 
 (facts "coercion-matcher"
   (let [PositiveInt (s/both s/Int (s/pred pos? 'positive))
         handlers {:api [(k/handler
                           {:name :plus
-                           :handler (p/fnk ^:never-validate plus :- {:result PositiveInt}
-                                      [[:data x :- s/Int, y :- PositiveInt]]
-                                      {:result (+ x y)})})]}]
+                           :handle (p/fnk ^:never-validate plus :- {:result PositiveInt}
+                                     [[:data x :- s/Int, y :- PositiveInt]]
+                                     {:result (+ x y)})})]}]
 
     (facts "with default settings"
       (let [d (k/dispatcher {:handlers handlers})]
@@ -1031,9 +1031,9 @@
       (facts "with input coercion for another key"
         (let [d (k/dispatcher {:handlers {:api [(k/handler
                                                   {:name :plus
-                                                   :handler (p/fnk plus [[:data x :- s/Int]
-                                                                         [:tada y :- s/Int]]
-                                                              {:result (+ x y)})})]}
+                                                   :handle (p/fnk plus [[:data x :- s/Int]
+                                                                        [:tada y :- s/Int]]
+                                                             {:result (+ x y)})})]}
                                :coercion {:input {:data (constantly nil)
                                                   :tada (constantly nil)}}})]
 
@@ -1059,10 +1059,10 @@
         handler (k/handler
                   {:name :test
                    :output {:value s/Int}
-                   :handler (fn [context]
-                              (:data (k/input-coerce! context {:data {:value s/Int
-                                                                      s/Keyword s/Any}
-                                                               s/Keyword s/Any})))})]
+                   :handle (fn [context]
+                             (:data (k/input-coerce! context {:data {:value s/Int
+                                                                     s/Keyword s/Any}
+                                                              s/Keyword s/Any})))})]
 
     (facts "manual coercion"
       (facts "with input coercion on"
@@ -1095,9 +1095,9 @@
     (fact "automatic endpoint coercion"
       (let [d (k/dispatcher {:handlers {:api (k/handler
                                                {:name :test
-                                                :handler (p/fnk ^:never-validate f :- {:value s/Int}
-                                                           [data :- {:value s/Int}]
-                                                           data)})}
+                                                :handle (p/fnk ^:never-validate f :- {:value s/Int}
+                                                          [data :- {:value s/Int}]
+                                                          data)})}
                              :coercion {:input nil}})]
 
         (fact "with request-coercion off"
@@ -1128,10 +1128,10 @@
                              :handlers {api [(k/handler
                                                {:name :test
                                                 :output {:value s/Int}
-                                                :handler (fn [context] (:data context))})
+                                                :handle (fn [context] (:data context))})
                                              (k/handler
                                                {:name :test2
-                                                :handler (p/fnk [[:data x :- s/Str :as data]] data)})]}})]
+                                                :handle (p/fnk [[:data x :- s/Str :as data]] data)})]}})]
 
         (pr-str (:input (k/some-handler d :api/test2)))
 
@@ -1154,3 +1154,8 @@
 
 (fact "printing it"
   (pr-str (k/dispatcher {:handlers {}})) => "#<Dispatcher>")
+
+
+(def dispatcher
+  (k/dispatcher
+    {:handlers {:api (k/handler {:name :hello, :handle (constantly "hello world")})}}))

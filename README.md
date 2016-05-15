@@ -38,7 +38,7 @@ Quickstart: `lein new kekkonen kakkonen`
 
 (def dispatcher
   (k/dispatcher
-    {:handlers {:api (k/handler {:name :hello, :handler (constantly "hello world"))}}}))
+    {:handlers {:api (k/handler {:name :hello, :handle (constantly "hello world"))}}}))
 
 (k/invoke dispatcher :api/hello)
 ; => "hello world"

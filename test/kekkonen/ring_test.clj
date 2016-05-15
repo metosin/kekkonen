@@ -185,8 +185,8 @@
       (let [app (r/ring-handler
                   (k/dispatcher {:handlers {:api (k/handler
                                                    {:name :plus
-                                                    :handler (p/fnk [[:data x :- s/Int, y :- s/Int]]
-                                                               (ok (+ x y)))})}})
+                                                    :handle (p/fnk [[:data x :- s/Int, y :- s/Int]]
+                                                              (ok (+ x y)))})}})
                   {:coercion {:body-params nil}})]
 
         (app {:uri "/api/plus"
@@ -214,7 +214,7 @@
 (facts "mapping"
   (facts "default body-params -> data"
     (let [app (r/ring-handler
-                (k/dispatcher {:handlers {:api (k/handler {:name :test, :handler identity})}}))]
+                (k/dispatcher {:handlers {:api (k/handler {:name :test, :handle identity})}}))]
 
       (app {:uri "/api/test"
             :request-method :post
@@ -222,7 +222,7 @@
 
   (fact "custom query-params -> query via interceptor"
     (let [app (r/ring-handler
-                (k/dispatcher {:handlers {:api (k/handler {:name :test, :handler identity})}})
+                (k/dispatcher {:handlers {:api (k/handler {:name :test, :handle identity})}})
                 {:interceptors [(k/context-copy [:request :query-params] [:query])]})]
 
       (app {:uri "/api/test"
@@ -231,7 +231,7 @@
 
   (fact "custom query-params -> query via parameters"
     (let [app (r/ring-handler
-                (k/dispatcher {:handlers {:api (k/handler {:name :test, :handler identity})}})
+                (k/dispatcher {:handlers {:api (k/handler {:name :test, :handle identity})}})
                 {:types {:handler {:parameters {[:query] [:request :query-params]}}}})]
 
       (app {:uri "/api/test"
@@ -254,7 +254,7 @@
                  {:api
                   (k/handler
                     {:name :test
-                     :handler (partial k/get-handler)})}}))]
+                     :handle (partial k/get-handler)})}}))]
 
     (app {:uri "/api/test" :request-method :post}) => (contains
                                                         {:ring
@@ -270,8 +270,8 @@
                  {:api
                   (k/handler
                     {:name :test
-                     :handler (fn [context]
-                                {:user (-> context ::user)})})}})
+                     :handle (fn [context]
+                               {:user (-> context ::user)})})}})
               {:interceptors [{:enter (fn [ctx]
                                         (let [user (get-in ctx [:request :header-params "user"])]
                                           (assoc ctx ::user user)))
@@ -295,6 +295,6 @@
   (let [app (r/ring-handler
               (k/dispatcher
                 {:context {:secret 42}
-                 :handlers {:api (k/handler {:name :ipa, :handler (fn [ctx] (::value ctx))})}})
+                 :handlers {:api (k/handler {:name :ipa, :handle (fn [ctx] (::value ctx))})}})
               {:interceptors [(fn [ctx] (assoc ctx ::value (:secret ctx)))]})]
     (app {:uri "/api/ipa" :request-method :post}) => 42))

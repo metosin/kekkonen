@@ -74,10 +74,10 @@
        :kekkonen.ring/method :get
        :name spec
        :no-doc true
-       :handler (fn [{:keys [request] :as context}]
-                  (let [dispatcher (k/get-dispatcher context)
-                        ns (some-> context :request :query-params :ns str keyword)
-                        handlers (k/available-handlers dispatcher ns (#'r/clean-context context))]
-                    (ok (swagger-object
-                          (add-base-path request (ring-swagger handlers swagger))
-                          (-> options :options :spec)))))})))
+       :handle (fn [{:keys [request] :as context}]
+                 (let [dispatcher (k/get-dispatcher context)
+                       ns (some-> context :request :query-params :ns str keyword)
+                       handlers (k/available-handlers dispatcher ns (#'r/clean-context context))]
+                   (ok (swagger-object
+                         (add-base-path request (ring-swagger handlers swagger))
+                         (-> options :options :spec)))))})))

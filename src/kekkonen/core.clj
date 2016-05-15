@@ -172,7 +172,7 @@
 
 (s/defn handler
   ([meta :- KeywordMap]
-    (handler (dissoc meta :handler) (:handler meta)))
+    (handler (dissoc meta :handle) (:handle meta)))
   ([meta :- KeywordMap, f :- Function]
     (assert (:name meta) "handler should have :name")
     (vary-meta f merge {:type :handler} meta)))

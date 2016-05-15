@@ -12,8 +12,8 @@
 (def hello-world
   (k/handler
     {:name "hello-world"
-     :handler (fn [_]
-                "hello world.")}))
+     :handle (fn [_]
+               "hello world.")}))
 
 (hello-world {})
 
@@ -23,8 +23,8 @@
     {:description "this is a handler for echoing data"
      :name :echo
      :summary "echoes data"
-     :handler (fn [{:keys [data]}]
-                data)}))
+     :handle (fn [{:keys [data]}]
+               data)}))
 
 (echo {:data {:name "tommi"}})
 
@@ -34,8 +34,8 @@
     {:description "fnk echo"
      :name :fnkecho
      :summery "echoes data"
-     :handler (p/fnk [[:data x :- s/Int, y :- s/Int]]
-                (+ x y))}))
+     :handle (p/fnk [[:data x :- s/Int, y :- s/Int]]
+               (+ x y))}))
 
 (plus {:data {:x 1, :y 2}})
 
@@ -67,7 +67,7 @@
                                     hello-world]
                            :public (k/handler
                                      {:name :ping
-                                      :handler (p/fnk [] :pong)})}}
+                                      :handle (p/fnk [] :pong)})}}
           :context {:components {:counter (atom 0)}}}))
 
 ; get a handler

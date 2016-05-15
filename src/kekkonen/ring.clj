@@ -204,11 +204,11 @@
                 s/Keyword s/Any}
                s/Keyword s/Any}
        :description "Returns a handler info or nil."
-       :handler (fn [{{{action :kekkonen.action} :query-params} :request :as context}]
-                  (ok (k/public-handler
-                        (k/some-handler
-                          (k/get-dispatcher context)
-                          action))))})
+       :handle (fn [{{{action :kekkonen.action} :query-params} :request :as context}]
+                 (ok (k/public-handler
+                       (k/some-handler
+                         (k/get-dispatcher context)
+                         action))))})
     (k/handler
       {:name "handlers"
        :type ::handler
@@ -221,14 +221,14 @@
                 s/Keyword s/Any}
                s/Keyword s/Any}
        :description "Return a list of available handlers from kekkonen.ns namespace"
-       :handler (fn [{{{ns :kekkonen.ns} :query-params} :request :as context}]
-                  (ok (->> context
-                           k/get-dispatcher
-                           (p/<- (k/available-handlers ns (clean-context context)))
-                           (filter (p/fn-> :ring))
-                           (remove (p/fn-> :ns (= :kekkonen)))
-                           (remove (p/fn-> :meta :no-doc))
-                           (map k/public-handler))))})
+       :handle (fn [{{{ns :kekkonen.ns} :query-params} :request :as context}]
+                 (ok (->> context
+                          k/get-dispatcher
+                          (p/<- (k/available-handlers ns (clean-context context)))
+                          (filter (p/fn-> :ring))
+                          (remove (p/fn-> :ns (= :kekkonen)))
+                          (remove (p/fn-> :meta :no-doc))
+                          (map k/public-handler))))})
     (k/handler
       {:name "actions"
        :type ::handler
@@ -245,12 +245,12 @@
                 s/Keyword s/Any}
                s/Keyword s/Any}
        :description "Return a map of action -> error of all available handlers"
-       :handler (fn [{{{mode :kekkonen.mode ns, :kekkonen.ns} :query-params} :request :as context}]
-                  (ok (->> context
-                           k/get-dispatcher
-                           (p/<- (k/dispatch-handlers (or mode :check) ns (clean-context context)))
-                           (filter (p/fn-> first :ring))
-                           (remove (p/fn-> first :ns (= :kekkonen)))
-                           (remove (p/fn-> first :meta :no-doc))
-                           (map (fn [[k v]] [(:action k) (k/stringify-schema v)]))
-                           (into {}))))})]})
+       :handle (fn [{{{mode :kekkonen.mode ns, :kekkonen.ns} :query-params} :request :as context}]
+                 (ok (->> context
+                          k/get-dispatcher
+                          (p/<- (k/dispatch-handlers (or mode :check) ns (clean-context context)))
+                          (filter (p/fn-> first :ring))
+                          (remove (p/fn-> first :ns (= :kekkonen)))
+                          (remove (p/fn-> first :meta :no-doc))
+                          (map (fn [[k v]] [(:action k) (k/stringify-schema v)]))
+                          (into {}))))})]})
