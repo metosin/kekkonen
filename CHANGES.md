@@ -24,6 +24,15 @@
   :data {:info {:title "Kekkonen"}}}}
 ```
 
+* **BREAKING**: Handler dispatch function is now `:handle` instead of `:function`
+* Handlers can be defined via a single map with `:handle` key for the dispatch
+
+```clj
+(k/handler
+  {:name "hello"
+   :handle (constantly "hello")})
+```
+
 * updated dependencies:
 
 ```clj
