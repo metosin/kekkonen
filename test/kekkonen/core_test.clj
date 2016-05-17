@@ -1154,8 +1154,3 @@
 
 (fact "printing it"
   (pr-str (k/dispatcher {:handlers {}})) => "#<Dispatcher>")
-
-
-(def dispatcher
-  (k/dispatcher
-    {:handlers {:api (k/handler {:name :hello, :handle (constantly "hello world")})}}))
