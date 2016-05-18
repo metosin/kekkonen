@@ -41,8 +41,7 @@
   (fact "setting context to nil, all execution is stopped"
     (-> {:x 2}
         (i/enqueue [{:enter #(update % :x inc)
-                     :error (fn [context e]
-                              (println context "-" e))
+                     :error not-executed
                      :leave not-executed}
                     {:enter (constantly nil)
                      :leave not-executed}
@@ -59,4 +58,4 @@
                       {:enter (fn [_] (throw (ex-info "fail" {:reason "too many men"})))
                        :leave not-executed}
                       {:leave not-executed}])
-          (i/execute))) => {:x 3 ::exception true}))
+          (i/execute)) => {:x 3 ::exception true})))
