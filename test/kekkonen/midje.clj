@@ -13,7 +13,13 @@
            mdata (if data (select-keys data (vec (keys m))))]
        (and
          (not (nil? x))
-         (= mdata m))))))
+         (every?
+           (fn [[k v]]
+             (let [v' (get mdata k)]
+               (if (fn? v)
+                 (v v')
+                 (= v v'))))
+           m))))))
 
 (def schema-error? (throws? {:type ::s/error}))
 (def missing-route? (throws? {:type ::k/dispatch}))
