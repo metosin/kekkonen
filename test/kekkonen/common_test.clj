@@ -35,7 +35,12 @@
   (kc/deep-merge-from-to
     {:data {:x String} :request {:body-params {:y String}}}
     [[:data] [:request :body-params]])
-  => {:data {:x String} :request {:body-params {:x String, :y String}}})
+  => {:data {:x String} :request {:body-params {:x String, :y String}}}
+  (fact "with non maps, data is overridden, #27"
+    (kc/deep-merge-from-to
+      {:data {:x String} :request {:body-params [{:y String}]}}
+      [[:data] [:request :body-params]])
+    => {:data {:x String} :request {:body-params {:x String}}}))
 
 (fact "deep-merge-to-from"
   (kc/deep-merge-to-from
@@ -92,5 +97,6 @@
 (p/defnk handler [[:data x :- s/Int] y :- s/Bool])
 
 (fact "extracting schemas"
-  (kc/extract-schema handler) => {:input {:data {:x s/Int, s/Keyword s/Any}, :y s/Bool, s/Keyword s/Any}
+  (kc/extract-schema handler) => {:input {:data {:x s/Int, s/Keyword s/Any}
+                                          :y s/Bool, s/Keyword s/Any}
                                   :output s/Any})
