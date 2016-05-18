@@ -24,21 +24,22 @@
 ;; Deep Merge: fast
 ;;
 
-(defn- deep-merge* [& maps]
+(defn- deep-merge* [& colls]
   (let [f (fn [old new]
             (if (and (map? old) (map? new))
               (merge-with deep-merge* old new)
               new))]
-    (if (every? map? maps)
-      (apply merge-with f maps)
-      (last maps))))
+    (if (every? map? colls)
+      (apply merge-with f colls)
+      (last colls))))
 
 (defn deep-merge
-  "Deep-merges map together, non-maps are overridden"
-  [& maps]
-  (let [maps (filter identity maps)]
-    (assert (every? map? maps))
-    (apply merge-with deep-merge* maps)))
+  "Deep-merges things together"
+  [& coll]
+  (let [values (filter identity coll)]
+    (if (every? map? values)
+      (apply merge-with deep-merge* values)
+      (last values))))
 
 ;;
 ;; Deep Merge: slower, merges all map-like forms

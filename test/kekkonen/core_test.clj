@@ -1154,3 +1154,11 @@
 
 (fact "printing it"
   (pr-str (k/dispatcher {:handlers {}})) => "#<Dispatcher>")
+
+(fact "vector schemas, #27"
+  (let [d (k/dispatcher {:handlers {:api (k/handler
+                                           {:name :vector
+                                            :handle (p/fnk [data :- [{:kikka s/Str}]]
+                                                      data)})}})]
+    (k/invoke d :api/vector {:data [{:kikka "kukka"}, {:kikka "kakka"}]})
+    => [{:kikka "kukka"}, {:kikka "kakka"}]))

@@ -324,3 +324,14 @@
     (api {:core {:handlers {secret-ns [#'nada]}, :meta [[::role require-role]]}}))
   (fact "invalid meta causes creation-time exception"
     (api {:core {:handlers {secret-ns [#'nada]}, :meta {}}}) => (throws? {:name :nada, :invalid-keys [::role]})))
+
+(fact "vector schemas, #27"
+  (let [app (api {:core {:handlers {:api (k/handler
+                                           {:name :vectorz
+                                            :handle (p/fnk [data :- [{:kikka s/Str}]]
+                                                      (ok data))})}}})]
+    (let [response (app {:uri "/api/vectorz"
+                         :request-method :post
+                         :body-params [{:kikka "kukka"}, {:kikka "kakka"}]})]
+      response => ok?
+      (parse response) => [{:kikka "kukka"}, {:kikka "kakka"}])))
