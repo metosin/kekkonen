@@ -1,5 +1,6 @@
 (ns kekkonen.interceptor-test
   (:require [midje.sweet :refer :all]
+            [kekkonen.midje :refer :all]
             [kekkonen.interceptor :as i]))
 
 (defn not-executed [_]
@@ -58,4 +59,18 @@
                       {:enter (fn [_] (throw (ex-info "fail" {:reason "too many men"})))
                        :leave not-executed}
                       {:leave not-executed}])
-          (i/execute)) => {:x 3 ::exception true})))
+          (i/execute)) => {:x 3 ::exception true})
+
+    (fact "if uncatched, is thrown in the end"
+      (-> {:x 2}
+          (i/enqueue [{:enter #(update % :x inc)
+                       :leave not-executed}
+                      {:enter (fn [_] (throw (ex-info "fail" {:reason "too many men"})))
+                       :leave not-executed}
+                      {:leave not-executed}])
+          (i/execute)) => (throws?
+                            {:execution-id integer?
+                             :interceptor string?
+                             :exception (partial instance? Exception)
+                             :stage :enter
+                             :exception-type :clojure.lang.ExceptionInfo}))))
