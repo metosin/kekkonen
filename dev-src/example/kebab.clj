@@ -110,7 +110,10 @@
 
 (def app
   (cqrs-api
-    {:core {:handlers {:kebab [#'get-kebabs #'add-kebab #'reset-kebabs]
+    {:swagger {:ui "/api-docs"
+               :spec "/swagger.json"
+               :data {:info {:title "Kebab Api"}}}
+     :core {:handlers {:kebab [#'get-kebabs #'add-kebab #'reset-kebabs]
                        :math 'example.math
                        :tx [#'transact #'speculative]}
             :context {:db (atom {})
