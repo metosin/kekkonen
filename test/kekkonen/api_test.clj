@@ -53,7 +53,7 @@
               response => ok?
               (parse response) => nil))
 
-          (fact "with invalid parameters"
+         (fact "with invalid parameters"
             (let [response (app {:uri "/api/public/plus"
                                  :request-method :post
                                  :headers {"kekkonen.mode" "validate"}})]
@@ -211,7 +211,7 @@
     (fact "swagger-object"
       (fact "without role"
         (let [response (app {:uri "/swagger.json" :request-method :get})
-              body (parse response)]
+              body (parse-swagger response)]
           response => ok?
           body => (contains
                     {:swagger "2.0"
@@ -229,7 +229,7 @@
                                 "application/transit+msgpack"]
                      :definitions anything
                      :paths (contains
-                              {:/api/public/plus
+                              {"/api/public/plus"
                                (just
                                  {:post
                                   (just
@@ -257,43 +257,43 @@
             body => (contains
                       {:paths
                        (just
-                         {:/api/public/plus anything
-                          :/api/public/nada anything
-                          :/kekkonen/handler anything
-                          :/kekkonen/handlers anything
-                          :/kekkonen/actions anything})}))
+                         {"/api/public/plus" anything
+                          "/api/public/nada" anything
+                          "/kekkonen/handler" anything
+                          "/kekkonen/handlers" anything
+                          "/kekkonen/actions" anything})}))
 
           (fact "secret endpoints are not documented"
             body =not=> (contains
                           {:paths
                            (contains
-                             {:/api/secret/plus anything})})))
+                             {"/api/secret/plus" anything})})))
 
         (fact "with ns-filter"
           (let [response (app {:uri "/swagger.json"
                                :request-method :get
                                :query-params {::role :admin
                                               :ns "api.public"}})
-                body (parse response)]
+                body (parse-swagger response)]
             response => ok?
             body => (contains
                       {:paths
                        (just
-                         {:/api/public/plus anything
-                          :/api/public/nada anything})})))))
+                         {"/api/public/plus" anything
+                          "/api/public/nada" anything})})))))
 
     (fact "with role"
       (let [response (app {:uri "/swagger.json"
                            :request-method :get
                            :query-params {::role :admin}})
-            body (parse response)]
+            body (parse-swagger response)]
         response => ok?
 
         (fact "secret endpoints are also documented"
           body => (contains
                     {:paths
                      (contains
-                       {:/api/secret/plus anything})}))))
+                       {"/api/secret/plus" anything})}))))
 
     (fact "swagger-ui"
       (let [response (app {:uri "/api-docs" :request-method :get})]
