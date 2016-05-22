@@ -2,7 +2,8 @@
   (:require [midje.util.exceptions :as e]
             [kekkonen.core :as k]
             [schema.core :as s]
-            [cheshire.core :as c]))
+            [cheshire.core :as c]
+            [plumbing.core :as p]))
 
 (defn throws?
   ([]
@@ -21,6 +22,15 @@
                  (= v v'))))
            m))))))
 
+(defn throws-interceptor-exception? [m]
+  (throws?
+    (merge
+      {:execution-id integer?
+       :stage :enter
+       :interceptor string?
+       :exception (partial instance? Exception)}
+      m)))
+
 (def schema-error? (throws? {:type ::s/error}))
 (def missing-route? (throws? {:type ::k/dispatch}))
 (def input-coercion-error? (throws? {:type ::k/request}))
@@ -29,3 +39,12 @@
 (defn parse [x]
   (if (and x (:body x))
     (c/parse-string (slurp (:body x)) true)))
+
+(defn parse-swagger [response]
+  (-> response
+      parse
+      (update :paths (fn [paths]
+                       (p/map-keys
+                         (fn [x]
+                           (-> x str (subs 1)))
+                         paths)))))
