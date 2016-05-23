@@ -74,3 +74,12 @@
                              :exception (partial instance? Exception)
                              :stage :enter
                              :exception-type :clojure.lang.ExceptionInfo}))))
+
+(facts "pre-enter & pre-leave"
+  (-> {:x 2}
+      (i/enqueue [{:enter #(update % :x inc)}
+                  {:enter #(update % :x inc)}
+                  {:leave #(update % :x inc)}])
+      (i/execute {:pre-enter (fn [ctx _] (update ctx :enter (fnil inc 0)))
+                  :pre-leave (fn [ctx _] (update ctx :leave (fnil dec 0)))}))
+  => {:x 5, :enter 2, :leave -1})
