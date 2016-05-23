@@ -179,8 +179,8 @@
 
         (app {:uri "/api/plus"
               :request-method :post
-              :query-params {:x "1", :y "2"}}) => (throws ClassCastException)))
-
+              :query-params {:x "1", :y "2"}}) => (throws-interceptor-exception?
+                                                    {:exception-type :java.lang.ClassCastException})))
     (fact "if handler is dependent on :data-input, default coercion is applies"
       (let [app (r/ring-handler
                   (k/dispatcher {:handlers {:api (k/handler
@@ -200,7 +200,8 @@
 
       (app {:uri "/api/plus"
             :request-method :post
-            :query-params {:x "1", :y "2"}}) => (throws ClassCastException)))
+            :query-params {:x "1", :y "2"}}) => (throws-interceptor-exception?
+                                                  {:exception-type :java.lang.ClassCastException})))
 
   (fact "all ring & core coercions can be disabled"
     (let [app (r/ring-handler
@@ -209,7 +210,8 @@
 
       (app {:uri "/api/plus"
             :request-method :post
-            :query-params {:x "1", :y "2"}}) => (throws ClassCastException))))
+            :query-params {:x "1", :y "2"}}) => (throws-interceptor-exception?
+                                                  {:exception-type :java.lang.ClassCastException}))))
 
 (facts "mapping"
   (facts "default body-params -> data"

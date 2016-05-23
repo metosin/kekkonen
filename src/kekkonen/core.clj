@@ -5,6 +5,7 @@
             [plumbing.map :as pm]
             [kekkonen.common :as kc]
             [linked.core :as linked]
+            [kekkonen.interceptor :as interceptor]
             [clojure.walk :as walk]
             [schema.coerce :as sc]
             [schema.utils :as su]
@@ -377,18 +378,12 @@
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
 
-(defn- intercept-enter [context interceptor]
+(defn- pre-enter [context interceptor]
   (if-let [enter (:enter interceptor)]
     (let [input-schema (:input (kc/extract-schema enter))
           dispatcher (::dispatcher context)
-          input-matcher (-> dispatcher :coercion :input)
-          ctx (input-coerce! context input-schema input-matcher)]
-      (or (enter ctx) (reduced nil)))
-    context))
-
-(defn- intercept-leave [context interceptor]
-  (if-let [leave (:leave interceptor)]
-    (or (leave context) (reduced nil))
+          input-matcher (-> dispatcher :coercion :input)]
+      (input-coerce! context input-schema input-matcher))
     context))
 
 (defn- intercept-handler [mode]
@@ -405,15 +400,15 @@
                                 response)))]
          (assoc context :response response))))})
 
-(defn- intercept [context interceptors]
-  (as-> context context
-        (reduce intercept-enter context interceptors)
-        (reduce intercept-leave context (reverse interceptors))))
+(defn- execute [context interceptors]
+  (-> context
+      (interceptor/enqueue interceptors)
+      (interceptor/execute {:pre-enter pre-enter})))
 
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
     (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
-          context (-> (initialize-context dispatcher handler context) (intercept interceptors))]
+          context (-> (initialize-context dispatcher handler context) (execute interceptors))]
       (if (contains? context :response)
         (:response context)
         (invalid-action! action)))
