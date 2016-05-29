@@ -106,16 +106,43 @@
                           :uri (handler-uri handler)
                           :input input-schema})))
 
-;;
-;; Ring-handler
-;;
-
 (defn- uri-without-context
   "Extracts the uri from the request but dropping the context"
   [{:keys [uri context]}]
   (if (and context (.startsWith uri context))
     (.substring uri (.length context))
     uri))
+
+(defn- copy-parameters [handler ctx]
+  (reduce kc/deep-merge-to-from ctx (-> handler :ring :type-config :parameters)))
+
+(defn- set-coercion [handler ctx]
+  (assoc ctx ::k/coercion (-> handler :ring :coercion)))
+
+(defn- prepare [dispatcher handler]
+  {:enter (fn [ctx]
+            (->> ctx
+                 (k/prepare dispatcher handler)
+                 (set-coercion handler)
+                 (copy-parameters handler)))})
+
+(defn- dispatch [options]
+  {:enter (fn [{:keys [request ::k/dispatcher] {:keys [action] :as handler} ::k/handler :as ctx}]
+            (let [response (if (is-validate-request? request)
+                             (ok (k/validate dispatcher action ctx))
+                             (let [response (k/invoke dispatcher action ctx)]
+                               (coerce-response! response handler options)))]
+              (assoc ctx :response response)))})
+
+(defn- clean-context [context]
+  (-> context
+      (kc/dissoc-in [:request :query-params :kekkonen.action])
+      (kc/dissoc-in [:request :query-params :kekkonen.mode])
+      (kc/dissoc-in [:request :query-params :kekkonen.ns])))
+
+;;
+;; Public api
+;;
 
 (s/defn ring-handler
   "Creates a ring handler from Dispatcher and options."
@@ -128,42 +155,16 @@
           router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
       (fn [{:keys [request-method] :as request}]
         ;; match a handlers based on uri and context
-        (if-let [{{:keys [type-config methods coercion] :as ring} :ring action :action :as handler} (router (uri-without-context request))]
+        (if-let [handler (router (uri-without-context request))]
           ;; only allow calls to ring-mapped handlers with matching method
-          (if (and ring (methods request-method))
-            ;; TODO: create an interceptor chain
-            (let [ring-context {::k/coercion coercion, :request request}
-                  context (as-> (k/initialize-context dispatcher handler ring-context) context
-
-                                ;; map parameters from ring-request into common keys
-                                (reduce kc/deep-merge-to-from context (:parameters type-config))
-
-                                ;; global interceptors enter
-                                (reduce
-                                  (fn [ctx {:keys [enter]}]
-                                    (if enter (or (enter ctx) (reduced nil)) ctx))
-                                  context
-                                  (:interceptors options)))
-
-                  response (if (is-validate-request? request)
-                             (ok (k/validate dispatcher action context))
-                             (let [response (k/invoke dispatcher action context)]
-                               (coerce-response! response handler options)))
-
-                  context (as-> (assoc context :response response) context
-
-                                ;; global interceptors leave
-                                (reduce
-                                  (fn [ctx {:keys [leave]}]
-                                    (if leave (or (leave ctx) (reduced nil)) ctx))
-                                  context
-                                  (reverse (:interceptors options))))]
-
-              (:response context))))))))
-
-;;
-;; Routing
-;;
+          (if (some-> handler :ring :methods (contains? request-method))
+            (let [interceptors (kc/join
+                                 (prepare dispatcher handler)
+                                 (:interceptors options)
+                                 (dispatch options))]
+              (-> {:request request}
+                  (k/execute interceptors)
+                  :response))))))))
 
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in order."
@@ -183,12 +184,6 @@
 ;;
 ;; Special handlers
 ;;
-
-(defn- clean-context [context]
-  (-> context
-      (kc/dissoc-in [:request :query-params :kekkonen.action])
-      (kc/dissoc-in [:request :query-params :kekkonen.mode])
-      (kc/dissoc-in [:request :query-params :kekkonen.ns])))
 
 (def +kekkonen-handlers+
   {:kekkonen

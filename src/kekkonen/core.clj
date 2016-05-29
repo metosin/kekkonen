@@ -359,7 +359,7 @@
              context))
      context)))
 
-(defn initialize-context [dispatcher handler context]
+(defn prepare [dispatcher handler context]
   (kc/deep-merge
     (:context dispatcher)
     context
@@ -400,7 +400,7 @@
                                 response)))]
          (assoc context :response response))))})
 
-(defn- execute [context interceptors]
+(defn execute [context interceptors]
   (-> context
       (interceptor/enqueue interceptors)
       (interceptor/execute {:pre-enter pre-enter})))
@@ -408,7 +408,7 @@
 (defn- dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
     (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
-          context (-> (initialize-context dispatcher handler context) (execute interceptors))]
+          context (-> (prepare dispatcher handler context) (execute interceptors))]
       (if (contains? context :response)
         (:response context)
         (invalid-action! action)))
