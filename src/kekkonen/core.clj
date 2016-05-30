@@ -362,11 +362,9 @@
 (defn prepare [dispatcher handler context]
   (if (::dispatcher context)
     context
-    (kc/deep-merge
-      (:context dispatcher)
-      context
-      {::dispatcher dispatcher
-       ::handler handler})))
+    (assoc (kc/deep-merge (:context dispatcher) context)
+      ::dispatcher dispatcher
+      ::handler handler)))
 
 ;;
 ;; Dispatching to handlers
