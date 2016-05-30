@@ -152,19 +152,20 @@
     (let [options (-> (kc/deep-merge +default-options+ options)
                       (update :interceptors (partial mapv k/interceptor)))
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
-          router (p/for-map [handler (k/all-handlers dispatcher nil)] (-> handler :ring :uri) handler)]
+          router (p/for-map [handler (k/all-handlers dispatcher nil)
+                             :let [interceptors (kc/join
+                                                  (prepare dispatcher handler)
+                                                  (:interceptors options)
+                                                  (dispatch options))]]
+                   (-> handler :ring :uri) [handler interceptors])]
       (fn [{:keys [request-method] :as request}]
         ;; match a handlers based on uri and context
-        (if-let [handler (router (uri-without-context request))]
+        (if-let [[handler interceptors] (router (uri-without-context request))]
           ;; only allow calls to ring-mapped handlers with matching method
           (if (some-> handler :ring :methods (contains? request-method))
-            (let [interceptors (kc/join
-                                 (prepare dispatcher handler)
-                                 (:interceptors options)
-                                 (dispatch options))]
-              (-> {:request request}
-                  (k/execute interceptors)
-                  :response))))))))
+            (-> {:request request}
+                (k/execute interceptors)
+                :response)))))))
 
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in order."
