@@ -39,7 +39,7 @@
 ```clj
 [prismatic/schema "1.1.1"] is available but we use "1.1.0"
 [prismatic/plumbing "0.5.3"] is available but we use "0.5.2"
-[metosin/ring-swagger "0.22.7"] is available but we use "0.22.6"
+[metosin/ring-swagger "0.22.8"] is available but we use "0.22.6"
 [clj-http "3.1.0"] available but we use "2.1.0"
 ```
 
