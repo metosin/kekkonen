@@ -60,24 +60,25 @@
 (def r2 (kr/ring-handler d2))
 (def r3 (kr/ring-handler d2 {:coercion nil}))
 
+(def data {:uri "/api/math/plus1"
+           :request-method :post
+           :body-params {:x 10, :y 20}})
+
 (defn ring-bench []
 
   (title "ring & dispatcher coercion")
-  (cc/quick-bench (r1 {:uri "/api/math/plus1"
-                       :request-method :post
-                       :body-params {:x 10, :y 20}}))
+  (assert (= 30 (-> data r1 :body :result)))
+  (cc/quick-bench (r1 data))
   ; 20.7µs => 17.1µs => 11.3µs
 
   (title "ring coercion")
-  (cc/quick-bench (r2 {:uri "/api/math/plus1"
-                       :request-method :post
-                       :body-params {:x 10, :y 20}}))
+  (assert (= 30 (-> data r2 :body :result)))
+  (cc/quick-bench (r2 data))
   ; 15.7µs => 12.2µs => 7.6µs
 
   (title "no coercion")
-  (cc/quick-bench (r3 {:uri "/api/math/plus1"
-                       :request-method :post
-                       :body-params {:x 10, :y 20}}))
+  (assert (= 30 (-> data r3 :body :result)))
+  (cc/quick-bench (r3 data))
   ; ................ => 3.5µs
 
   (println))
