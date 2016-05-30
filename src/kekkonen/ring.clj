@@ -67,11 +67,11 @@
 (defn- coerce-response! [response handler options]
   (if-let [responses (-> handler :meta :responses)]
     (let [status (or (:status response) 200)
-          schema (get-in responses [status :schema])
-          matcher (get-in options [:coercion :body-params])
-          value (:body response)]
+          schema (get-in responses [status :schema])]
       (if schema
-        (let [coerced (k/coerce! schema matcher value :response ::response)]
+        (let [value (:body response)
+              matcher (get-in options [:coercion :body-params])
+              coerced (k/coerce! schema matcher value :response ::response)]
           (assoc response :body coerced))
         response))
     response))
