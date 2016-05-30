@@ -400,6 +400,7 @@
                                 response)))]
          (assoc context :response response))))})
 
+;; pre-enter adds +30% overhead, pre-compile into interceptors!
 (defn execute [context interceptors]
   (-> context
       (interceptor/enqueue interceptors)
