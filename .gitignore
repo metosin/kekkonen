@@ -12,5 +12,6 @@ pom.xml.asc
 bower_components
 *.log
 /kekkonen.iml
-/.idea
+**/.idea
+**/target
 .classpath
