@@ -15,7 +15,6 @@
          [data :- GetInput]
          (cqrs/success data))
 
-
 (s/defschema PostInput
              {:data s/Str})
 
@@ -27,17 +26,26 @@
 (defnk ^:get-post get-and-post
        "handles both"
        [get-params post-params request]
-       (clojure.pprint/pprint request)
+       #_(clojure.pprint/pprint request)
        (if (= (:request-method request) :get)
          (s/with-fn-validation (get-handler get-params))
          (s/with-fn-validation (post-handler post-params))))
 
+(defn interceptor [ctx]
+  "logs incoming requests for us"
+  (let [uri (get-in ctx [:request :uri])
+        request-method (name (get-in ctx [:request :request-method]))]
+    (println (str request-method ": " uri))
+    ctx))
+
 (def app (http-api {:core {:handlers {:api [#'get-and-post]}
-                           :type-resolver (k/type-resolver :get :get-post :post)}
+                           :type-resolver (k/type-resolver :get :get-post :post)
+                           }
                     :ring {:types {:get-post {:methods #{:get :post}
                                          ; :query-params comes from Ring https://github.com/ring-clojure/ring/wiki/Parameters
                                          :parameters {[:get-params] [:request :query-params]
-                                                      [:post-params] [:request :body-params]}}}}}))
+                                                      [:post-params] [:request :body-params]}}}
+                           :interceptors [interceptor]}}))
 
 (defonce server (atom nil))
 
