@@ -12,6 +12,7 @@
 (s/defn get-handler
         "Echoes a GetInput"
         [data :- GetInput]
+        ; here is your handler
         (cqrs/success data))
 
 (s/defschema PostInput
@@ -20,6 +21,7 @@
 (s/defn post-handler
         "Echoes a PostInput"
         [data :- PostInput]
+        ; here is your handler
         (cqrs/success data))
 
 (defnk ^:get-post get-and-post
@@ -38,18 +40,17 @@
 
 (defn err-handler [ex data req]
   "logs exception message and return info to client"
-  (clojure.pprint/pprint (.getMessage ex))
+  (println (str "ERROR: " (.getMessage ex)))
   (cqrs/failure (.getMessage ex)))
 
-(def app (http-api {:core {:handlers      {:api [#'get-and-post]}
-                           :type-resolver (k/type-resolver :get :get-post :post)}
-                    :mw   {:exceptions {#_:default #_err-handler
-                                        :handlers {:schema.core/error err-handler}}}
-                    :ring {:types        {:get-post {:methods    #{:get :post}
-                                                     ; :query-params comes from Ring https://github.com/ring-clojure/ring/wiki/Parameters
-                                                     :parameters {[:get-params]  [:request :query-params]
-                                                                  [:post-params] [:request :body-params]}}}
-                           :interceptors [interceptor]}}))
+(def app (cqrs/cqrs-api {:core {:handlers      {:api [#'get-and-post]}
+                                :type-resolver (k/type-resolver :get :get-post :post)}
+                         :mw   {:exceptions {:handlers {:schema.core/error err-handler}}}
+                         :ring {:types        {:get-post {:methods    #{:get :post}
+                                                          ; :query-params comes from Ring https://github.com/ring-clojure/ring/wiki/Parameters
+                                                          :parameters {[:get-params]  [:request :query-params]
+                                                                       [:post-params] [:request :body-params]}}}
+                                :interceptors [interceptor]}}))
 
 (defonce server (atom nil))
 

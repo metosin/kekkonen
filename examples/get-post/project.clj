@@ -2,4 +2,6 @@
   :description "Extended examples"
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [http-kit "2.1.19"]
-                 [metosin/kekkonen "0.3.0-SNAPSHOT"]])
+                 [metosin/kekkonen "0.3.0-SNAPSHOT"]]
+  :profiles {:dev {:dependencies [[midje "1.6.3"]
+                                  [ring-mock "0.1.5"]]}})
