@@ -9,6 +9,7 @@
              {:name                         s/Str
               (s/optional-key :description) s/Str})
 
+; GET http://localhost:3000/api/get-and-post?name=taras
 (s/defn get-handler
         "Echoes a GetInput"
         [data :- GetInput]
@@ -18,6 +19,7 @@
 (s/defschema PostInput
              {:data s/Str})
 
+; POST http://localhost:3000/api/get-and-post {"data":"taras"}
 (s/defn post-handler
         "Echoes a PostInput"
         [data :- PostInput]
@@ -59,9 +61,12 @@
     (@server :timeout 100)
     (reset! server nil)))
 
+;TODO start
 (defn -main [&args]
   (reset! server (server/run-server #'app {:port 3000}))
-  (println "server running in port 3000"))
+  (println "server running in port 3000")
+  ;TODO client calls
+  )
 
 (defn run-server []
   (reset! server (server/run-server #'app {:port 3000}))
