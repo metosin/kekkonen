@@ -6,6 +6,8 @@
             [kekkonen.cqrs :as cqrs]))
 
 (facts "About http handling"
+       (fact "GET works for simple-get"
+             (app (mock/request :get "/api/simple-get?name=taras")) => cqrs/success?)
        (fact "GET works for get-and-post"
              (app (mock/request :get "/api/get-and-post?name=taras")) => cqrs/success?)
        (fact "POST works for get-and-post"
