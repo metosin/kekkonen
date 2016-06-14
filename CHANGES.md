@@ -37,9 +37,10 @@
 * updated dependencies:
 
 ```clj
-[prismatic/schema "1.1.1"] is available but we use "1.1.0"
+[prismatic/schema "1.1.2"] is available but we use "1.1.0"
 [prismatic/plumbing "0.5.3"] is available but we use "0.5.2"
-[metosin/ring-swagger "0.22.8"] is available but we use "0.22.6"
+[metosin/ring-http-response "0.7.0"] is available but we use "0.6.5"
+[metosin/ring-swagger "0.22.9"] is available but we use "0.22.6"
 [clj-http "3.1.0"] available but we use "2.1.0"
 ```
 

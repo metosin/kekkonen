@@ -6,13 +6,13 @@
             :distribution :repo
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.3"]
-                 [prismatic/schema "1.1.1"]
+                 [prismatic/schema "1.1.2"]
                  [frankiesardo/linked "1.2.6"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.8"]
+                 [metosin/ring-swagger "0.22.9"]
                  [metosin/ring-swagger-ui "2.1.4-0"]
-                 [metosin/ring-http-response "0.6.5"]
+                 [metosin/ring-http-response "0.7.0"]
                  [ring-middleware-format "0.7.0"]
 
                  ;; client stuff, separate module?
