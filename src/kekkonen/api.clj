@@ -24,17 +24,16 @@
                            :version "0.0.1"}}}})
 
 (defn api [options]
-  (s/with-fn-validation
-    (let [options (s/validate Options (kc/deep-merge-map-like +default-options+ options))
-          api-handlers (-> options :api :handlers)
-          swagger-data (merge (-> options :swagger :data) (mw/api-info (:mw options)))
-          swagger-options (-> options :swagger)
-          swagger-handler (ks/swagger-handler swagger-data swagger-options)
-          dispatcher (cond-> (k/dispatcher (:core options))
-                             api-handlers (k/inject api-handlers)
-                             swagger-handler (k/inject swagger-handler))]
-      (mw/wrap-api
-        (r/routes
-          [(r/ring-handler dispatcher (:ring options))
-           (ks/swagger-ui swagger-options)])
-        (:mw options)))))
+  (let [options (s/validate Options (kc/deep-merge-map-like +default-options+ options))
+        api-handlers (-> options :api :handlers)
+        swagger-data (merge (-> options :swagger :data) (mw/api-info (:mw options)))
+        swagger-options (-> options :swagger)
+        swagger-handler (ks/swagger-handler swagger-data swagger-options)
+        dispatcher (cond-> (k/dispatcher (:core options))
+                           api-handlers (k/inject api-handlers)
+                           swagger-handler (k/inject swagger-handler))]
+    (mw/wrap-api
+      (r/routes
+        [(r/ring-handler dispatcher (:ring options))
+         (ks/swagger-ui swagger-options)])
+      (:mw options))))
