@@ -400,13 +400,16 @@
                                 response)))]
          (assoc context :response response))))})
 
+(defn enqueue [context interceptors]
+  (interceptor/enqueue context interceptors))
+
 ;; pre-enter adds +30% overhead, pre-compile into interceptors!
 (defn execute [context interceptors]
   (-> context
       (interceptor/enqueue interceptors)
       (interceptor/execute {:pre-enter pre-enter})))
 
-(defn- dispatch [dispatcher mode action context]
+(defn dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
     (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
           context (-> (prepare dispatcher handler context) (execute interceptors))]
