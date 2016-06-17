@@ -90,6 +90,10 @@
 (defn- is-validate-request? [request]
   (= (get-in request [:headers mode-parameter]) "validate"))
 
+(defn- request-mode [request]
+  (if (= (get-in request [:headers mode-parameter]) "validate")
+    :validate :invoke))
+
 (defn- attach-ring-meta [options handler]
   (let [{:keys [parameters allow-method-override?] :as type-config} (get (:types options) (:type handler))
         coercion (:coercion options)
@@ -119,20 +123,16 @@
 (defn- set-coercion [handler ctx]
   (assoc ctx ::k/coercion (-> handler :ring :coercion)))
 
-(defn- prepare [dispatcher handler]
+(defn- prepare [handler]
   {:enter (fn [ctx]
             (->> ctx
-                 (k/prepare dispatcher handler)
                  (set-coercion handler)
                  (copy-parameters handler)))})
 
-(defn- dispatch [options]
-  {:enter (fn [{:keys [request ::k/dispatcher] {:keys [action] :as handler} ::k/handler :as ctx}]
-            (let [response (if (is-validate-request? request)
-                             (ok (k/validate dispatcher action ctx))
-                             (let [response (k/invoke dispatcher action ctx)]
-                               (coerce-response! response handler options)))]
-              (assoc ctx :response response)))})
+(defn- coerce-response [options]
+  {:leave (fn [ctx]
+            (let [handler (::k/handler ctx)]
+              (update ctx :response #(coerce-response! % handler options))))})
 
 (defn- clean-context [context]
   (-> context
@@ -154,18 +154,20 @@
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (p/for-map [handler (k/all-handlers dispatcher nil)
                              :let [interceptors (kc/join
-                                                  (prepare dispatcher handler)
+                                                  (prepare handler)
                                                   (:interceptors options)
-                                                  (dispatch options))]]
+                                                  (coerce-response options))]]
                    (-> handler :ring :uri) [handler interceptors])]
       (fn [{:keys [request-method] :as request}]
         ;; match a handlers based on uri and context
-        (if-let [[handler interceptors] (router (uri-without-context request))]
+        (if-let [[{:keys [action ring]} interceptors] (router (uri-without-context request))]
           ;; only allow calls to ring-mapped handlers with matching method
-          (if (some-> handler :ring :methods (contains? request-method))
-            (-> {:request request}
-                (k/execute interceptors)
-                :response)))))))
+          (if (some-> ring :methods (contains? request-method))
+            (let [mode (request-mode request)]
+              (-> {:request request}
+                  (k/enqueue interceptors)
+                  (->> (k/dispatch dispatcher mode action))
+                  (cond-> (= :validate mode) (ok))))))))))
 
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in order."
@@ -219,11 +221,11 @@
        :description "Return a list of available handlers from kekkonen.ns namespace"
        :handle (fn [{{{ns :kekkonen.ns} :query-params} :request :as context}]
                  (ok (-> context
-                          k/get-dispatcher
+                         k/get-dispatcher
                          (k/available-handlers ns (clean-context context))
                          (->> (filter (p/fn-> :ring))
-                          (remove (p/fn-> :ns (= :kekkonen)))
-                          (remove (p/fn-> :meta :no-doc))
+                              (remove (p/fn-> :ns (= :kekkonen)))
+                              (remove (p/fn-> :meta :no-doc))
                               (map k/public-handler)))))})
     (k/handler
       {:name "actions"
@@ -243,10 +245,10 @@
        :description "Return a map of action -> error of all available handlers"
        :handle (fn [{{{mode :kekkonen.mode ns, :kekkonen.ns} :query-params} :request :as context}]
                  (ok (-> context
-                          k/get-dispatcher
+                         k/get-dispatcher
                          (k/dispatch-handlers (or mode :check) ns (clean-context context))
                          (->> (filter (p/fn-> first :ring))
-                          (remove (p/fn-> first :ns (= :kekkonen)))
-                          (remove (p/fn-> first :meta :no-doc))
-                          (map (fn [[k v]] [(:action k) (k/stringify-schema v)]))
+                              (remove (p/fn-> first :ns (= :kekkonen)))
+                              (remove (p/fn-> first :meta :no-doc))
+                              (map (fn [[k v]] [(:action k) (k/stringify-schema v)]))
                               (into {})))))})]})
