@@ -1,8 +1,20 @@
 ## 0.3.0-SNAPSHOT
 
-* **BREAKING**: Removed type-level interceptors from ring-adapter.
+* **BREAKING**: Removed type-level interceptors from ring-adapter, use normal interceptors instead.
 * Support for Context-based urls, thanks to [Wout Neirynck](https://github.com/wneirynck).
 * Data input schemas for apis can be vectors, fixes [#27](https://github.com/metosin/kekkonen/issues/27).
+* Use Pedestal-style interceptors, with `:name`, `:enter`, `:leave` and `:error`
+  * Extended to contain `:input` and `:output` schemas.
+* Interceptors are pre-compiled for better perf.
+* Interceptors can be `nil`, allowing conditional interceptors
+
+```clj
+(k/handler
+  {:name "fixture!"
+   :interceptors [[require-role :admin] (if-not env/dev-mode? log-it)]
+   :handle (fn [ctx] ...)})
+```
+
 * **BREAKING**: top-level swagger options are now in align to the compojure-api:
   * Fixes [#22](https://github.com/metosin/kekkonen/issues/22)
   * By default, `api`s don't bind swagger-spec & swagger-ui, use `:spec` & `:ui` options
