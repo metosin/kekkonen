@@ -34,17 +34,15 @@
                   (ex-data t))
            t))
 
-(defn- try-f [context interceptor stage pre-f]
+(defn- try-f [context interceptor stage]
   (if-let [f (get interceptor stage)]
     (try
-      (if pre-f
-        (-> context (pre-f interceptor) f)
-        (f context))
+      (f context)
       (catch Throwable t
         (assoc context ::error (throwable->ex-info t (::execution-id context) interceptor stage))))
     context))
 
-(defn- enter-all [context {:keys [pre-enter]}]
+(defn- enter-all [context]
   (loop [context context]
     (let [queue (::queue context)
           stack (::stack context)]
@@ -54,7 +52,7 @@
               context (-> context
                           (assoc ::queue (pop queue))
                           (assoc ::stack (conj stack interceptor))
-                          (try-f interceptor :enter pre-enter))]
+                          (try-f interceptor :enter))]
           (cond
             (::error context) (dissoc context ::queue)
             true (recur context)))))))
@@ -73,7 +71,7 @@
                   (update-in [::suppressed] conj ex))))))
       context)))
 
-(defn- leave-all [context {:keys [pre-leave]}]
+(defn- leave-all [context]
   (loop [context context]
     (let [stack (::stack context)]
       (if (empty? stack)
@@ -82,7 +80,7 @@
               context (assoc context ::stack (pop stack))
               context (if (::error context)
                         (try-error context interceptor)
-                        (try-f context interceptor :leave pre-leave))]
+                        (try-f context interceptor :leave))]
           (recur context))))))
 
 ;;
@@ -105,16 +103,13 @@
 (defn terminate [context]
   (dissoc context ::queue))
 
-(defn execute
-  ([context]
-    (execute context {}))
-  ([context options]
-   (let [context (some-> context
-                         begin
-                         (enter-all options)
-                         terminate
-                         (leave-all options)
-                         end)]
-     (if-let [ex (::error context)]
-       (throw ex)
-       context))))
+(defn execute [context]
+  (let [context (some-> context
+                        begin
+                        enter-all
+                        terminate
+                        leave-all
+                        end)]
+    (if-let [ex (::error context)]
+      (throw ex)
+      context)))

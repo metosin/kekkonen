@@ -130,17 +130,23 @@
 ;; Schema tools
 ;;
 
-(defn extract-schema [x]
-  (p/for-map [k [:input :output]]
-    k (let [pfnk-schema (case k
-                          :input pfnk/input-schema
-                          :output pfnk/output-schema)
-            pfnk? (fn [x] (and (satisfies? pfnk/PFnk x) (:schema (meta x))))]
-        (if (var? x)
-          (cond
-            (pfnk? @x) (pfnk-schema @x)
-            :else (or (-> x meta k) s/Any))
-          (or (and (-> x meta :schema) (pfnk-schema x))
-              ;; TODO: maek it better
-              (and (= :input k) (:input x))
-              (-> x meta k) s/Any)))))
+(defn extract-schema
+  ([x]
+   (extract-schema x s/Any))
+  ([x default]
+   (p/for-map [k [:input :output]
+               :let [schema (let [pfnk-schema (case k
+                                                :input pfnk/input-schema
+                                                :output pfnk/output-schema)
+                                  pfnk? (fn [x] (and (satisfies? pfnk/PFnk x) (:schema (meta x))))]
+                              (if (var? x)
+                                (cond
+                                  (pfnk? @x) (pfnk-schema @x)
+                                  :else (or (-> x meta k) s/Any))
+                                (or (and (-> x meta :schema) (pfnk-schema x))
+                                    ;; TODO: maek it better
+                                    (and (= :input k) (:input x))
+                                    (-> x meta k)
+                                    default)))]
+               :when schema]
+     k schema)))

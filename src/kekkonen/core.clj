@@ -32,6 +32,7 @@
   (s/constrained
     {(s/optional-key :name) s/Str
      (s/optional-key :input) s/Any
+     (s/optional-key :output) s/Any
      (s/optional-key :enter) Function
      (s/optional-key :leave) Function}
     (fn [{:keys [enter leave]}] (or enter leave))
@@ -39,31 +40,6 @@
 
 (s/defschema FunctionOrInterceptor
   (s/conditional fn? Function :else Interceptor))
-
-(defn interceptor [interceptor-or-a-function]
-  (s/validate
-    Interceptor
-    (cond
-      (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
-      (map? interceptor-or-a-function) interceptor-or-a-function
-      :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))))
-
-;; TODO: should return a vector of interceptors, not a combined one
-(defn interceptors [data]
-  (assert (vector? data) "interceptors must be defined as a vector")
-  (let [interceptors (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
-        execute (fn [[first & rest] ctx]
-                  (if-let [ctx (first ctx)]
-                    (if rest
-                      (recur rest ctx)
-                      ctx)))
-        enters (seq (keep :enter interceptors))
-        input (apply kc/deep-merge (keep :input (map kc/extract-schema enters)))
-        leaves (seq (reverse (keep :leave interceptors)))]
-    (merge
-      (if (not= input KeywordMap) {:input input})
-      (if enters {:enter (partial execute enters)})
-      (if leaves {:leave (partial execute leaves)}))))
 
 ;;
 ;; Context & Handler
@@ -359,11 +335,58 @@
              context))
      context)))
 
-(defn prepare [dispatcher handler context]
+;;
+;; Interceptors
+;;
+
+(defn prepare [context dispatcher handler]
   (let [ctx (assoc (kc/deep-merge (:context dispatcher) context)
               ::dispatcher dispatcher
               ::handler handler)]
     ctx))
+
+(defn extract-input-schema [interceptor]
+  (merge
+    (kc/extract-schema (:enter interceptor) nil)
+    interceptor))
+
+(defn with-input-coercion [interceptor]
+  (if-let [input (:input interceptor)]
+    (update interceptor :enter (fn [f]
+                                 (fn [context]
+                                   (let [dispatcher (::dispatcher context)
+                                         input-matcher (-> dispatcher :coercion :input)]
+                                     (f (input-coerce! context input input-matcher))))))
+    interceptor))
+
+(defn interceptor [interceptor-or-a-function]
+  (s/validate
+    Interceptor
+    (->
+      (cond
+        (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
+        (map? interceptor-or-a-function) interceptor-or-a-function
+        :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))
+      extract-input-schema
+      with-input-coercion)))
+
+;; TODO: should return a vector of interceptors, not a combined one
+(defn interceptors [data]
+  (assert (vector? data) "interceptors must be defined as a vector")
+  (let [interceptors (map (fn [x]  (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
+        execute (fn [[first & rest] ctx]
+                  (if-let [ctx (first ctx)]
+                    (if rest
+                      (recur rest ctx)
+                      ctx)))
+        enters (seq (keep :enter interceptors))
+        input (apply kc/deep-merge (keep :input (map kc/extract-schema enters)))
+        leaves (seq (reverse (keep :leave interceptors)))]
+    (interceptor
+      (merge
+        (if (not= input KeywordMap) {:input input})
+        (if enters {:enter (partial execute enters)})
+        (if leaves {:leave (partial execute leaves)})))))
 
 ;;
 ;; Dispatching to handlers
@@ -376,14 +399,6 @@
 
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
-
-(defn- pre-enter [context interceptor]
-  (if-let [enter (:enter interceptor)]
-    (let [input-schema (:input (kc/extract-schema enter))
-          dispatcher (::dispatcher context)
-          input-matcher (-> dispatcher :coercion :input)]
-      (input-coerce! context input-schema input-matcher))
-    context))
 
 (defn- intercept-handler [mode]
   {:enter
@@ -402,16 +417,13 @@
 (defn enqueue [context interceptors]
   (interceptor/enqueue context interceptors))
 
-;; pre-enter adds +30% overhead, pre-compile into interceptors!
-(defn execute [context interceptors]
-  (-> context
-      (interceptor/enqueue interceptors)
-      (interceptor/execute {:pre-enter pre-enter})))
-
 (defn dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
     (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
-          context (-> (prepare dispatcher handler context) (execute interceptors))]
+          context (-> context
+                      (prepare dispatcher handler)
+                      (interceptor/enqueue interceptors)
+                      (interceptor/execute))]
       (if (contains? context :response)
         (:response context)
         (invalid-action! action)))
