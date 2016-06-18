@@ -68,6 +68,9 @@
 (defn join [& x-or-xs]
   (flatten x-or-xs))
 
+(defn vectorize [x]
+  (if (sequential? x) (vec x) [x]))
+
 (defn dissoc-in
   "Dissociates an entry from a nested associative structure returning a new
   nested structure. `keys` is a sequence of keys. Any empty maps that result

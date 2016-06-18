@@ -370,23 +370,9 @@
       extract-input-schema
       with-input-coercion)))
 
-;; TODO: should return a vector of interceptors, not a combined one
 (defn interceptors [data]
   (assert (vector? data) "interceptors must be defined as a vector")
-  (let [interceptors (map (fn [x]  (interceptor (if (vector? x) (apply (first x) (rest x)) x))) data)
-        execute (fn [[first & rest] ctx]
-                  (if-let [ctx (first ctx)]
-                    (if rest
-                      (recur rest ctx)
-                      ctx)))
-        enters (seq (keep :enter interceptors))
-        input (apply kc/deep-merge (keep :input (map kc/extract-schema enters)))
-        leaves (seq (reverse (keep :leave interceptors)))]
-    (interceptor
-      (merge
-        (if (not= input KeywordMap) {:input input})
-        (if enters {:enter (partial execute enters)})
-        (if leaves {:leave (partial execute leaves)})))))
+  (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) (keep identity data)))
 
 ;;
 ;; Dispatching to handlers
@@ -417,13 +403,16 @@
 (defn enqueue [context interceptors]
   (interceptor/enqueue context interceptors))
 
+(defn execute [context]
+  (interceptor/execute context))
+
 (defn dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
     (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
           context (-> context
                       (prepare dispatcher handler)
-                      (interceptor/enqueue interceptors)
-                      (interceptor/execute))]
+                      (enqueue interceptors)
+                      (execute))]
       (if (contains? context :response)
         (:response context)
         (invalid-action! action)))
@@ -516,8 +505,8 @@
   (reduce
     (fn [acc [k v]]
       (if-let [factory (get meta k)]
-        (if-let [interceptor (interceptor (factory v))]
-          (conj acc interceptor)
+        (if-let [interceptors (seq (interceptors (kc/vectorize (factory v))))]
+          (concat acc interceptors)
           acc)
         acc))
     []

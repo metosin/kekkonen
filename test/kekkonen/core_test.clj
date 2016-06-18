@@ -400,13 +400,20 @@
                                       :required required})))))
 
 (fact "interceptors"
-  (let [{:keys [enter leave]} (k/interceptors [{:enter #(update % :enter inc)
-                                                :leave #(update % :leave dec)}
-                                               (fn [ctx] (update ctx :enter inc))
-                                               {:enter #(update % :enter (partial * 10))
-                                                :leave #(update % :leave (partial * 10))}])]
-    (fact "enters are applied in order, leaves in reverse order"
-      (leave (enter {:enter 0, :leave 0})) => {:enter 20, :leave -1})))
+  (let [interceptors (k/interceptors [{:enter #(update % :enter inc)
+                                       :leave #(update % :leave dec)}
+                                      nil
+                                      (fn [ctx] (update ctx :enter inc))
+                                      {:enter #(update % :enter (partial * 10))
+                                       :leave #(update % :leave (partial * 10))}])]
+
+    (fact "3 interceptors are created (nil is disgarded)"
+      (count interceptors) => 3)
+
+    (fact "interceptors are executed correctly"
+      (-> {:enter 0, :leave 0}
+          (k/enqueue interceptors)
+          (k/execute)) => {:enter 20, :leave -1})))
 
 (facts "meta"
 
@@ -541,12 +548,12 @@
           (let [api-ns (k/namespace
                          {:name :api
                           ::inc 1
-                          :interceptors [[times* 2]]})
+                          :interceptors [nil [times* 2] nil]})
                 d (k/dispatcher
                     {:handlers {api-ns (k/handler
                                          {:name :test
                                           ::times 3
-                                          :interceptors [[inc* 100]]
+                                          :interceptors [nil [inc* 100] nil]
                                           :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
