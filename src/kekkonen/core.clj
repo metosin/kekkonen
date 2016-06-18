@@ -339,10 +339,11 @@
 ;; Interceptors
 ;;
 
-(defn prepare [context dispatcher handler]
+(defn prepare [context dispatcher handler mode]
   (let [ctx (assoc (kc/deep-merge (:context dispatcher) context)
               ::dispatcher dispatcher
-              ::handler handler)]
+              ::handler handler
+              ::mode mode)]
     ctx))
 
 (defn extract-input-schema [interceptor]
@@ -388,10 +389,11 @@
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action: " action) {:type ::dispatch, :value action})))
 
-(defn- intercept-handler [mode]
+(defn- intercept-handler []
   {:enter
    (fn [context]
      (let [{:keys [handle input output]} (::handler context)
+           mode (::mode context)
            dispatcher (::dispatcher context)
            input-matcher (-> dispatcher :coercion :input)]
        (let [context (if (#{:validate :invoke} mode) (input-coerce! context input input-matcher) context)
@@ -410,9 +412,9 @@
 
 (defn dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
-    (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler mode)])
+    (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler)])
           context (-> context
-                      (prepare dispatcher handler)
+                      (prepare dispatcher handler mode)
                       (enqueue interceptors)
                       (execute))]
       (if (contains? context :response)

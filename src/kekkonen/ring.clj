@@ -130,8 +130,9 @@
                  (copy-parameters handler)))})
 
 (defn- coerce-response [options]
-  {:leave (fn [ctx]
-            (let [handler (::k/handler ctx)]
+  {:leave (fn [{:keys [::k/handler ::k/mode] :as ctx}]
+            (if (= :validate mode)
+              (update ctx :response ok)
               (update ctx :response #(coerce-response! % handler options))))})
 
 (defn- clean-context [context]
@@ -166,8 +167,7 @@
             (let [mode (request-mode request)]
               (-> {:request request}
                   (k/enqueue interceptors)
-                  (->> (k/dispatch dispatcher mode action))
-                  (cond-> (= :validate mode) (ok))))))))))
+                  (->> (k/dispatch dispatcher mode action))))))))))
 
 (s/defn routes :- k/Function
   "Creates a ring handler of multiples handlers, matches in order."
