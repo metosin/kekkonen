@@ -372,7 +372,9 @@
 
 (defn interceptors [data]
   (assert (vector? data) "interceptors must be defined as a vector")
-  (map (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x))) (keep identity data)))
+  (map
+    (fn [x] (interceptor (if (vector? x) (apply (first x) (rest x)) x)))
+    (keep identity data)))
 
 ;;
 ;; Dispatching to handlers
@@ -384,7 +386,7 @@
   (get-in dispatcher [:handlers action]))
 
 (defn- invalid-action! [action]
-  (throw (ex-info (str "Invalid action") {:type ::dispatch, :value action})))
+  (throw (ex-info (str "Invalid action: " action) {:type ::dispatch, :value action})))
 
 (defn- intercept-handler [mode]
   {:enter
@@ -501,7 +503,7 @@
 ;; Creating a Dispatcher
 ;;
 
-(defn- interceptor-chain [meta metas]
+(defn- extract-interceptors [meta metas]
   (reduce
     (fn [acc [k v]]
       (if-let [factory (get meta k)]
@@ -518,9 +520,11 @@
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
         reorder (fn [h m]
                   (if-let [invalid-keys (seq (set/difference (set (keys m)) (set (keys meta))))]
-                    (throw (ex-info "invalid meta-data on handler" {:name (:name h)
-                                                                    :invalid-keys invalid-keys
-                                                                    :allowed-keys (keys meta)}))
+                    (throw (ex-info
+                             "invalid meta-data on handler"
+                             {:name (:name h)
+                              :invalid-keys invalid-keys
+                              :allowed-keys (keys meta)}))
                     (into
                       (linked/map)
                       (keep
@@ -533,7 +537,11 @@
                    (let [ns (handler-ns m)
                          ns-meta (collect-ns-meta m)
                          user-meta (:meta h)
-                         all-meta (map (partial reorder h) (if-not (empty? user-meta) (conj ns-meta user-meta) ns-meta))
+                         all-meta (map
+                                    (partial reorder h)
+                                    (if-not (empty? user-meta)
+                                      (conj ns-meta user-meta)
+                                      ns-meta))
                          user-input (reduce
                                       (fn [acc [k v]]
                                         (if-let [i (some-> k meta interceptor)]
@@ -544,7 +552,7 @@
                                       {}
                                       (apply concat all-meta))
                          input (kc/merge-map-schemas (:input h) user-input)
-                         interceptors (interceptor-chain meta all-meta)]
+                         interceptors (extract-interceptors meta all-meta)]
                      (merge h {:ns ns
                                :ns-meta ns-meta
                                :all-meta all-meta
