@@ -98,7 +98,6 @@
     false))
 
 (defn enqueue [context interceptors]
-  {:pre (every? interceptor? interceptors)}
   (update-in context [::queue]
              (fnil into PersistentQueue/EMPTY)
              interceptors))
