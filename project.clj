@@ -25,7 +25,7 @@
                                   ; required when working with Java 1.6
                                   [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
                                   [midje "1.8.3"]]}
-             :perf {:jvm-opts ^:replace []}
+             :perf {:jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true"]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
   :aliases {"all" ["with-profile" "dev:dev,1.7"]
             "perf" ["with-profile" "default,dev,perf"]

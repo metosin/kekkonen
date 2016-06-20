@@ -394,10 +394,10 @@
    (fn [context]
      (let [{:keys [handle input output]} (::handler context)
            mode (::mode context)
-           dispatcher (::dispatcher context)
-           input-matcher (-> dispatcher :coercion :input)]
-       (let [context (if (#{:validate :invoke} mode) (input-coerce! context input input-matcher) context)
-             response (if (#{:invoke} mode)
+           dispatcher (::dispatcher context)]
+       (let [context (if (#{:validate :invoke} mode)
+                       (input-coerce! context input) context)
+             response (if (= :invoke mode)
                         (as-> (handle context) response
                               (if (and output (-> dispatcher :coercion :output))
                                 (coerce! output (-> dispatcher :coercion :output) response nil ::response)

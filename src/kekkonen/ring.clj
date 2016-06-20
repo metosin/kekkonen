@@ -42,7 +42,7 @@
 ;; Internals
 ;;
 
-(defn- uri->action [path]
+(defn- uri->action [^String path]
   (let [i (.lastIndexOf path "/")]
     (if-not (= (count path) 1)
       (keyword (subs (str (str/replace (subs path 0 i) #"/" ".") (subs path i)) 1)))))
@@ -54,26 +54,26 @@
     "/" (name (:name handler))))
 
 (defn- ring-coercion [parameters coercion]
-  (let [coercions (pm/unflatten
-                    (for [[k matcher] coercion
-                          :when matcher]
-                      [[:request k] (fn [schema value]
-                                      (k/coerce! schema matcher (or value {}) k ::request))]))]
-    (k/multi-coercion
-      (if parameters
-        (reduce kc/copy-to-from coercions parameters)
-        coercions))))
+  (if coercion
+    (let [coercions (pm/unflatten
+                      (for [[k matcher] coercion
+                            :when matcher]
+                        [[:request k] (fn [schema value]
+                                        (k/coerce! schema matcher (or value {}) k ::request))]))]
+      (k/multi-coercion
+        (if parameters
+          (reduce kc/copy-to-from coercions parameters)
+          coercions)))))
 
 (defn- coerce-response! [response handler options]
   (if-let [responses (-> handler :meta :responses)]
-    (let [status (or (:status response) 200)
-          schema (get-in responses [status :schema])]
-      (if schema
-        (let [value (:body response)
-              matcher (get-in options [:coercion :body-params])
-              coerced (k/coerce! schema matcher value :response ::response)]
-          (assoc response :body coerced))
-        response))
+    (if-let [matcher (get-in options [:coercion :body-params])]
+      (let [status (or (:status response) 200)]
+        (if-let [schema (get-in responses [status :schema])]
+          (let [coerced (k/coerce! schema matcher (:body response) :response ::response)]
+            (assoc response :body coerced))
+          response))
+      response)
     response))
 
 (defn- ring-input-schema [input parameters]
@@ -86,9 +86,6 @@
         value (rsjs/describe (s/enum "invoke" "validate") "mode" :default "invoke")
         extra-keys-schema (s/find-extra-keys-schema (get-in schema [:request :header-params]))]
     (update-in schema [:request :header-params] merge {key value} (if-not extra-keys-schema {s/Any s/Any}))))
-
-(defn- is-validate-request? [request]
-  (= (get-in request [:headers mode-parameter]) "validate"))
 
 (defn- request-mode [request]
   (if (= (get-in request [:headers mode-parameter]) "validate")
@@ -112,13 +109,13 @@
 
 (defn- uri-without-context
   "Extracts the uri from the request but dropping the context"
-  [{:keys [uri context]}]
+  [{:keys [^String uri ^String context]}]
   (if (and context (.startsWith uri context))
     (.substring uri (.length context))
     uri))
 
 (defn- copy-parameters [handler ctx]
-  (reduce kc/deep-merge-to-from ctx (-> handler :ring :type-config :parameters)))
+  (reduce kc/copy-to-from ctx (-> handler :ring :type-config :parameters)))
 
 (defn- set-coercion [handler ctx]
   (assoc ctx ::k/coercion (-> handler :ring :coercion)))
@@ -159,6 +156,7 @@
                                                   (:interceptors options)
                                                   (coerce-response options))]]
                    (-> handler :ring :uri) [handler interceptors])]
+      ;; the ring handler
       (fn [{:keys [request-method] :as request}]
         ;; match a handlers based on uri and context
         (if-let [[{:keys [action ring]} interceptors] (router (uri-without-context request))]
