@@ -130,7 +130,7 @@
 
 (defn- coerce-response [options]
   {:leave (fn [{:keys [::k/handler ::k/mode] :as ctx}]
-            (if (= :validate mode)
+            (if (not= :invoke mode)
               (update ctx :response ok)
               (update ctx :response #(coerce-response! % handler options))))})
 
