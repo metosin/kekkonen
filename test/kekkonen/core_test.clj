@@ -4,7 +4,8 @@
             [midje.sweet :refer :all]
             [schema.core :as s]
             [plumbing.core :as p]
-            [clojure.set :as set])
+            [clojure.set :as set]
+            [kekkonen.interceptor :as interceptor])
   (:import [kekkonen.core Dispatcher]))
 
 (background
@@ -412,8 +413,8 @@
 
     (fact "interceptors are executed correctly"
       (-> {:enter 0, :leave 0}
-          (k/enqueue interceptors)
-          (k/execute)) => {:enter 20, :leave -1})))
+          (interceptor/enqueue interceptors)
+          (interceptor/execute)) => {:enter 20, :leave -1})))
 
 (facts "meta"
 
@@ -448,11 +449,6 @@
                         ::intercept intercept*
                         ::times times*}})]
 
-        (fact "user-meta is populated correctly"
-          (k/some-handler d :api/test) => (contains {:meta {::inc 2, ::intercept [dec x10], ::times 2}
-                                                     :ns-meta []
-                                                     :all-meta [{::inc 2, ::intercept [dec x10], ::times 2}]}))
-
         (fact "are executed in some order: (-> 2 (+ 2) dec (* 2) (* 10) => 60"
           (k/invoke d :api/test {:data {:x 2}}) => 60)))
 
@@ -477,12 +473,6 @@
                                                [::inc inc*]
                                                [::times times*]])
 
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {::inc 1 ::times 2}
-                            :ns-meta []
-                            :all-meta [{::inc 1 ::times 2}]}))
-
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
         (fact "are executed in order 2/2"
@@ -494,12 +484,6 @@
                                         :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
-
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {::inc 1 ::times 2}
-                            :ns-meta []
-                            :all-meta [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 5)))
 
@@ -516,12 +500,6 @@
                      :meta [[::inc inc*]
                             [::times times*]]})]
 
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {}
-                            :ns-meta [{::inc 1 ::times 2}]
-                            :all-meta [{::inc 1 ::times 2}]}))
-
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
         (fact "are executed in order 1/2"
@@ -535,12 +513,6 @@
                                           :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
-
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {}
-                            :ns-meta [{::inc 1 ::times 2}]
-                            :all-meta [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 5))
 
@@ -887,17 +859,7 @@
     (fact "input schemas have been modified"
       (let [handler (k/some-handler d :api.secret.doc/read)]
 
-        (fact "handler-input is coming directly from handler"
-          handler => (contains
-                       {:handler-input {:entity {:doc s/Str, s/Keyword s/Any}
-                                        s/Keyword s/Any}}))
-
-        (fact "user-input is accumulated from the path"
-          handler => (contains
-                       {:user-input {:data {:doc-id s/Int, s/Keyword s/Any}
-                                     s/Keyword s/Any}}))
-
-        (fact "input is merged sum of the previous"
+        (fact "input is merged correctly"
           handler => (contains
                        {:input {:entity {:doc s/Str, s/Keyword s/Any}
                                 :data {:doc-id s/Int, s/Keyword s/Any}

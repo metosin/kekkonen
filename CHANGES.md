@@ -6,7 +6,10 @@
 * Data input schemas for apis can be vectors, fixes [#27](https://github.com/metosin/kekkonen/issues/27).
 * Use Pedestal-style interceptors, with `:name`, `:enter`, `:leave` and `:error`
   * Extended to contain `:input` and `:output` schemas.
-* Interceptors are pre-compiled for better perf.
+* Interceptors are pre-compiled in all layers for simplicity and better perf.
+* Remove the following excess meta-data from handlers: 
+  * `:ns-meta`, `:all-meta`, `:handler-input` & `:user-input`
+* Remove `:interceptors` from the `Dispatcher`, as they are now precompiled into handlers
 * Interceptors can be `nil`, allowing conditional interceptors
 
 ```clj

@@ -60,21 +60,11 @@
 
    ;; extra meta-data
    :meta KeywordMap
-   (s/optional-key :ns-meta) [KeywordMap]
-   (s/optional-key :all-meta) [KeywordMap]
-
    ;; interceptors
    :interceptors [Interceptor]
 
-   ;; input schemas
-   ; full input
+   ;; schemas
    :input s/Any
-   ; direct handler input
-   :handler-input s/Any
-   ; user-meta defined input
-   :user-input s/Any
-
-   ;; output schemas
    :output s/Any
 
    (s/optional-key :source-map) {:line s/Int
@@ -249,7 +239,6 @@
    context :- KeywordMap
    coercion :- {:input (s/maybe KeywordMap)
                 :output s/Any}
-   interceptors :- [Interceptor]
    meta :- KeywordMap])
 
 (defmethod clojure.core/print-method Dispatcher
@@ -339,25 +328,30 @@
 ;; Interceptors
 ;;
 
-(defn prepare [context dispatcher handler mode]
+(defn- prepare [context dispatcher handler mode]
   (let [ctx (assoc (kc/deep-merge (:context dispatcher) context)
               ::dispatcher dispatcher
               ::handler handler
               ::mode mode)]
     ctx))
 
-(defn extract-input-schema [interceptor]
+(defn- with-input-schema [interceptor]
   (merge
     (kc/extract-schema (:enter interceptor) nil)
     interceptor))
 
-(defn with-input-coercion [interceptor]
+(defn- with-input-coercion [interceptor]
   (if-let [input (:input interceptor)]
     (update interceptor :enter (fn [f]
                                  (fn [context]
                                    (let [dispatcher (::dispatcher context)
                                          input-matcher (-> dispatcher :coercion :input)]
                                      (f (input-coerce! context input input-matcher))))))
+    interceptor))
+
+(defn- with-string-name [interceptor]
+  (if (:name interceptor)
+    (update interceptor :name str)
     interceptor))
 
 (defn interceptor [interceptor-or-a-function]
@@ -368,8 +362,9 @@
         (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
         (map? interceptor-or-a-function) interceptor-or-a-function
         :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))
-      extract-input-schema
-      with-input-coercion)))
+      with-input-schema
+      with-input-coercion
+      with-string-name)))
 
 (defn interceptors [data]
   (assert (vector? data) "interceptors must be defined as a vector")
@@ -389,34 +384,27 @@
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action: " action) {:type ::dispatch, :value action})))
 
-(defn- intercept-handler []
-  {:enter
-   (fn [context]
-     (let [{:keys [handle input output]} (::handler context)
-           mode (::mode context)
-           dispatcher (::dispatcher context)]
-       (let [context (if (#{:validate :invoke} mode)
-                       (input-coerce! context input) context)
-             response (if (= :invoke mode)
-                        (as-> (handle context) response
-                              (if (and output (-> dispatcher :coercion :output))
-                                (coerce! output (-> dispatcher :coercion :output) response nil ::response)
-                                response)))]
-         (assoc context :response response))))})
-
-(defn enqueue [context interceptors]
-  (interceptor/enqueue context interceptors))
-
-(defn execute [context]
-  (interceptor/execute context))
+(def ^:private execute-handler
+  {:name ::handle
+   :enter (fn [context]
+            (let [{:keys [handle input output]} (::handler context)
+                  mode (::mode context)
+                  dispatcher (::dispatcher context)]
+              (let [context (if (#{:validate :invoke} mode)
+                              (input-coerce! context input) context)
+                    response (if (= :invoke mode)
+                               (as-> (handle context) response
+                                     (if (and output (-> dispatcher :coercion :output))
+                                       (coerce! output (-> dispatcher :coercion :output) response nil ::response)
+                                       response)))]
+                (assoc context :response response))))})
 
 (defn dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
-    (let [interceptors (concat (:interceptors dispatcher) interceptors [(intercept-handler)])
-          context (-> context
+    (let [context (-> context
                       (prepare dispatcher handler mode)
-                      (enqueue interceptors)
-                      (execute))]
+                      (interceptor/enqueue interceptors)
+                      (interceptor/execute))]
       (if (contains? context :response)
         (:response context)
         (invalid-action! action)))
@@ -516,7 +504,7 @@
     []
     (apply concat metas)))
 
-(defn- collect-and-enrich [{:keys [handlers type-resolver meta]} allow-empty-namespaces?]
+(defn- collect-and-enrich [{:keys [handlers type-resolver meta interceptors]} allow-empty-namespaces?]
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
         collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
@@ -537,6 +525,7 @@
         enrich (fn [h m]
                  (if (or (seq m) allow-empty-namespaces?)
                    (let [ns (handler-ns m)
+                         action (handler-action (:name h) ns)
                          ns-meta (collect-ns-meta m)
                          user-meta (:meta h)
                          all-meta (map
@@ -544,27 +533,18 @@
                                     (if-not (empty? user-meta)
                                       (conj ns-meta user-meta)
                                       ns-meta))
-                         user-input (reduce
-                                      (fn [acc [k v]]
-                                        (if-let [i (some-> k meta interceptor)]
-                                          (if-let [enter (:enter i)]
-                                            (let [schema (:input (kc/extract-schema (enter v)))]
-                                              (kc/merge-map-schemas acc schema))
-                                            acc)))
-                                      {}
-                                      (apply concat all-meta))
-                         input (kc/merge-map-schemas (:input h) user-input)
-                         interceptors (extract-interceptors meta all-meta)]
+                         interceptors (mapv
+                                        interceptor
+                                        (concat
+                                          interceptors
+                                          (extract-interceptors meta all-meta)
+                                          [execute-handler]))
+                         input (apply kc/merge-map-schemas (:input h) (keep :input interceptors))]
+
                      (merge h {:ns ns
-                               :ns-meta ns-meta
-                               :all-meta all-meta
                                :interceptors interceptors
-
-                               :handler-input (:input h)
-                               :user-input user-input
                                :input (if (seq input) input s/Any)
-
-                               :action (handler-action (:name h) ns)}))
+                               :action action}))
                    (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
         traverse (fn traverse [x m]
                    (flatten
@@ -609,14 +589,12 @@
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
-  (let [options (kc/deep-merge-map-like +default-options+ options)
-        handlers (->> (collect-and-enrich options false))
-        interceptors (mapv interceptor (:interceptors options))]
+  (let [options (-> (kc/deep-merge-map-like +default-options+ options))
+        handlers (->> (collect-and-enrich options false))]
     (map->Dispatcher
       (merge
         (select-keys options [:context :coercion :meta])
-        {:handlers handlers
-         :interceptors interceptors}))))
+        {:handlers handlers}))))
 
 (s/defn transform-handlers
   "Applies f to all handlers. If the call returns nil,

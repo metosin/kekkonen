@@ -7,7 +7,8 @@
             [ring.swagger.json-schema :as rsjs]
             [ring.util.http-response :refer [ok]]
             [plumbing.core :as p]
-            [plumbing.map :as pm])
+            [plumbing.map :as pm]
+            [kekkonen.interceptor :as interceptor])
   (:import [kekkonen.core Dispatcher]
            [java.util HashMap Map]))
 
@@ -234,7 +235,7 @@
           (if (some-> ring :methods (contains? request-method))
             (let [mode (request-mode request)]
               (-> {:request request}
-                  (k/enqueue interceptors)
+                  (interceptor/enqueue interceptors)
                   (->> (k/dispatch dispatcher mode action))))))))))
 
 ;;
