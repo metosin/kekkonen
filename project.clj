@@ -6,17 +6,17 @@
             :distribution :repo
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.3"]
-                 [prismatic/schema "1.1.1"]
+                 [prismatic/schema "1.1.2"]
                  [frankiesardo/linked "1.2.6"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.8"]
+                 [metosin/ring-swagger "0.22.9"]
                  [metosin/ring-swagger-ui "2.1.4-0"]
-                 [metosin/ring-http-response "0.6.5"]
+                 [metosin/ring-http-response "0.7.0"]
                  [ring-middleware-format "0.7.0"]
 
                  ;; client stuff, separate module?
-                 [clj-http "3.1.0"]]
+                 [clj-http "2.2.0"]]
   :profiles {:dev {:plugins [[lein-midje "3.2"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.8.0"]
@@ -25,7 +25,7 @@
                                   ; required when working with Java 1.6
                                   [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
                                   [midje "1.8.3"]]}
-             :perf {:jvm-opts ^:replace []}
+             :perf {:jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true"]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
   :aliases {"all" ["with-profile" "dev:dev,1.7"]
             "perf" ["with-profile" "default,dev,perf"]

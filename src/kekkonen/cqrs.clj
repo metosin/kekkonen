@@ -32,12 +32,16 @@
 ;;
 
 (s/defn command
-  [meta :- k/KeywordMap, f :- k/Function]
-  (vary-meta f merge {:type :command} meta))
+  ([meta :- k/KeywordMap]
+    (command (dissoc meta :handle) (:handle meta)))
+  ([meta :- k/KeywordMap, f :- k/Function]
+    (k/handler (merge meta {:type :command}) f)))
 
 (s/defn query
-  [meta :- k/KeywordMap, f :- k/Function]
-  (vary-meta f merge {:type :query} meta))
+  ([meta :- k/KeywordMap]
+    (query (dissoc meta :handle) (:handle meta)))
+  ([meta :- k/KeywordMap, f :- k/Function]
+    (k/handler (merge meta {:type :query}) f)))
 
 ;;
 ;; api

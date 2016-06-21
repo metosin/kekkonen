@@ -43,7 +43,9 @@
 
 (defn coerce-error-handler [f]
   (fn [_ data _]
-    (f (-> data (dissoc :schema) (update-in [:error] #(stringify (su/error-val %)))))))
+    (f (-> data
+           (select-keys [:value :type :error :in #_:execution-id #_:stage])
+           (update-in [:error] #(stringify (su/error-val %)))))))
 
 (def ^:private missing-route-handler (constantly (r/not-found)))
 (def ^:private request-validation-handler (coerce-error-handler r/bad-request))

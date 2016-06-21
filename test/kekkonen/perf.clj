@@ -38,11 +38,11 @@
 
   (title "with coercion")
   (cc/quick-bench (k/invoke d1 :api.math/plus1 {:data {:x 10, :y 20}}))
-  ; 28.0µs => 8.2µs (memoized) => 7.0µs (lookup)
+  ; 28.0µs => 8.2µs (memoized) => 7.0µs (lookup) => 7.2µs (leave) => 10.0µs (pedestal) => 9.6µs (precompiled)
 
   (title "without coercion")
   (cc/quick-bench (k/invoke d2 :api.math/plus1 {:data {:x 10, :y 20}}))
-  ; 3.7µs -> 3.7µs (memoized) => 2.0µs (lookup)
+  ; 3.7µs -> 3.7µs (memoized) => 2.0µs (lookup) => 2.1µs (leave) => 4.2µs (pedestal) => 3.9µs (precompiled)
 
   (title "clojure multimethod")
   (cc/quick-bench (multi-method-invoke :api.math/plus1 {:data {:x 10, :y 20}}))
@@ -60,25 +60,26 @@
 (def r2 (kr/ring-handler d2))
 (def r3 (kr/ring-handler d2 {:coercion nil}))
 
+(def data {:uri "/api/math/plus1"
+           :request-method :post
+           :body-params {:x 10, :y 20}})
+
 (defn ring-bench []
 
   (title "ring & dispatcher coercion")
-  (cc/quick-bench (r1 {:uri "/api/math/plus1"
-                       :request-method :post
-                       :body-params {:x 10, :y 20}}))
-  ; 20.7µs => 17.1µs => 11.3µs
+  (assert (= 30 (-> data r1 :body :result)))
+  (cc/quick-bench (r1 data))
+  ; 20.7µs => 17.1µs => 11.3µs => 14.7µs (leave) => 19.2 (pedestal) => 19.0µs (precompiled)
 
   (title "ring coercion")
-  (cc/quick-bench (r2 {:uri "/api/math/plus1"
-                       :request-method :post
-                       :body-params {:x 10, :y 20}}))
-  ; 15.7µs => 12.2µs => 7.6µs
+  (assert (= 30 (-> data r2 :body :result)))
+  (cc/quick-bench (r2 data))
+  ; 15.7µs => 12.2µs => 7.6µs => 10.4µs (leave) => 13.3µs (pedestal) => 13.1µs (precompiled)
 
   (title "no coercion")
-  (cc/quick-bench (r3 {:uri "/api/math/plus1"
-                       :request-method :post
-                       :body-params {:x 10, :y 20}}))
-  ; ................ => 3.5µs
+  (assert (= 30 (-> data r3 :body :result)))
+  (cc/quick-bench (r3 data))
+  ; ................ => 3.5µs => 3.9 (leave) => 9.5µs (pedestal) => 9.1µs (precompiled)
 
   (println))
 

@@ -4,7 +4,8 @@
             [midje.sweet :refer :all]
             [schema.core :as s]
             [plumbing.core :as p]
-            [clojure.set :as set])
+            [clojure.set :as set]
+            [kekkonen.interceptor :as interceptor])
   (:import [kekkonen.core Dispatcher]))
 
 (background
@@ -219,11 +220,11 @@
   (fact "can't be created without handlers"
     (k/dispatcher {}) => (throws?))
 
-  (fact "can't be created with root level handlers"
-    (k/dispatcher {:handlers 'kekkonen.core-test}) => (throws?))
+  (fact "can be created with root level handlers (since 0.3.0)"
+    (k/dispatcher {:handlers 'kekkonen.core-test}) => some?)
 
   (fact "can be created with namespaced handlers"
-    (k/dispatcher {:handlers {:test 'kekkonen.core-test}}) => truthy)
+    (k/dispatcher {:handlers {:test 'kekkonen.core-test}}) => some?)
 
   (fact "with handlers and context"
     (let [d (k/dispatcher {:context {:components {:db (atom #{})}}
@@ -400,13 +401,20 @@
                                       :required required})))))
 
 (fact "interceptors"
-  (let [{:keys [enter leave]} (k/interceptors [{:enter #(update % :enter inc)
-                                                :leave #(update % :leave dec)}
-                                               (fn [ctx] (update ctx :enter inc))
-                                               {:enter #(update % :enter (partial * 10))
-                                                :leave #(update % :leave (partial * 10))}])]
-    (fact "enters are applied in order, leaves in reverse order"
-      (leave (enter {:enter 0, :leave 0})) => {:enter 20, :leave -1})))
+  (let [interceptors (k/interceptors [{:enter #(update % :enter inc)
+                                       :leave #(update % :leave dec)}
+                                      nil
+                                      (fn [ctx] (update ctx :enter inc))
+                                      {:enter #(update % :enter (partial * 10))
+                                       :leave #(update % :leave (partial * 10))}])]
+
+    (fact "3 interceptors are created (nil is disgarded)"
+      (count interceptors) => 3)
+
+    (fact "interceptors are executed correctly"
+      (-> {:enter 0, :leave 0}
+          (interceptor/enqueue interceptors)
+          (interceptor/execute)) => {:enter 20, :leave -1})))
 
 (facts "meta"
 
@@ -441,11 +449,6 @@
                         ::intercept intercept*
                         ::times times*}})]
 
-        (fact "user-meta is populated correctly"
-          (k/some-handler d :api/test) => (contains {:meta {::inc 2, ::intercept [dec x10], ::times 2}
-                                                     :ns-meta []
-                                                     :all-meta [{::inc 2, ::intercept [dec x10], ::times 2}]}))
-
         (fact "are executed in some order: (-> 2 (+ 2) dec (* 2) (* 10) => 60"
           (k/invoke d :api/test {:data {:x 2}}) => 60)))
 
@@ -470,12 +473,6 @@
                                                [::inc inc*]
                                                [::times times*]])
 
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {::inc 1 ::times 2}
-                            :ns-meta []
-                            :all-meta [{::inc 1 ::times 2}]}))
-
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
         (fact "are executed in order 2/2"
@@ -487,12 +484,6 @@
                                         :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
-
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {::inc 1 ::times 2}
-                            :ns-meta []
-                            :all-meta [{::inc 1 ::times 2}]}))
 
             (k/invoke d :api/test {:data {:x 2}}) => 5)))
 
@@ -509,12 +500,6 @@
                      :meta [[::inc inc*]
                             [::times times*]]})]
 
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {}
-                            :ns-meta [{::inc 1 ::times 2}]
-                            :all-meta [{::inc 1 ::times 2}]}))
-
             (k/invoke d :api/test {:data {:x 2}}) => 6))
 
         (fact "are executed in order 1/2"
@@ -529,24 +514,18 @@
                      :meta [[::times times*]
                             [::inc inc*]]})]
 
-            (fact "user-meta is populated correctly"
-              (k/some-handler d :api/test)
-              => (contains {:meta {}
-                            :ns-meta [{::inc 1 ::times 2}]
-                            :all-meta [{::inc 1 ::times 2}]}))
-
             (k/invoke d :api/test {:data {:x 2}}) => 5))
 
         (fact "interceptors are populated correctly"
           (let [api-ns (k/namespace
                          {:name :api
                           ::inc 1
-                          :interceptors [[times* 2]]})
+                          :interceptors [nil [times* 2] nil]})
                 d (k/dispatcher
                     {:handlers {api-ns (k/handler
                                          {:name :test
                                           ::times 3
-                                          :interceptors [[inc* 100]]
+                                          :interceptors [nil [inc* 100] nil]
                                           :handle (p/fn-> :data :x)})}
                      :meta [[::times times*]
                             [::inc inc*]]})]
@@ -880,17 +859,7 @@
     (fact "input schemas have been modified"
       (let [handler (k/some-handler d :api.secret.doc/read)]
 
-        (fact "handler-input is coming directly from handler"
-          handler => (contains
-                       {:handler-input {:entity {:doc s/Str, s/Keyword s/Any}
-                                        s/Keyword s/Any}}))
-
-        (fact "user-input is accumulated from the path"
-          handler => (contains
-                       {:user-input {:data {:doc-id s/Int, s/Keyword s/Any}
-                                     s/Keyword s/Any}}))
-
-        (fact "input is merged sum of the previous"
+        (fact "input is merged correctly"
           handler => (contains
                        {:input {:entity {:doc s/Str, s/Keyword s/Any}
                                 :data {:doc-id s/Int, s/Keyword s/Any}
