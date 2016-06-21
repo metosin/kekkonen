@@ -763,6 +763,7 @@
     (fact "maps as interceptors"
       (k/interceptor {:enter stop}) => {:enter stop}
       (k/interceptor {:leave stop}) => {:leave stop}
+      (k/interceptor {:error stop}) => {:error stop}
       (k/interceptor {:enter stop, :leave stop}) => {:enter stop, :leave stop}
       (fact "invalid keys cause failure"
         (k/interceptor {:enter stop, :whatever stop}) => throws?)

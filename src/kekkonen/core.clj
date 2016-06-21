@@ -34,9 +34,10 @@
      (s/optional-key :input) s/Any
      (s/optional-key :output) s/Any
      (s/optional-key :enter) Function
-     (s/optional-key :leave) Function}
-    (fn [{:keys [enter leave]}] (or enter leave))
-    'enter-or-leave-required))
+     (s/optional-key :leave) Function
+     (s/optional-key :error) Function}
+    (fn [{:keys [enter leave error]}] (or enter leave error))
+    'enter-or-leave-or-error-required))
 
 (s/defschema FunctionOrInterceptor
   (s/conditional fn? Function :else Interceptor))
