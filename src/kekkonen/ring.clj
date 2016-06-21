@@ -140,51 +140,7 @@
       (kc/dissoc-in [:request :query-params :kekkonen.ns])))
 
 ;;
-;; Public api
-;;
-
-(s/defn ring-handler
-  "Creates a ring handler from Dispatcher and options."
-  ([dispatcher :- Dispatcher]
-    (ring-handler dispatcher {}))
-  ([dispatcher :- Dispatcher, options :- k/KeywordMap]
-    (let [options (-> (kc/deep-merge +default-options+ options)
-                      (update :interceptors (partial mapv k/interceptor)))
-          dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
-          router (HashMap. ^Map (p/for-map [handler (k/all-handlers dispatcher nil)
-                                            :let [interceptors (kc/join
-                                                                 (prepare handler)
-                                                                 (:interceptors options)
-                                                                 (coerce-response options))]]
-                                  (-> handler :ring :uri) [handler interceptors]))]
-      ;; the ring handler
-      (fn [{:keys [request-method] :as request}]
-        ;; match a handlers based on uri and context
-        (if-let [[{:keys [action ring]} interceptors] (.get router (uri-without-context request))]
-          ;; only allow calls to ring-mapped handlers with matching method
-          (if (some-> ring :methods (contains? request-method))
-            (let [mode (request-mode request)]
-              (-> {:request request}
-                  (k/enqueue interceptors)
-                  (->> (k/dispatch dispatcher mode action))))))))))
-
-(s/defn routes :- k/Function
-  "Creates a ring handler of multiples handlers, matches in order."
-  [ring-handlers :- [(s/maybe k/Function)]]
-  (apply some-fn (keep identity ring-handlers)))
-
-(s/defn match
-  "Creates a ring-handler for given uri & request-method"
-  ([match-uri ring-handler]
-    (match match-uri identity ring-handler))
-  ([match-uri match-request-method ring-handler]
-    (fn [{:keys [uri request-method] :as request}]
-      (if (and (= match-uri uri)
-               (match-request-method request-method))
-        (ring-handler request)))))
-
-;;
-;; Special handlers
+;; Special endpoints
 ;;
 
 (def +kekkonen-handlers+
@@ -251,3 +207,51 @@
                               (remove (p/fn-> first :meta :no-doc))
                               (map (fn [[k v]] [(:action k) (k/stringify-schema v)]))
                               (into {})))))})]})
+
+;;
+;; Public api
+;;
+
+(s/defn ring-handler
+  "Creates a ring handler from Dispatcher and options."
+  ([dispatcher :- Dispatcher]
+    (ring-handler dispatcher {}))
+  ([dispatcher :- Dispatcher, options :- k/KeywordMap]
+    (let [options (-> (kc/deep-merge +default-options+ options)
+                      (update :interceptors (partial mapv k/interceptor)))
+          dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
+          router (HashMap. ^Map (p/for-map [handler (k/all-handlers dispatcher nil)
+                                            :let [interceptors (kc/join
+                                                                 (prepare handler)
+                                                                 (:interceptors options)
+                                                                 (coerce-response options))]]
+                                  (-> handler :ring :uri) [handler interceptors]))]
+      ;; the ring handler
+      (fn [{:keys [request-method] :as request}]
+        ;; match a handlers based on uri and context
+        (if-let [[{:keys [action ring]} interceptors] (.get router (uri-without-context request))]
+          ;; only allow calls to ring-mapped handlers with matching method
+          (if (some-> ring :methods (contains? request-method))
+            (let [mode (request-mode request)]
+              (-> {:request request}
+                  (k/enqueue interceptors)
+                  (->> (k/dispatch dispatcher mode action))))))))))
+
+;;
+;; Routing
+;;
+
+(s/defn routes :- k/Function
+  "Creates a ring handler of multiples handlers, matches in order."
+  [ring-handlers :- [(s/maybe k/Function)]]
+  (apply some-fn (keep identity ring-handlers)))
+
+(s/defn match
+  "Creates a ring-handler for given uri & request-method"
+  ([match-uri ring-handler]
+    (match match-uri identity ring-handler))
+  ([match-uri match-request-method ring-handler]
+    (fn [{:keys [uri request-method] :as request}]
+      (if (and (= match-uri uri)
+               (match-request-method request-method))
+        (ring-handler request)))))
