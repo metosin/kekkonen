@@ -6,12 +6,7 @@
 (def ^:private ^AtomicLong execution-id (AtomicLong.))
 
 (defn- interceptor-name [interceptor]
-  (let [n (:name interceptor)]
-    (cond
-      (keyword? n) n
-      (string? n) n
-      (nil? n) (pr-str interceptor)
-      :else (throw (ex-info (str "Name must be string, keyword or nil; Got: " (pr-str n)) {:name n})))))
+  (get interceptor :name (pr-str interceptor)))
 
 (defn- begin [context]
   (if (contains? context ::execution-id)
