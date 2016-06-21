@@ -220,11 +220,11 @@
   (fact "can't be created without handlers"
     (k/dispatcher {}) => (throws?))
 
-  (fact "can't be created with root level handlers"
-    (k/dispatcher {:handlers 'kekkonen.core-test}) => (throws?))
+  (fact "can be created with root level handlers (since 0.3.0)"
+    (k/dispatcher {:handlers 'kekkonen.core-test}) => some?)
 
   (fact "can be created with namespaced handlers"
-    (k/dispatcher {:handlers {:test 'kekkonen.core-test}}) => truthy)
+    (k/dispatcher {:handlers {:test 'kekkonen.core-test}}) => some?)
 
   (fact "with handlers and context"
     (let [d (k/dispatcher {:context {:components {:db (atom #{})}}

@@ -6,7 +6,7 @@
 (defnk ^:query hello [[:data name :- String]]
   (success {:message (str "Hello, " name)}))
 
-(def app (cqrs-api {:core {:handlers {:api #'hello}}}))
+(def app (cqrs-api {:core {:handlers #'hello}}))
 
 (defn start []
   (server/run-server #'app {:port 3000}))
@@ -17,10 +17,9 @@
 ;   (server/run-server
 ;    (cqrs-api
 ;      {:core
-;        {:handlers
-;          {:api
-;            (query
-;              {:name "hello"
-;               :handle (fn [{{:keys [name]} :data}]
-;                         (success {:message (str "Hello, " name)}))})}}})
+;       {:handlers
+;        (query
+;          {:name "hello"
+;           :handle (fn [{{:keys [name]} :data}]
+;                     (success {:message (str "Hello, " name)}))})}})
 ;    {:port 3000}))

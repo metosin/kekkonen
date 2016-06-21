@@ -504,7 +504,7 @@
     []
     (apply concat metas)))
 
-(defn- collect-and-enrich [{:keys [handlers type-resolver meta interceptors]} allow-empty-namespaces?]
+(defn- collect-and-enrich [{:keys [handlers type-resolver meta interceptors]}]
   (let [handler-ns (fn [m] (if (seq m) (->> m (map :name) (map name) (str/join ".") keyword)))
         collect-ns-meta (fn [m] (if (seq m) (->> m (map :meta) (filterv (complement empty?)))))
         handler-action (fn [n ns] (keyword (str/join "/" (map name (filter identity [ns n])))))
@@ -523,29 +523,27 @@
                             [k v]))
                         (keys meta)))))
         enrich (fn [h m]
-                 (if (or (seq m) allow-empty-namespaces?)
-                   (let [ns (handler-ns m)
-                         action (handler-action (:name h) ns)
-                         ns-meta (collect-ns-meta m)
-                         user-meta (:meta h)
-                         all-meta (map
-                                    (partial reorder h)
-                                    (if-not (empty? user-meta)
-                                      (conj ns-meta user-meta)
-                                      ns-meta))
-                         interceptors (mapv
-                                        interceptor
-                                        (concat
-                                          interceptors
-                                          (extract-interceptors meta all-meta)
-                                          [execute-handler]))
-                         input (apply kc/merge-map-schemas (:input h) (keep :input interceptors))]
+                 (let [ns (handler-ns m)
+                       action (handler-action (:name h) ns)
+                       ns-meta (collect-ns-meta m)
+                       user-meta (:meta h)
+                       all-meta (map
+                                  (partial reorder h)
+                                  (if-not (empty? user-meta)
+                                    (conj ns-meta user-meta)
+                                    ns-meta))
+                       interceptors (mapv
+                                      interceptor
+                                      (concat
+                                        interceptors
+                                        (extract-interceptors meta all-meta)
+                                        [execute-handler]))
+                       input (apply kc/merge-map-schemas (:input h) (keep :input interceptors))]
 
-                     (merge h {:ns ns
-                               :interceptors interceptors
-                               :input (if (seq input) input s/Any)
-                               :action action}))
-                   (throw (ex-info "can't define handlers into empty namespace" {:handler h}))))
+                   (merge h {:ns ns
+                             :interceptors interceptors
+                             :input (if (seq input) input s/Any)
+                             :action action})))
         traverse (fn traverse [x m]
                    (flatten
                      (for [[k v] x]
@@ -563,7 +561,7 @@
 ;;
 
 (s/defschema Options
-  {:handlers {(s/cond-pre s/Keyword Namespace) s/Any}
+  {:handlers s/Any
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
    (s/optional-key :interceptors) [FunctionOrInterceptor]
@@ -589,8 +587,8 @@
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"
   [options :- Options]
-  (let [options (-> (kc/deep-merge-map-like +default-options+ options))
-        handlers (->> (collect-and-enrich options false))]
+  (let [options (kc/deep-merge-map-like +default-options+ options)
+        handlers (collect-and-enrich options)]
     (map->Dispatcher
       (merge
         (select-keys options [:context :coercion :meta])
@@ -611,5 +609,5 @@
   [dispatcher :- Dispatcher, handlers :- (s/constrained s/Any (complement nil?) 'not-nil)]
   (if handlers
     (let [handler (collect-and-enrich
-                    (merge dispatcher {:handlers handlers :type-resolver any-type-resolver}) true)]
+                    (merge dispatcher {:handlers handlers :type-resolver any-type-resolver}))]
       (update-in dispatcher [:handlers] merge handler))))
