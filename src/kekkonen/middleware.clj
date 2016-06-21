@@ -138,8 +138,10 @@
    :not-found missing-route-handler
    :exceptions {:default safe-handler
                 :handlers {:kekkonen.core/dispatch missing-route-handler
-                           :kekkonen.ring/request request-validation-handler
+                           :kekkonen.core/request request-validation-handler
+                           :kekkonen.core/response response-validation-handler
                            :kekkonen.ring/parsing request-parsing-handler
+                           :kekkonen.ring/request request-validation-handler
                            :kekkonen.ring/response response-validation-handler}}})
 
 (defn wrap-api
