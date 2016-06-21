@@ -45,7 +45,7 @@
   (fn [_ data _]
     (f (-> data
            (select-keys [:value :type :error :in #_:execution-id #_:stage])
-           (update-in [:error] #(stringify (su/error-val %)))))))
+           (update-in [:error] #(stringify %))))))
 
 (def ^:private missing-route-handler (constantly (r/not-found)))
 (def ^:private request-validation-handler (coerce-error-handler r/bad-request))

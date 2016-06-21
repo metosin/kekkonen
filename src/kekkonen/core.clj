@@ -288,7 +288,7 @@
            :in in
            :value value
            :schema schema
-           :error coerced})))))
+           :error (su/error-val coerced)})))))
 
 (defn simple-coercion [matcher]
   (fn [context schema]
