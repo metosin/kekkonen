@@ -171,7 +171,7 @@ Start the server and browse to http://localhost:3000 and you should see the foll
 
 Clojure multimethods introduce mutable implicit state. With multimethods, by requiring a namespace `x` you
 could get an extra methods for a multimethod as a [side-effect](https://github.com/clojure/clojure/blob/bc186508ab98514780efbbddb002bf6fd2938aee/src/jvm/clojure/lang/MultiFn.java#L58-L68).
-For internal functionality (like in the cljs frontends), it's totally awesome and polymorfic.
+For internal functionality (like in the cljs frontends), it's totally awesome and polymorphic.
 
 For remoting, things should be explicit and secure. With Kekkonen, handler registration is explicit and security
 works like the UNIX directory structure: by not having access to namespace `:api.admin`, you can't have access
