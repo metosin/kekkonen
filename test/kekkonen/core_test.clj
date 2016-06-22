@@ -757,18 +757,19 @@
     ((comp remove-ab copy-ab-to-cd) {:a {:b 1}}) => {:c {:d 1}}))
 
 (fact "Interceptors"
-  (let [stop (constantly nil)]
-    (fact "functions can be expanded into interceptors"
-      (k/interceptor stop) => {:enter stop})
-    (fact "maps as interceptors"
-      (k/interceptor {:enter stop}) => {:enter stop}
-      (k/interceptor {:leave stop}) => {:leave stop}
-      (k/interceptor {:error stop}) => {:error stop}
-      (k/interceptor {:enter stop, :leave stop}) => {:enter stop, :leave stop}
-      (fact "invalid keys cause failure"
-        (k/interceptor {:enter stop, :whatever stop}) => throws?)
-      (fact "either enter or leave is required"
-        (k/interceptor {}) => throws?))))
+  (fact "functions can be expanded into interceptors"
+    (k/interceptor identity) => (contains {:enter identity}))
+  (fact "maps as interceptors"
+    (k/interceptor {:enter identity}) => (contains {:enter identity})
+    (k/interceptor {:leave identity}) => (contains {:leave identity})
+    (k/interceptor {:error identity}) => (contains {:error identity})
+    (k/interceptor {:enter identity, :leave identity}) => (contains {:enter identity, :leave identity})
+    (k/interceptor {:enter identity, :leave identity, :error identity}) => (contains {:enter identity, :leave identity, :error identity})
+
+    (fact "invalid keys cause failure"
+      (k/interceptor {:enter identity, :whatever identity}) => throws?)
+    (fact "either enter or leave is required"
+      (k/interceptor {}) => throws?)))
 
 (fact "Interceptors"
   (let [->> (fn [x] (fn [ctx] (update ctx :x #(str % x))))

@@ -19,7 +19,7 @@
                       (s/optional-key :parameters) {[s/Keyword] [s/Keyword]}
                       (s/optional-key :allow-method-override?) s/Bool}}
    :coercion {s/Keyword k/Function}
-   :interceptors [k/FunctionOrInterceptor]})
+   :interceptors [k/FunctionOrInterceptorLike]})
 
 (s/def +default-options+ :- Options
   ; TODO: no types in default bindings?

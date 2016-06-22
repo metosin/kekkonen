@@ -28,19 +28,21 @@
 ;; Interceptors
 ;;
 
-(s/defschema Interceptor
+(defrecord Interceptor [name input output enter leave error])
+
+(s/defschema InterceptorLike
   (s/constrained
-    {(s/optional-key :name) s/Str
+    {(s/optional-key :name) (s/maybe (s/cond-pre s/Keyword s/Str s/Symbol))
      (s/optional-key :input) s/Any
      (s/optional-key :output) s/Any
-     (s/optional-key :enter) Function
-     (s/optional-key :leave) Function
-     (s/optional-key :error) Function}
+     (s/optional-key :enter) (s/maybe Function)
+     (s/optional-key :leave) (s/maybe Function)
+     (s/optional-key :error) (s/maybe Function)}
     (fn [{:keys [enter leave error]}] (or enter leave error))
-    'enter-or-leave-or-error-required))
+    'enter-leave-or-error-required))
 
-(s/defschema FunctionOrInterceptor
-  (s/conditional fn? Function :else Interceptor))
+(s/defschema FunctionOrInterceptorLike
+  (s/conditional fn? Function :else InterceptorLike))
 
 ;;
 ;; Context & Handler
@@ -356,16 +358,17 @@
     interceptor))
 
 (defn interceptor [interceptor-or-a-function]
-  (s/validate
-    Interceptor
-    (->
-      (cond
-        (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
-        (map? interceptor-or-a-function) interceptor-or-a-function
-        :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))
-      with-input-schema
-      with-input-coercion
-      with-string-name)))
+  (map->Interceptor
+    (s/validate
+      InterceptorLike
+      (->
+        (cond
+          (fn? interceptor-or-a-function) {:enter interceptor-or-a-function}
+          (map? interceptor-or-a-function) interceptor-or-a-function
+          :else (throw (ex-info (str "Can't coerce into an interceptor: " interceptor-or-a-function) {})))
+        with-input-schema
+        with-input-coercion
+        with-string-name))))
 
 (defn interceptors [data]
   (assert (vector? data) "interceptors must be defined as a vector")
@@ -565,7 +568,7 @@
   {:handlers s/Any
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
-   (s/optional-key :interceptors) [FunctionOrInterceptor]
+   (s/optional-key :interceptors) [FunctionOrInterceptorLike]
    (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
                                (s/optional-key :output) s/Any}
    (s/optional-key :meta) (s/cond-pre [[(s/one s/Keyword 'key) Function]] KeywordMap)
