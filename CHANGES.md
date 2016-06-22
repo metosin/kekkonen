@@ -10,7 +10,9 @@
 * Exceptions raised in the interceptor chain are rethrown as wrapped (Pedestal) exceptions,
 containing extra meta-data of the failed step: `:execution-id`, `:stage`, `:interceptor`, `:exception-type` and `:exception`.
   * extra fields are removed in the api exception handling
-* Interceptors are pre-compiled in all layers for simplicity and better perf.
+* `kekkonen.core/request` & `kekkonen.core/response` exception handeled gracefully with the `api`s
+* Createing an `api` doesn't force schema validation by default
+* Interceptors are pre-compiled into Records in all layers for simplicity and better perf.
 * Remove the following excess meta-data from handlers: 
   * `:ns-meta`, `:all-meta`, `:handler-input` & `:user-input`
 * Remove `:interceptors` from the `Dispatcher`, as they are now precompiled into handlers
