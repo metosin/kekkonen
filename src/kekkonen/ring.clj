@@ -36,9 +36,12 @@
               :body-params rsc/json-schema-coercion-matcher}
    :interceptors []})
 
-(def +ring-meta+
-  {::disable-mode nil
-   ::method nil})
+(def +ring-dispatcher-options+
+  {:coercion {:input nil
+              :output nil}
+   :meta {::disable-mode nil
+          ::method nil
+          :responses nil}})
 
 ;;
 ;; Internals
@@ -218,7 +221,7 @@
   ([dispatcher :- Dispatcher]
     (ring-handler dispatcher {}))
   ([dispatcher :- Dispatcher, options :- k/KeywordMap]
-    (let [options (-> (kc/deep-merge +default-options+ options)
+    (let [options (-> (kc/deep-merge-map-like +default-options+ options)
                       (update :interceptors (partial mapv k/interceptor)))
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
           router (HashMap. ^Map (p/for-map [handler (k/all-handlers dispatcher nil)

@@ -7,7 +7,8 @@
             [schema.core :as s]
             [ring.util.http-response :refer [ok]]
             [ring.util.http-predicates :as hp]
-            [plumbing.core :as p]))
+            [plumbing.core :as p]
+            [kekkonen.common :as kc]))
 
 (p/defnk ^:handler plus
   [[:request [:query-params x :- s/Int, y :- s/Int]]]
@@ -21,7 +22,10 @@
 (facts "wrap-exceptions"
   (let [app (mw/wrap-exceptions
               (r/ring-handler
-                (k/dispatcher {:handlers {:api [#'plus #'responsez]}}))
+                (k/dispatcher
+                  (kc/merge-map-like
+                    r/+ring-dispatcher-options+
+                    {:handlers {:api [#'plus #'responsez]}})))
               (:exceptions mw/+default-options+))]
 
     (fact "request coercion errors"

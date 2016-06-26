@@ -469,7 +469,6 @@
                                                [:summary nil]
                                                [:description nil]
                                                [:no-doc nil]
-                                               [:responses nil]
                                                [::inc inc*]
                                                [::times times*]])
 

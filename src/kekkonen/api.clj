@@ -15,8 +15,7 @@
 
 (s/def +default-options+ :- Options
   {:core (-> k/+default-options+
-             (assoc :coercion {:input nil, :output nil})
-             (update :meta kc/merge-map-like r/+ring-meta+))
+             (kc/merge-map-like r/+ring-dispatcher-options+))
    :api {:handlers r/+kekkonen-handlers+}
    :ring r/+default-options+
    :mw mw/+default-options+

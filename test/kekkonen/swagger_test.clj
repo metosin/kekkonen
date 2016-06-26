@@ -5,7 +5,8 @@
             [schema.core :as s]
             [ring.util.http-response :refer [ok]]
             [plumbing.core :as p]
-            [kekkonen.ring :as r]))
+            [kekkonen.ring :as r]
+            [kekkonen.common :as kc]))
 
 (p/defnk ^:handler echo
   {:summary "summary"
@@ -21,7 +22,10 @@
 
 (fact "swagger-docs"
   (let [dispatcher (k/transform-handlers
-                     (k/dispatcher {:handlers {:api {:admin #'echo}}})
+                     (k/dispatcher
+                       (kc/merge-map-like
+                         r/+ring-dispatcher-options+
+                         {:handlers {:api {:admin #'echo}}}))
                      (partial #'r/attach-ring-meta r/+default-options+))
         handlers (k/available-handlers dispatcher nil {})
 
@@ -55,7 +59,10 @@
 
 (facts "swagger-handler"
   (let [dispatcher (k/transform-handlers
-                     (k/dispatcher {:handlers {:api {:admin #'echo}}})
+                     (k/dispatcher
+                       (kc/merge-map-like
+                         r/+ring-dispatcher-options+
+                         {:handlers {:api {:admin #'echo}}}))
                      (partial #'r/attach-ring-meta r/+default-options+))
         swagger-handler (ks/swagger-handler {} {:spec "swagger.json", :info {:version "1.2.3"}})]
 

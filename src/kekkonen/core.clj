@@ -583,9 +583,7 @@
    :meta {:interceptors interceptors
           :summary nil
           :description nil
-          :no-doc nil
-          ;; TODO: should this be defined in kekkonen.ring?
-          :responses nil}})
+          :no-doc nil}})
 
 (s/defn dispatcher :- Dispatcher
   "Creates a Dispatcher"

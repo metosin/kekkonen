@@ -5,7 +5,8 @@
             [midje.sweet :refer :all]
             [schema.core :as s]
             [ring.util.http-response :refer [ok]]
-            [plumbing.core :as p]))
+            [plumbing.core :as p]
+            [kekkonen.common :as kc]))
 
 (facts "uri->action"
   (#'r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
@@ -32,7 +33,10 @@
 
 (facts "request routing"
   (let [app (r/ring-handler
-              (k/dispatcher {:handlers {:api [#'ping #'snoop]}}))]
+              (k/dispatcher
+                (kc/merge-map-like
+                  r/+ring-dispatcher-options+
+                  {:handlers {:api [#'ping #'snoop]}})))]
 
     (fact "non matching route returns nil"
       (app {:uri "/" :request-method :post}) => nil)
@@ -79,7 +83,10 @@
 
 (facts "coercion"
   (let [app (r/ring-handler
-              (k/dispatcher {:handlers {:api [#'plus #'divide #'power #'echo #'response]}}))]
+              (k/dispatcher
+                (kc/merge-map-like
+                  r/+ring-dispatcher-options+
+                  {:handlers {:api [#'plus #'divide #'power #'echo #'response]}})))]
 
     (fact "query-params"
 
