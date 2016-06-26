@@ -31,18 +31,17 @@
 (defrecord Interceptor [name input output enter leave error])
 
 (s/defschema InterceptorLike
-  (s/constrained
-    {(s/optional-key :name) (s/maybe (s/cond-pre s/Keyword s/Str s/Symbol))
-     (s/optional-key :input) s/Any
-     (s/optional-key :output) s/Any
-     (s/optional-key :enter) (s/maybe Function)
-     (s/optional-key :leave) (s/maybe Function)
-     (s/optional-key :error) (s/maybe Function)}
-    (fn [{:keys [enter leave error]}] (or enter leave error))
-    'enter-leave-or-error-required))
-
-(s/defschema FunctionOrInterceptorLike
-  (s/conditional fn? Function :else InterceptorLike))
+  (s/conditional
+    fn? Function
+    :else (s/constrained
+            {(s/optional-key :name) (s/maybe (s/cond-pre s/Keyword s/Str s/Symbol))
+             (s/optional-key :input) s/Any
+             (s/optional-key :output) s/Any
+             (s/optional-key :enter) (s/maybe Function)
+             (s/optional-key :leave) (s/maybe Function)
+             (s/optional-key :error) (s/maybe Function)}
+            (fn [{:keys [enter leave error]}] (or enter leave error))
+            'enter-leave-or-error-required)))
 
 ;;
 ;; Context & Handler
@@ -568,7 +567,7 @@
   {:handlers s/Any
    (s/optional-key :context) KeywordMap
    (s/optional-key :type-resolver) Function
-   (s/optional-key :interceptors) [FunctionOrInterceptorLike]
+   (s/optional-key :interceptors) [InterceptorLike]
    (s/optional-key :coercion) {(s/optional-key :input) (s/maybe KeywordMap)
                                (s/optional-key :output) s/Any}
    (s/optional-key :meta) (s/cond-pre [[(s/one s/Keyword 'key) Function]] KeywordMap)
