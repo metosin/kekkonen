@@ -330,7 +330,7 @@
 ;; Interceptors
 ;;
 
-(defn- prepare [context dispatcher handler mode]
+(defn- initialize [context dispatcher handler mode]
   (let [ctx (assoc (kc/deep-merge (:context dispatcher) context)
               ::dispatcher dispatcher
               ::handler handler
@@ -405,7 +405,7 @@
 (defn dispatch [dispatcher mode action context]
   (if-let [{:keys [interceptors] :as handler} (some-handler dispatcher action)]
     (let [context (-> context
-                      (prepare dispatcher handler mode)
+                      (initialize dispatcher handler mode)
                       (interceptor/enqueue interceptors)
                       (interceptor/execute))]
       (if (contains? context :response)
