@@ -544,8 +544,8 @@
                        input (apply kc/merge-map-schemas (:input h) (keep :input interceptors))]
 
                    (merge h {:ns ns
-                             :interceptors interceptors
-                             :input (if (seq input) input s/Any)
+                                         :interceptors interceptors
+                                         :input (if (seq input) input s/Any)
                              :action action})))
         traverse (fn traverse [x m]
                    (flatten
@@ -605,7 +605,7 @@
                                       (->> handlers
                                            (p/map-vals f)
                                            (filter (p/fn-> second))
-                                           (into {})))))
+                                           (into (empty handlers))))))
 
 (s/defn inject
   "Injects handlers into an existing Dispatcher"
