@@ -105,12 +105,13 @@
                   (:methods type-config))
         input-schema (-> (:input handler)
                          (ring-input-schema parameters)
-                         (cond-> (not (get-in handler [:meta ::disable-mode])) attach-mode-parameter))]
-    (assoc handler :ring {:type-config type-config
+                         (cond-> (not (get-in handler [:meta ::disable-mode])) attach-mode-parameter))
+        meta {:type-config type-config
                           :methods methods
-                          :coercion (ring-coercion parameters coercion)
+              :coercion (ring-coercion parameters coercion)
                           :uri (handler-uri handler)
-                          :input input-schema})))
+              :input input-schema}]
+    (assoc handler :ring meta)))
 
 (defn- uri-without-context
   "Extracts the uri from the request but dropping the context"
