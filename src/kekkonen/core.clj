@@ -301,7 +301,7 @@
       (reduce
         (fn [ctx [ks coercion]]
           (if-let [coercion-schema (get-in schema ks)]
-            (assoc-in ctx ks (coercion coercion-schema (get-in ctx ks)))
+            (update-in ctx ks (partial coercion coercion-schema))
             ctx))
         context coercions))))
 
