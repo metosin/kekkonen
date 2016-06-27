@@ -44,7 +44,7 @@ Quickstart: `lein new kekkonen kakkonen`
 ; => "hello world"
 ```
 
-## Hello World (ring-based CQRS API)
+## Hello World (ring-based Query API)
 
 ```clj
 (require '[kekkonen.cqrs :refer :all])
@@ -56,53 +56,15 @@ Quickstart: `lein new kekkonen kakkonen`
   (success (str "Hello, " (-> ctx :data :name))))
 
 (server/run-server
-  (cqrs-api {:core {:handlers {:api #'hello}}})
-  {:port 3000})
-```
-
-## Stateful math with Schema & Plumbing
-
-```clj
-(require '[schema.core :as s])
-(require '[plumbing.core :as p])
-
-(p/defnk ^:command inc! [counter]
-  (success (swap! counter inc)))
-
-(p/defnk ^:query get-sum
-  "sums up parameters + the current counter value"
-  [[:data x :- s/Int, y :- s/Int] counter]
-  (success (+ x y @counter)))
-
-(server/run-server
-  (cqrs-api {:core {:handlers {:api {:math [#'inc! #'get-sum]}}
-                    :context {:counter (atom 0)}}})
+  (cqrs-api {:core {:handlers #'hello}}})
   {:port 4000})
 ```
 
-More examples at [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples) and
-info in the [Wiki](https://github.com/metosin/kekkonen/wiki/Basics).
+you can invoke the hello api with http://localhost:4000/hello?name=World
 
-# Roadmap
+## CQRS API with Swagger Docs
 
-Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest things:
-
-* Move fully to the interceptor -model
-* Create namespaces with handlers from external sources (db, file, [actors](https://github.com/puniverse/pulsar))
-* Adapter for Websockets
-* (ClojureScript) api-docs beyond Swagger
-* Support for Om Next Remotes
-* Clojure(Script) client & project template (re-kekkonen)
-* Opinionated CQRS reference implementation, with eventing
-* Graph-based dependency management
-* Handler mutations & hot-swapping
-* Go Async
-
-# A More complete example
-
-## Creating an API
-
-```clojure
+```clj
 (ns example.api
   (:require [org.httpkit.server :as server]
             [kekkonen.cqrs :refer :all]
@@ -136,8 +98,7 @@ Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest 
   [[:data x :- s/Int, y :- s/Int]]
   (success {:result (+ x y)}))
 
-(defnk ^:command inc!
-  [counter]
+(defnk ^:command inc! [counter]
   (success {:result (swap! counter inc)}))
 
 ;;
@@ -158,12 +119,29 @@ Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest 
 ;;
 
 (comment
-  (server/run-server #'app {:port 5000}))
+  (server/run-server #'app {:port 3000}))
 ```
 
-Start the server and browse to http://localhost:3000 and you should see the following:
+Start the server and browse to http://localhost:3000/api-docs and you should see the following:
 
 ![swagger-example](https://raw.githubusercontent.com/wiki/metosin/kekkonen/swagger-example.png)
+
+More examples at [`/examples`](https://github.com/metosin/kekkonen/tree/master/examples) and
+info in the [Wiki](https://github.com/metosin/kekkonen/wiki/Basics).
+
+# Roadmap
+
+Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest things:
+
+* Create namespaces with handlers from external sources (db, file, [actors](https://github.com/puniverse/pulsar))
+* Adapter for Websockets
+* (ClojureScript) api-docs beyond Swagger
+* Support for Om Next Remotes
+* Clojure(Script) client & project template (re-kekkonen)
+* Opinionated CQRS reference implementation, with eventing
+* Graph-based dependency management
+* Handler mutations & hot-swapping
+* Go Async
 
 # Thinking aloud
 
