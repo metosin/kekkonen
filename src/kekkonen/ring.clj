@@ -65,7 +65,7 @@
                             :when matcher]
                         [[:request k] (fn [schema value]
                                         (k/coerce! schema matcher (or value {}) k ::request))]))]
-      (k/multi-coercion
+      (k/coercion
         (if parameters
           (reduce kc/copy-to-from coercions parameters)
           coercions)))))

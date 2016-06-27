@@ -1024,8 +1024,7 @@
   (let [str->long-matcher {s/Int (fn [x] (if (string? x) (Long/parseLong x) x))}
         str->long-coercion (fn [schema value]
                              (k/coerce! schema str->long-matcher value ..in.. ..type..))
-        single-coercion (k/simple-coercion str->long-matcher)
-        multi-coercion (k/multi-coercion {:data str->long-coercion})
+        coercion (k/coercion {:data str->long-coercion})
         handler (k/handler
                   {:name :test
                    :output {:value s/Int}
@@ -1043,17 +1042,11 @@
 
           (fact "with request-coercion on"
             (k/invoke d :api/test {:data {:value "123"}
-                                   ::k/coercion multi-coercion}) => {:value 123}
-
-            (k/invoke d :api/test {:data {:value "123"}
-                                   ::k/coercion single-coercion}) => {:value 123})
+                                   ::k/coercion coercion}) => {:value 123})
 
           (fact "with ineffective request-coercion"
             (k/invoke d :api/test {:data {:value false}
-                                   ::k/coercion multi-coercion}) => (throws? {:in ..in.., :type ..type..})
-
-            (k/invoke d :api/test {:data {:value false}
-                                   ::k/coercion single-coercion}) => input-coercion-error?)))
+                                   ::k/coercion coercion}) => (throws? {:in ..in.., :type ..type..}))))
 
       (facts "witn input coercion off"
         (let [d (k/dispatcher {:handlers {:api handler}
@@ -1075,17 +1068,11 @@
 
         (fact "with request-coercion on"
           (k/invoke d :api/test {:data {:value "123"}
-                                 ::k/coercion multi-coercion}) => {:value 123}
-
-          (k/invoke d :api/test {:data {:value "123"}
-                                 ::k/coercion single-coercion}) => {:value 123})
+                                 ::k/coercion coercion}) => {:value 123})
 
         (fact "with ineffective request-coercion"
           (k/invoke d :api/test {:data {:value false}
-                                 ::k/coercion multi-coercion}) => (throws? {:in ..in.., :type ..type..})
-
-          (k/invoke d :api/test {:data {:value false}
-                                 ::k/coercion single-coercion}) => input-coercion-error?)))
+                                 ::k/coercion coercion}) => (throws? {:in ..in.., :type ..type..}))))
 
     (fact "automatic path coercion"
       (let [api (k/namespace {:name :api ::load-doc true})
@@ -1110,17 +1097,11 @@
 
         (fact "with request-coercion on"
           (k/invoke d :api/test {:data {:value "123"}
-                                 ::k/coercion multi-coercion}) => {:value 123}
-
-          (k/invoke d :api/test {:data {:value "123"}
-                                 ::k/coercion single-coercion}) => {:value 123})
+                                 ::k/coercion coercion}) => {:value 123})
 
         (fact "with ineffective request-coercion"
           (k/invoke d :api/test {:data {:value false}
-                                 ::k/coercion multi-coercion}) => (throws? {:in ..in.., :type ..type..})
-
-          (k/invoke d :api/test {:data {:value false}
-                                 ::k/coercion single-coercion}) => input-coercion-error?)))))
+                                 ::k/coercion coercion}) => (throws? {:in ..in.., :type ..type..}))))))
 
 (fact "printing it"
   (pr-str (k/dispatcher {:handlers {}})) => "#<Dispatcher>")

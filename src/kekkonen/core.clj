@@ -291,19 +291,15 @@
            :schema schema
            :error (su/error-val coerced)})))))
 
-(defn simple-coercion [matcher]
-  (fn [context schema]
-    (coerce! schema matcher context nil ::request)))
-
-(defn multi-coercion [key->coercion]
-  (let [coercions (pm/flatten key->coercion)]
+(defn coercion [data]
+  (let [ks->coerce (pm/flatten data)]
     (fn [context schema]
       (reduce
-        (fn [ctx [ks coercion]]
+        (fn [ctx [ks coerce]]
           (if-let [coercion-schema (get-in schema ks)]
-            (update-in ctx ks (partial coercion coercion-schema))
+            (update-in ctx ks (partial coerce coercion-schema))
             ctx))
-        context coercions))))
+        context ks->coerce))))
 
 (defn input-coerce!
   ([context schema]
