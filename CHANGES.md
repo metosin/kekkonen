@@ -1,4 +1,4 @@
-## 0.3.0-SNAPSHOT
+## 0.3.0 (27.6.2016)
 
 * **BREAKING**: Removed type-level interceptors from ring-adapter, use normal interceptors instead.
 * **BREAKING**: Ring request-parameters are now assoc-in'd (into `:data`) instead of deep-merging. For speed.
