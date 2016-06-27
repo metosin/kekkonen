@@ -387,18 +387,21 @@
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action: " action) {:type ::dispatch, :value action})))
 
+(def ^:private validate-or-invoke? #{:validate :invoke})
+(def ^:private invoke? (partial = :invoke))
+
 (def ^:private execute-handler
   {:name ::handle
    :enter (fn [context]
             (let [{:keys [handle input output]} (::handler context)
                   mode (::mode context)
-                  dispatcher (::dispatcher context)]
-              (let [context (if (#{:validate :invoke} mode)
-                              (input-coerce! context input) context)
-                    response (if (= :invoke mode)
+                  {{input-coercion :input, output-coercion :output} :coercion} (::dispatcher context)]
+              (let [context (if (validate-or-invoke? mode)
+                              (input-coerce! context input input-coercion) context)
+                    response (if (invoke? mode)
                                (as-> (handle context) response
-                                     (if (and output (-> dispatcher :coercion :output))
-                                       (coerce! output (-> dispatcher :coercion :output) response nil ::response)
+                                     (if (and output output-coercion)
+                                       (coerce! output output-coercion response nil ::response)
                                        response)))]
                 (assoc context :response response))))})
 
