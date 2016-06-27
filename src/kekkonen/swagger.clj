@@ -6,8 +6,7 @@
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
             [plumbing.core :as p]
-            [kekkonen.ring :as r]
-            [clojure.string :as str]))
+            [kekkonen.ring :as r]))
 
 (s/defschema Options
   {(s/optional-key :ui) (s/maybe s/Str)
@@ -19,11 +18,11 @@
 (defn transform-handler
   "Transforms a handler into ring-swagger path->method->operation map."
   [handler]
-  (let [{:keys [description ns ring] {:keys [summary responses no-doc]} :meta} handler
+  (let [{:keys [description ns ring] {:keys [summary responses produces consumes no-doc]} :meta} handler
         {:keys [parameters input methods uri]} ring
-        ;; deep-merge back the mappings to get right request requirements
-        input (reduce kc/deep-merge-from-to input parameters)
-        {:keys [body-params query-params path-params header-params]} (:request input)]
+        ;; copy back the mappings to get right request requirements
+        input (reduce kc/copy-from-to input parameters)
+        {:keys [body-params query-params path-params header-params multipart-params]} (:request input)]
 
     ;; discard handlers with :no-doc or without :ring metadata
     (if (and (not no-doc) ring)
@@ -34,11 +33,14 @@
                                        :summary description})
                       (if summary {:summary summary})
                       (if responses {:responses responses})
+                      (if produces {:produces produces})
+                      (if consumes {:consumes consumes})
                       {:parameters (kc/strip-nil-values
                                      {:body body-params
                                       :query query-params
                                       :path path-params
-                                      :header header-params})}))})))
+                                      :header header-params
+                                      :formData multipart-params})}))})))
 
 (s/defn ring-swagger :- rs2/Swagger
   "Creates a ring-swagger object out of handlers and extra info"
