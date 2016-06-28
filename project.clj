@@ -13,7 +13,7 @@
                  [metosin/ring-swagger "0.22.9"]
                  [metosin/ring-swagger-ui "2.1.4-0"]
                  [metosin/ring-http-response "0.7.0"]
-                 [ring-middleware-format "0.7.0"]
+                 [ring-middleware-format "0.8.0"]
 
                  ;; client stuff, separate module?
                  [clj-http "2.2.0"]]

@@ -1,3 +1,12 @@
+
+## UNRELEASED
+
+* updated dependencies:
+
+```clj
+[metosin/ring-http-response "0.8.0"] is available but we use "0.7.0"
+```
+
 ## 0.3.1 (28.6.2016)
 
 * Alpha support for (ring-based) file uploads
