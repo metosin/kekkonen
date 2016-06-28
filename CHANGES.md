@@ -1,3 +1,27 @@
+## 0.3.1 (28.6.2016)
+
+* Alpha support for (ring-based) file uploads
+  * `kekkonen.upload/multipart-params` interceptor, uses `ring.middleware.multipart-params/multipart-params-request` (same options)
+  * `kekkonen.upload/TempFileUpload` & `kekkonen.upload/ByteArrayUpload` as swagger-aware types
+  * `:kekkonen.ring/consumes` & `:kekkonen.ring/produces` - meta-data, just for docs now
+  
+```clj
+(defnk upload
+  "upload a file to the server"
+  {:interceptors [[upload/multipart-params]]
+   :type ::ring/handler
+   ::ring/method :put
+   ::ring/consumes ["multipart/form-data"]}
+  [[:request [:multipart-params file :- upload/TempFileUpload]]]
+  (ok (dissoc file :tempfile)))
+
+(def app
+  (api
+    {:swagger {:ui "/api-docs"
+               :spec "/swagger.json"}
+     :api {:handlers {:http #'upload}}}))
+```
+
 ## 0.3.0 (27.6.2016)
 
 * **BREAKING**: Removed type-level interceptors from ring-adapter, use normal interceptors instead.
