@@ -8,7 +8,7 @@
 
 (s/defschema Options
   {:core k/KeywordMap
-   (s/optional-key :api) {:handlers k/KeywordMap}
+   (s/optional-key :api) {:handlers s/Any}
    (s/optional-key :ring) r/Options
    (s/optional-key :mw) k/KeywordMap
    (s/optional-key :swagger) ks/Options})

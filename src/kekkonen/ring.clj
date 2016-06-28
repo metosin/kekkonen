@@ -33,6 +33,7 @@
               :path-params rsc/query-schema-coercion-matcher
               :form-params rsc/query-schema-coercion-matcher
               :header-params rsc/query-schema-coercion-matcher
+              :multipart-params rsc/query-schema-coercion-matcher
               :body-params rsc/json-schema-coercion-matcher}
    :interceptors []})
 
@@ -41,6 +42,8 @@
               :output nil}
    :meta {::disable-mode nil
           ::method nil
+          ::consumes nil
+          ::produces nil
           :responses nil}})
 
 ;;

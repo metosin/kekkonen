@@ -5,14 +5,16 @@
             [schema.core :as s]
             [ring.util.http-response :refer [ok]]
             [plumbing.core :as p]
-            [kekkonen.ring :as r]
+            [kekkonen.ring :as ring]
             [kekkonen.common :as kc]))
 
 (p/defnk ^:handler echo
   {:summary "summary"
    :responses {200 {:schema {:x [s/Str]
                              :y s/Int
-                             :z s/Bool}}}}
+                             :z s/Bool}}}
+   ::ring/consumes ["application/json"]
+   ::ring/produces ["application/json"]}
   [[:request
     body-params :- {:country (s/enum :FI :CA)}
     [:query-params x :- [s/Str]]
@@ -24,9 +26,9 @@
   (let [dispatcher (k/transform-handlers
                      (k/dispatcher
                        (kc/merge-map-like
-                         r/+ring-dispatcher-options+
+                         ring/+ring-dispatcher-options+
                          {:handlers {:api {:admin #'echo}}}))
-                     (partial #'r/attach-ring-meta r/+default-options+))
+                     (partial #'ring/attach-ring-meta ring/+default-options+))
         handlers (k/available-handlers dispatcher nil {})
 
         swagger (ks/ring-swagger
@@ -50,6 +52,8 @@
                             :responses {200 {:schema {:x [s/Str]
                                                       :y s/Int
                                                       :z s/Bool}}}
+                            :consumes ["application/json"]
+                            :produces ["application/json"]
                             :summary "summary"
                             :tags [:api.admin]}}}})
 
@@ -61,9 +65,9 @@
   (let [dispatcher (k/transform-handlers
                      (k/dispatcher
                        (kc/merge-map-like
-                         r/+ring-dispatcher-options+
+                         ring/+ring-dispatcher-options+
                          {:handlers {:api {:admin #'echo}}}))
-                     (partial #'r/attach-ring-meta r/+default-options+))
+                     (partial #'ring/attach-ring-meta ring/+default-options+))
         swagger-handler (ks/swagger-handler {} {:spec "swagger.json", :info {:version "1.2.3"}})]
 
     (against-background [(k/get-dispatcher anything) => dispatcher]

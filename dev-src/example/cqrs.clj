@@ -3,7 +3,9 @@
             [kekkonen.cqrs :refer :all]
             [plumbing.core :refer [defnk]]
             [schema.core :as s]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [kekkonen.upload :as upload]
+            [kekkonen.ring :as ring]))
 
 ;;
 ;; Security
@@ -99,6 +101,15 @@
   [[:components counter]]
   (success {:result (swap! counter (partial + 10))}))
 
+(defnk upload
+  "upload a file to the server"
+  {:interceptors [[upload/multipart-params]]
+   :type ::ring/handler
+   ::ring/method :put
+   ::ring/consumes ["multipart/form-data"]}
+  [[:request [:multipart-params file :- upload/TempFileUpload]]]
+  (success (dissoc file :tempfile)))
+
 ;;
 ;; Application
 ;;
@@ -108,6 +119,7 @@
     {:swagger {:ui "/api-docs"
                :spec "/swagger.json"
                :data {:info {:title "Kekkonen"}}}
+     :api {:handlers {:http #'upload}}
      :core {:handlers {:api {:item [#'get-items #'add-item #'reset-items]
                              :calculator [#'plus #'times #'increment]
                              :security #'get-user

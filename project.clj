@@ -24,6 +24,8 @@
                                   [http-kit "2.1.19"]
                                   ; required when working with Java 1.6
                                   [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
+                                  ; uploads
+                                  [javax.servlet/servlet-api "2.5"]
                                   [midje "1.8.3"]]}
              :perf {:jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true"]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
