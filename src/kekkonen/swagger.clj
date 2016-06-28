@@ -6,7 +6,7 @@
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
             [plumbing.core :as p]
-            [kekkonen.ring :as r]))
+            [kekkonen.ring :as ring]))
 
 (s/defschema Options
   {(s/optional-key :ui) (s/maybe s/Str)
@@ -18,7 +18,7 @@
 (defn transform-handler
   "Transforms a handler into ring-swagger path->method->operation map."
   [handler]
-  (let [{:keys [description ns ring] {:keys [summary responses produces consumes no-doc]} :meta} handler
+  (let [{:keys [description ns ring] {:keys [summary responses ::ring/produces ::ring/consumes no-doc]} :meta} handler
         {:keys [parameters input methods uri]} ring
         ;; copy back the mappings to get right request requirements
         input (reduce kc/copy-from-to input parameters)
@@ -79,7 +79,7 @@
        :handle (fn [{:keys [request] :as context}]
                  (let [dispatcher (k/get-dispatcher context)
                        ns (some-> context :request :query-params :ns str keyword)
-                       handlers (k/available-handlers dispatcher ns (#'r/clean-context context))]
+                       handlers (k/available-handlers dispatcher ns (#'ring/clean-context context))]
                    (ok (swagger-object
                          (add-base-path request (ring-swagger handlers swagger))
                          (-> options :options :spec)))))})))

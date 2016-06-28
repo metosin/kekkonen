@@ -41,8 +41,8 @@
               :output nil}
    :meta {::disable-mode nil
           ::method nil
-          :consumes nil
-          :produces nil
+          ::consumes nil
+          ::produces nil
           :responses nil}})
 
 ;;

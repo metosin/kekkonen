@@ -106,7 +106,7 @@
   {:interceptors [[upload/multipart-params]]
    :type ::ring/handler
    ::ring/method :put
-   :consumes ["multipart/form-data"]}
+   ::ring/consumes ["multipart/form-data"]}
   [[:request [:multipart-params file :- upload/TempFileUpload]]]
   (success (dissoc file :tempfile)))
 
