@@ -1,6 +1,7 @@
 (ns sample.handler
-  (:require [plumbing.core :as p]
+  (:require [plumbing.core :refer [defnk]]
             [kekkonen.cqrs :refer :all]
+            [kekkonen.upload :as upload]
             [schema.core :as s]))
 
 (s/defschema Pizza
@@ -13,36 +14,51 @@
 ;; Handlers
 ;;
 
-(p/defnk ^:query ping []
+(defnk ^:query ping []
   (success {:ping "pong"}))
 
-(p/defnk ^:command echo-pizza
+(defnk ^:command echo-pizza
   "Echoes a pizza"
   {:responses {:default {:schema Pizza}}}
   [data :- Pizza]
   (success data))
 
-(p/defnk ^:query plus
+(defnk ^:query plus
   "playing with data"
   [[:data x :- s/Int, y :- s/Int]]
   (success (+ x y)))
 
-(p/defnk ^:command inc!
+(defnk ^:command inc!
   "a stateful counter"
-  [counter]
+  [[:state counter]]
   (success (swap! counter inc)))
+
+(defnk ^:command upload
+  "Upload a file to a server"
+  {:interceptors [[upload/multipart-params]]}
+  [[:state file]
+   [:request [:multipart-params upload :- upload/TempFileUpload]]]
+  (reset! file upload)
+  (success (dissoc upload :tempfile)))
+
+(defnk ^:query download
+  "Download the file from the server"
+  [[:state file]]
+  (let [{:keys [tempfile content-type filename]} @file]
+  (upload/response tempfile content-type filename)))
 
 ;;
 ;; Application
 ;;
 
-(p/defnk create [[:state counter]]
+(defn create [system]
   (cqrs-api
-    {:swagger {:ui "/api-docs"
+    {:swagger {:ui "/"
                :spec "/swagger.json"
-               :data {:info {:title "Kekkonen with Component"
+               :data {:info {:title "Kekkonen sample API"
                              :description "created with http://kekkonen.io"}}}
-     :core {:handlers {:api {:pizza #'echo-pizza
-                             :math [#'inc! #'plus]
-                             :ping #'ping}}
-            :context {:counter counter}}}))
+     :core {:handlers {:pizza #'echo-pizza
+                       :math [#'inc! #'plus]
+                       :ping #'ping
+                       :file [#'upload #'download]}
+            :context system}}))
