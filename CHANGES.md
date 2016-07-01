@@ -1,10 +1,12 @@
+## 0.3.2 (1.7.2016)
 
-## UNRELEASED
+* `kekkonen.upload/response` for easy returning of file-respones (uploads still Alpha)
 
 * updated dependencies:
 
 ```clj
 [metosin/ring-http-response "0.8.0"] is available but we use "0.7.0"
+[ring/ring-defaults "0.2.1"]
 ```
 
 ## 0.3.1 (28.6.2016)

@@ -4,7 +4,7 @@
             [ring.swagger.json-schema :as js]
             [ring.middleware.multipart-params :as multipart-params]
             [clojure.walk :as walk])
-  (:import [java.io File]))
+  (:import [java.io File ByteArrayInputStream]))
 
 (defn multipart-params
   ([]
@@ -43,3 +43,16 @@
   (->Upload {:filename s/Str
              :content-type s/Str
              :bytes s/Any}))
+
+(defn response
+  "Returns a file response out of File or byte[] content"
+  ([content content-type]
+   (response content content-type nil))
+  ([content content-type filename]
+   (let [body (if (instance? File content) content (ByteArrayInputStream. bytes))]
+     {:status 200
+      :headers (merge
+                 {"Content-Type" content-type}
+                 (if filename
+                   {"Content-Disposition" (str "inline; filename=\"" filename "\"")}))
+      :body body})))

@@ -1,4 +1,4 @@
-(defproject metosin/kekkonen "0.3.1"
+(defproject metosin/kekkonen "0.3.2"
   :description "A lightweight, remote (CQRS) API library for Clojure."
   :url "https://github.com/metosin/kekkonen"
   :license {:name "Eclipse Public License"
@@ -14,6 +14,7 @@
                  [metosin/ring-swagger-ui "2.1.4-0"]
                  [metosin/ring-http-response "0.8.0"]
                  [ring-middleware-format "0.7.0"]
+                 [ring/ring-defaults "0.2.1"]
 
                  ;; client stuff, separate module?
                  [clj-http "2.2.0"]]
