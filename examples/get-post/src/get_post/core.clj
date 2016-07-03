@@ -36,6 +36,7 @@
   "handles both requests"
   [get-params post-params request]
   (if (= (:request-method request) :get)
+    ; note - with-fn-validation is not thread safe
     (s/with-fn-validation (get-handler get-params))
     (s/with-fn-validation (post-handler post-params))))
 
