@@ -7,37 +7,37 @@
             [schema.core :as s]))
 
 (s/defschema GetInput
-             {:name                         s/Str
-              (s/optional-key :description) s/Str})
+  {:name                         s/Str
+   (s/optional-key :description) s/Str})
 
 ; GET http://localhost:3000/api/get-and-post?name=taras
 (s/defn get-handler
-        "Echoes a GetInput"
-        [data :- GetInput]
-        ; here is your handler
-        (cqrs/success data))
+  "Echoes a GetInput"
+  [data :- GetInput]
+  ; here is your handler
+  (cqrs/success data))
 
 (s/defschema PostInput
-             {:data s/Str})
+  {:data s/Str})
 
 ; POST http://localhost:3000/api/get-and-post {"data":"taras"}
 (s/defn post-handler
-        "Echoes a PostInput"
-        [data :- PostInput]
-        ; here is your handler
-        (cqrs/success data))
+  "Echoes a PostInput"
+  [data :- PostInput]
+  ; here is your handler
+  (cqrs/success data))
 
 (defnk ^:query simple-get
-       "handles get"
-       [data request]
-       (cqrs/success data))
+  "handles get"
+  [data request]
+  (cqrs/success data))
 
 (defnk ^:get-post get-and-post
-       "handles both requests"
-       [get-params post-params request]
-       (if (= (:request-method request) :get)
-         (s/with-fn-validation (get-handler get-params))
-         (s/with-fn-validation (post-handler post-params))))
+  "handles both requests"
+  [get-params post-params request]
+  (if (= (:request-method request) :get)
+    (s/with-fn-validation (get-handler get-params))
+    (s/with-fn-validation (post-handler post-params))))
 
 (defn interceptor [ctx]
   "logs incoming requests for us"
