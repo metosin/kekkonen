@@ -1,3 +1,12 @@
+## UNRELEASED
+
+* updated dependencies:
+
+```clj
+[prismatic/schema "1.1.3"] is available but we use "1.1.2"
+[frankiesardo/linked "1.2.7"] is available but we use "1.2.6"
+```
+
 ## 0.3.2 (1.7.2016)
 
 * `kekkonen.upload/response` for easy returning of file-respones (uploads still Alpha)

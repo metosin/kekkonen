@@ -6,8 +6,8 @@
             :distribution :repo
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.3"]
-                 [prismatic/schema "1.1.2"]
-                 [frankiesardo/linked "1.2.6"]
+                 [prismatic/schema "1.1.3"]
+                 [frankiesardo/linked "1.2.7"]
 
                  ;; http-stuff, separate module?
                  [metosin/ring-swagger "0.22.9"]
@@ -22,7 +22,7 @@
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.8.0"]
                                   [criterium "0.4.4"]
-                                  [http-kit "2.1.19"]
+                                  [http-kit "2.2.0"]
                                   ; required when working with Java 1.6
                                   [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
                                   ; uploads
