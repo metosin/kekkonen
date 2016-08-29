@@ -4,8 +4,9 @@
 
 ```clj
 [prismatic/schema "1.1.3"] is available but we use "1.1.2"
+[metosin/ring-swagger "0.22.10"] is available but we use "0.22.9"
 [metosin/ring-swagger-ui "2.2.2-0"] is available but we use "2.1.4-0"
-[frankiesardo/linked "1.2.7"] is available but we use "1.2.6"
+[frankiesardo/linked "1.2.8"] is available but we use "1.2.6"
 ```
 
 ## 0.3.2 (1.7.2016)

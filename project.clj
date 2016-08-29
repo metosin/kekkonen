@@ -7,10 +7,10 @@
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.3"]
                  [prismatic/schema "1.1.3"]
-                 [frankiesardo/linked "1.2.7"]
+                 [frankiesardo/linked "1.2.8"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.9"]
+                 [metosin/ring-swagger "0.22.10"]
                  [metosin/ring-swagger-ui "2.2.2-0"]
                  [metosin/ring-http-response "0.8.0"]
                  [ring-middleware-format "0.7.0"]
