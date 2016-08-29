@@ -1,5 +1,7 @@
 ## UNRELEASED
 
+* Ring-coercion is applied also for `:default`, fixes [#45](https://github.com/metosin/kekkonen/issues/45)
+
 * updated dependencies:
 
 ```clj

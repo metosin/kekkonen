@@ -76,6 +76,11 @@
   [[:request body-params :- {:value (s/either s/Str s/Int)}]]
   (ok body-params))
 
+(p/defnk ^:handler response-default
+  {:responses {:default {:schema {:value s/Str}}}}
+  [[:request body-params :- {:value (s/either s/Str s/Int)}]]
+  (ok body-params))
+
 (fact "internal schemas"
   (s/with-fn-validation
     (r/ring-handler
@@ -86,7 +91,7 @@
               (k/dispatcher
                 (kc/merge-map-like
                   r/+ring-dispatcher-options+
-                  {:handlers {:api [#'plus #'divide #'power #'echo #'response]}})))]
+                  {:handlers {:api [#'plus #'divide #'power #'echo #'response #'response-default]}})))]
 
     (fact "query-params"
 
@@ -139,6 +144,21 @@
               :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
 
         (app {:uri "/api/response"
+              :request-method :post
+              :body-params {:value 1}})
+
+        => (throws?
+             {:type :kekkonen.ring/response
+              :in :response
+              :value {:value 1}
+              :schema {:value s/Str}}))
+
+      (fact "with :default"
+        (app {:uri "/api/response-default"
+              :request-method :post
+              :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
+
+        (app {:uri "/api/response-default"
               :request-method :post
               :body-params {:value 1}})
 
