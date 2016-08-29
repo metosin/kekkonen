@@ -1,4 +1,4 @@
-## UNRELEASED
+## 0.3.3 (29.8.2016)
 
 * Ring-coercion is applied also for `:default`, fixes [#45](https://github.com/metosin/kekkonen/issues/45)
 
