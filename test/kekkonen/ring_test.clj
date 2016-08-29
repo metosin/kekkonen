@@ -133,19 +133,20 @@
             :body-params {:name "Pizza" :size "L"}}) => (ok {:name "Pizza" :size :L}))
 
     (fact "response coercion"
-      (app {:uri "/api/response"
-            :request-method :post
-            :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
+      (fact "with status code"
+        (app {:uri "/api/response"
+              :request-method :post
+              :body-params {:value "Pizza"}}) => (ok {:value "Pizza"})
 
-      (app {:uri "/api/response"
-            :request-method :post
-            :body-params {:value 1}})
+        (app {:uri "/api/response"
+              :request-method :post
+              :body-params {:value 1}})
 
-      => (throws?
-           {:type :kekkonen.ring/response
-            :in :response
-            :value {:value 1}
-            :schema {:value s/Str}}))
+        => (throws?
+             {:type :kekkonen.ring/response
+              :in :response
+              :value {:value 1}
+              :schema {:value s/Str}})))
 
     (fact "validation"
 
