@@ -66,7 +66,7 @@
 ;;
 
 (defn join [& x-or-xs]
-  (flatten x-or-xs))
+  (vec (keep identity (flatten x-or-xs))))
 
 (defn vectorize [x]
   (if (sequential? x) (vec x) [x]))

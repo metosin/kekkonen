@@ -91,9 +91,9 @@
     false))
 
 (defn enqueue [context interceptors]
-  (update-in context [::queue]
-             (fnil into PersistentQueue/EMPTY)
-             interceptors))
+  (update context ::queue
+          (fnil into PersistentQueue/EMPTY)
+          interceptors))
 
 (defn terminate [context]
   (dissoc context ::queue))

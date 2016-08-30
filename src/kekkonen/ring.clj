@@ -73,18 +73,6 @@
           (reduce kc/copy-to-from coercions parameters)
           coercions)))))
 
-(defn- coerce-response! [response handler options]
-  (if-let [responses (-> handler :meta :responses)]
-    (if-let [matcher (-> options :coercion :body-params)]
-      (let [status (or (:status response) 200)]
-        (if-let [schema (or (-> responses (get status) :schema)
-                            (-> responses :default :schema))]
-          (let [coerced (k/coerce! schema matcher (:body response) :response ::response)]
-            (assoc response :body coerced))
-          response))
-      response)
-    response))
-
 (defn- ring-input-schema [input parameters]
   (if parameters
     (reduce kc/move-from-to input parameters)
@@ -97,7 +85,7 @@
     (update-in schema [:request :header-params] merge {key value} (if-not extra-keys-schema {s/Any s/Any}))))
 
 (defn- request-mode [request]
-  (if (= (get-in request [:headers mode-parameter]) "validate")
+  (if (= "validate" (-> request :headers (get mode-parameter)))
     :validate :invoke))
 
 (defn- attach-ring-meta [options handler]
@@ -111,9 +99,9 @@
                          (ring-input-schema parameters)
                          (cond-> (not (get-in handler [:meta ::disable-mode])) attach-mode-parameter))
         meta {:type-config type-config
-                          :methods methods
+              :methods methods
               :coercion (ring-coercion parameters coercion)
-                          :uri (handler-uri handler)
+              :uri (handler-uri handler)
               :input input-schema}]
     (assoc handler :ring meta)))
 
@@ -124,23 +112,50 @@
     (.substring uri (.length context))
     uri))
 
-(defn- copy-parameters [handler ctx]
-  (reduce kc/copy-to-from ctx (-> handler :ring :type-config :parameters)))
-
-(defn- set-coercion [handler ctx]
-  (assoc ctx ::k/coercion (-> handler :ring :coercion)))
+(defn- copy-parameters [ctx parameters]
+  (reduce-kv
+    (fn [acc to from]
+      (let [value (get-in acc from)]
+        (assoc-in acc to value)))
+    ctx
+    parameters))
 
 (defn- prepare [handler]
-  {:enter (fn [ctx]
-            (->> ctx
-                 (set-coercion handler)
-                 (copy-parameters handler)))})
+  (let [parameters (-> handler :ring :type-config :parameters)
+        coercion (-> handler :ring :coercion)]
+    {:enter (fn [ctx]
+              (-> ctx
+                  (assoc ::k/coercion coercion)
+                  (copy-parameters parameters)))}))
 
-(defn- coerce-response [options]
-  {:leave (fn [{:keys [::k/handler ::k/mode] :as ctx}]
-            (if (not= :invoke mode)
-              (update ctx :response ok)
-              (update ctx :response #(coerce-response! % handler options))))})
+;;
+;; Response Coercion
+;;
+
+(defn- get-response-schema [responses status]
+  (or (-> responses (get status :default) :schema)
+      (-> responses :default :schema)))
+
+(defn- coerce-response [response responses matcher]
+  (let [status (get response :status 200)]
+    (if-let [schema (get-response-schema responses status)]
+      (let [coerced (k/coerce! schema matcher (:body response) :response ::response)]
+        (assoc response :body coerced))
+      response)))
+
+(defn- response-coercer [handler options]
+  (let [responses (-> handler :meta :responses)
+        matcher (-> options :coercion :body-params)
+        coerce #(coerce-response % handler options)]
+    (if (and responses matcher)
+      {:leave (fn [ctx]
+                (if (not= :invoke (::k/mode ctx))
+                  (update ctx :response ok)
+                  (update ctx :response coerce)))})))
+
+;;
+;;
+;;
 
 (defn- clean-context [context]
   (-> context
@@ -233,14 +248,14 @@
                                             :let [interceptors (kc/join
                                                                  (prepare handler)
                                                                  (:interceptors options)
-                                                                 (coerce-response options))]]
+                                                                 (response-coercer handler options))]]
                                   (-> handler :ring :uri) [handler interceptors]))]
       ;; the ring handler
       (fn [{:keys [request-method] :as request}]
         ;; match a handlers based on uri and context
         (if-let [[{:keys [action ring]} interceptors] (.get router (uri-without-context request))]
           ;; only allow calls to ring-mapped handlers with matching method
-          (if (some-> ring :methods (contains? request-method))
+          (if ((:methods ring) request-method)
             (let [mode (request-mode request)]
               (-> {:request request}
                   (interceptor/enqueue interceptors)

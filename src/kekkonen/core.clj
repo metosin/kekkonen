@@ -292,14 +292,15 @@
            :error (su/error-val coerced)})))))
 
 (defn coercion [data]
-  (let [ks->coerce (pm/flatten data)]
+  (let [ks->coerce (into {} (pm/flatten data))]
     (fn [context schema]
-      (reduce
-        (fn [ctx [ks coerce]]
+      (reduce-kv
+        (fn [ctx ks coerce]
           (if-let [coercion-schema (get-in schema ks)]
             (update-in ctx ks (partial coerce coercion-schema))
             ctx))
-        context ks->coerce))))
+        context
+        ks->coerce))))
 
 (defn input-coerce!
   ([context schema]
@@ -318,7 +319,8 @@
                  (let [schema (select-keys schema [k])
                        schema (if (seq schema) schema s/Any)]
                    (merge ctx (coerce! schema matcher (select-keys ctx [k]) nil ::request))))
-               context key->matcher)
+               context
+               key->matcher)
              context))
      context)))
 
@@ -378,7 +380,7 @@
 (s/defn some-handler :- (s/maybe Handler)
   "Returns a handler or nil"
   [dispatcher, action :- s/Keyword]
-  (get-in dispatcher [:handlers action]))
+  (get (:handlers dispatcher) action))
 
 (defn- invalid-action! [action]
   (throw (ex-info (str "Invalid action: " action) {:type ::dispatch, :value action})))
@@ -415,7 +417,7 @@
 (s/defn check
   "Checks an action handler with the given context."
   ([dispatcher :- Dispatcher, action :- s/Keyword]
-    (check dispatcher action {}))
+    (dispatch dispatcher :check action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
     (dispatch dispatcher :check action context)))
 
@@ -423,14 +425,14 @@
   "Checks if context is valid for the handler (without calling the body).
   Returns nil or throws an exception."
   ([dispatcher :- Dispatcher, action :- s/Keyword]
-    (validate dispatcher action {}))
+    (dispatch dispatcher :validate action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
     (dispatch dispatcher :validate action context)))
 
 (s/defn invoke
   "Invokes an action handler with the given context."
   ([dispatcher :- Dispatcher, action :- s/Keyword]
-    (invoke dispatcher action {}))
+    (dispatch dispatcher :invoke action {}))
   ([dispatcher :- Dispatcher, action :- s/Keyword, context :- Context]
     (dispatch dispatcher :invoke action context)))
 
@@ -543,8 +545,8 @@
                        input (apply kc/merge-map-schemas (:input h) (keep :input interceptors))]
 
                    (merge h {:ns ns
-                                         :interceptors interceptors
-                                         :input (if (seq input) input s/Any)
+                             :interceptors interceptors
+                             :input (if (seq input) input s/Any)
                              :action action})))
         traverse (fn traverse [x m]
                    (flatten
