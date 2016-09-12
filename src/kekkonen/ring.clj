@@ -9,8 +9,7 @@
             [plumbing.core :as p]
             [plumbing.map :as pm]
             [kekkonen.interceptor :as interceptor])
-  (:import [kekkonen.core Dispatcher]
-           [java.util HashMap Map]))
+  (:import [kekkonen.core Dispatcher]))
 
 (def ^:private mode-parameter "kekkonen.mode")
 
@@ -238,16 +237,16 @@
     (let [options (-> (kc/deep-merge-map-like +default-options+ options)
                       (update :interceptors (partial mapv k/interceptor)))
           dispatcher (k/transform-handlers dispatcher (partial attach-ring-meta options))
-          router (HashMap. ^Map (p/for-map [handler (k/all-handlers dispatcher nil)
-                                            :let [interceptors (kc/join
-                                                                 (prepare handler)
-                                                                 (:interceptors options)
-                                                                 (response-coercer handler options))]]
-                                  (-> handler :ring :uri) [handler interceptors]))]
+          router (p/for-map [handler (k/all-handlers dispatcher nil)
+                             :let [interceptors (kc/join
+                                                  (prepare handler)
+                                                  (:interceptors options)
+                                                  (response-coercer handler options))]]
+                   (-> handler :ring :uri) [handler interceptors])]
       ;; the ring handler
       (fn [{:keys [request-method] :as request}]
         ;; match a handlers based on uri and context
-        (if-let [[{:keys [action ring]} interceptors] (.get router (uri-without-context request))]
+        (if-let [[{:keys [action ring]} interceptors] (router (uri-without-context request))]
           ;; only allow calls to ring-mapped handlers with matching method
           (if ((:methods ring) request-method)
             (let [mode (request-mode request)]
