@@ -128,12 +128,18 @@
                   (assoc ::k/coercion coercion)
                   (copy-parameters parameters)))}))
 
+(defn- clean-context [context]
+  (-> context
+      (kc/dissoc-in [:request :query-params :kekkonen.action])
+      (kc/dissoc-in [:request :query-params :kekkonen.mode])
+      (kc/dissoc-in [:request :query-params :kekkonen.ns])))
+
 ;;
 ;; Response Coercion
 ;;
 
 (defn- get-response-schema [responses status]
-  (or (-> responses (get status :default) :schema)
+  (or (-> responses (get status) :schema)
       (-> responses :default :schema)))
 
 (defn- coerce-response [response responses matcher]
@@ -145,23 +151,11 @@
 
 (defn- response-coercer [handler options]
   (let [responses (-> handler :meta :responses)
-        matcher (-> options :coercion :body-params)
-        coerce #(coerce-response % handler options)]
-    (if (and responses matcher)
-      {:leave (fn [ctx]
-                (if (not= :invoke (::k/mode ctx))
-                  (update ctx :response ok)
-                  (update ctx :response coerce)))})))
-
-;;
-;;
-;;
-
-(defn- clean-context [context]
-  (-> context
-      (kc/dissoc-in [:request :query-params :kekkonen.action])
-      (kc/dissoc-in [:request :query-params :kekkonen.mode])
-      (kc/dissoc-in [:request :query-params :kekkonen.ns])))
+        coerce #(coerce-response % responses options)]
+    {:leave (fn [ctx]
+              (if (not= :invoke (::k/mode ctx))
+                (update ctx :response ok)
+                (update ctx :response coerce)))}))
 
 ;;
 ;; Special endpoints
