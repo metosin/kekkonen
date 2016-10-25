@@ -1,3 +1,23 @@
+## 0.4.0-SNAPSHOT
+
+* **BREAKING**: use [Muuntaja](https://github.com/metosin/muuntaja) instead of [ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format), [#255](https://github.com/metosin/compojure-api/pull/255)
+  for format negotiation, encoding and decoding.
+  - ?x more throughput on 1k JSON request-response echo
+  - api options `[:mw :format` has been deprecated (fails at api creation time), use `:formats` instead. It consumes either a
+    Muuntaja instance, Muuntaja options map or `::kekkonen.middleware/defaults` (for defaults). See [how to configure Muuntaja](https://github.com/metosin/muuntaja/wiki/Configuration) how to use.
+
+* Updated deps:
+
+```clj
+[metosin/muuntaja "0.1.0"]
+```
+
+* Removed deps:
+
+```clj
+[ring-middleware-format "0.7.0"]
+```
+
 ## 0.3.3 (29.8.2016)
 
 * Ring-coercion is applied also for `:default`, fixes [#45](https://github.com/metosin/kekkonen/issues/45)

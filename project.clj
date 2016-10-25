@@ -1,5 +1,5 @@
-(defproject metosin/kekkonen "0.3.3"
-  :description "A lightweight, remote (CQRS) API library for Clojure."
+(defproject metosin/kekkonen "0.4.0-SNAPSHOT"
+  :description "A lightweight, remote api library for Clojure."
   :url "https://github.com/metosin/kekkonen"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"
@@ -7,18 +7,19 @@
             :comments "same as Clojure"}
   :dependencies [[prismatic/plumbing "0.5.3"]
                  [prismatic/schema "1.1.3"]
-                 [frankiesardo/linked "1.2.8"]
+                 [frankiesardo/linked "1.2.9"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.10"]
-                 [metosin/ring-swagger-ui "2.2.2-0"]
+                 [metosin/ring-swagger "0.22.11"]
+                 [metosin/ring-swagger-ui "2.2.5-0"]
                  [metosin/ring-http-response "0.8.0"]
                  [ring-middleware-format "0.7.0"]
+                 [metosin/muuntaja "0.1.0"]
                  [ring/ring-defaults "0.2.1"]
 
                  ;; client stuff, separate module?
                  [clj-http "2.2.0"]]
-  :profiles {:dev {:plugins [[lein-midje "3.2"]]
+  :profiles {:dev {:plugins [[lein-midje "3.2.1"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.8.0"]
                                   [criterium "0.4.4"]

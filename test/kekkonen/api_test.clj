@@ -217,16 +217,22 @@
                     {:swagger "2.0"
                      :info {:title "Kekkonen API"
                             :version "0.0.1"}
-                     :consumes ["application/json"
-                                "application/x-yaml"
-                                "application/edn"
-                                "application/transit+json"
-                                "application/transit+msgpack"]
-                     :produces ["application/json"
-                                "application/x-yaml"
-                                "application/edn"
-                                "application/transit+json"
-                                "application/transit+msgpack"]
+                     :consumes (just
+                                 ["application/json"
+                                  "application/x-yaml"
+                                  "application/edn"
+                                  "application/msgpack"
+                                  "application/transit+json"
+                                  "application/transit+msgpack"]
+                                 :in-any-order)
+                     :produces (just
+                                 ["application/json"
+                                  "application/x-yaml"
+                                  "application/edn"
+                                  "application/msgpack"
+                                  "application/transit+json"
+                                  "application/transit+msgpack"]
+                                 :in-any-order)
                      :definitions anything
                      :paths (contains
                               {"/api/public/plus"

@@ -9,6 +9,8 @@
             [slingshot.slingshot :as slingshot]
             [kekkonen.common :as kc]
             [kekkonen.impl.logging :as logging]
+            [muuntaja.core :as muuntaja]
+            [muuntaja.middleware]
             [clojure.walk :as walk]
             [schema.utils :as su]
             [schema.core :as s])
@@ -80,17 +82,6 @@
 ;; ring-middleware-format stuff
 ;;
 
-(def ^:private +mime-types+
-  {:json "application/json"
-   :json-kw "application/json"
-   :edn "application/edn"
-   :yaml "application/x-yaml"
-   :yaml-kw "application/x-yaml"
-   :transit-json "application/transit+json"
-   :transit-msgpack "application/transit+msgpack"})
-
-(defn- mime-types [formats] (keep +mime-types+ formats))
-
 (defn- handle-req-error [^Throwable e _ _]
   ;; Ring-middleware-format catches all exceptions in req handling,
   ;; i.e. (handler req) is inside try-catch. If r-m-f was changed to catch only
@@ -99,6 +90,13 @@
     (slingshot/throw+ {:type :kekkonen.ring/parsing} e)
     (slingshot/throw+ e)))
 
+(defn create-muuntaja [options]
+  (if options
+    (muuntaja.core/create
+      (->
+        (if (= ::defaults options)
+          muuntaja.core/default-options
+          options)))))
 ;;
 ;; Keyword params
 ;;
@@ -123,23 +121,21 @@
 ;;
 
 (s/defn api-info [options]
-  (let [mime-types (mime-types (some-> options :format :formats))]
-    {:produces mime-types
-     :consumes mime-types}))
+  {:produces (some-> options :formats :produces)
+   :consumes (some-> options :formats :consumes)})
 
 ;;
 ;; Api Middleware
 ;;
 
 (def +default-options+
-  {:format {:formats [:json-kw :yaml-kw :edn :transit-json :transit-msgpack]
-            :params-opts {}
-            :response-opts {}}
+  {:formats ::defaults
    :not-found missing-route-handler
    :exceptions {:default safe-handler
                 :handlers {:kekkonen.core/dispatch missing-route-handler
                            :kekkonen.core/request request-validation-handler
                            :kekkonen.core/response response-validation-handler
+                           ::muuntaja/decode request-parsing-handler
                            :kekkonen.ring/parsing request-parsing-handler
                            :kekkonen.ring/request request-validation-handler
                            :kekkonen.ring/response response-validation-handler}}})
@@ -150,36 +146,34 @@
 
    Accepts the following options:
 
-   - :exceptions                options for kekkonen.core/wrap-exceptions
-     - :handlers                - map of type->exception-handler for exceptions. exception-handlers
-                                  take 3 arguments: the exception, ExceptionInfo data and the originating request.
-                                  tip: to catch normal Schema errors use :schema.core/error as type
+   - :exceptions        options for kekkonen.core/wrap-exceptions
+     - :handlers        - map of type->exception-handler for exceptions. exception-handlers
+                        take 3 arguments: the exception, ExceptionInfo data and the originating request.
+                        tip: to catch normal Schema errors use :schema.core/error as type
 
-   - :not-found                 a function request=>response to handle nil responses
+   - :not-found         a function request=>response to handle nil responses
 
-   - :format                    options for ring-middleware-format middlewares
-     - :formats                 - sequence of supported formats, e.g. [:json-kw :edn]
-     - :params-opts             - for ring.middleware.format-params/wrap-restful-params,
-                                  e.g. {:transit-json {:handlers readers}}
-     - :response-opts           - for *ring.middleware.format-params/wrap-restful-response*,
-                                  e.g. {:transit-json {:handlers writers}}"
+   - :formats           a compiled Muuntaja, ::defaults or muuntaja options"
   ([handler]
    (wrap-api handler {}))
   ([handler options]
+
+   (assert
+     (not (contains? options :format))
+     (str "ERROR: Option [:format] is not used with 0.4.0 or later. Kekkonen uses now Muuntaja insted of"
+          "ring-middleware-format and the new formatting options for it should be under [:formats]. See "
+          "'(doc kekkonen.middleware/wrap-api)' for more details."))
+
    (let [options (kc/deep-merge +default-options+ options)
-         {:keys [exceptions format]} options
-         {:keys [formats params-opts response-opts]} format]
+         {:keys [exceptions formats]} options
+         muuntaja (create-muuntaja formats)]
      (-> handler
          ring.middleware.http-response/wrap-http-response
          (wrap-not-found (:not-found options))
-         (wrap-restful-params
-           {:formats formats
-            :handle-error handle-req-error
-            :format-options params-opts})
+         (muuntaja.middleware/wrap-format-request muuntaja)
          (wrap-exceptions exceptions)
-         (wrap-restful-response
-           {:formats formats
-            :format-options response-opts})
+         (muuntaja.middleware/wrap-format-response muuntaja)
+         (muuntaja.middleware/wrap-format-negotiate muuntaja)
          (wrap-keyword-keys [:query-params])
          wrap-keyword-params
          wrap-nested-params

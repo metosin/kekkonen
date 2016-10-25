@@ -8,7 +8,9 @@
             [ring.util.http-response :refer [ok]]
             [ring.util.http-predicates :as hp]
             [plumbing.core :as p]
-            [kekkonen.common :as kc]))
+            [kekkonen.common :as kc]
+            [muuntaja.core :as muuntaja]
+            [muuntaja.options :as options]))
 
 (p/defnk ^:handler plus
   [[:request [:query-params x :- s/Int, y :- s/Int]]]
@@ -51,13 +53,18 @@
                              :value {:value 1}}))))
 
 (facts "api-info"
-  (let [options {:format {:formats [:json-kw :transit-json :edn]}}]
-    (mw/api-info options) => {:consumes ["application/json"
-                                         "application/transit+json"
-                                         "application/edn"]
-                              :produces ["application/json"
-                                         "application/transit+json"
-                                         "application/edn"]}))
+  (let [options {:formats (muuntaja/create
+                            (options/formats
+                              muuntaja/default-options
+                              ["application/json"
+                               "application/transit+json"
+                               "application/edn"]))}]
+    (mw/api-info options) => {:consumes #{"application/json"
+                                          "application/transit+json"
+                                          "application/edn"}
+                              :produces #{"application/json"
+                                          "application/transit+json"
+                                          "application/edn"}}))
 
 (facts "wrap-keyword-keys"
   ((mw/wrap-keyword-keys identity [:a :b]) {:a {:b {"kissa" "koira", "banaani" "valas"}}})

@@ -23,7 +23,9 @@
                            :version "0.0.1"}}}})
 
 (defn api [options]
-  (let [options (s/validate Options (kc/deep-merge-map-like +default-options+ options))
+  (let [options (-> (kc/deep-merge-map-like +default-options+ options)
+                    (->> (s/validate Options))
+                    (update-in [:mw :formats] mw/create-muuntaja))
         api-handlers (-> options :api :handlers)
         swagger-data (merge (-> options :swagger :data) (mw/api-info (:mw options)))
         swagger-options (-> options :swagger)
