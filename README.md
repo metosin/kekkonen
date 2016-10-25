@@ -1,8 +1,8 @@
-# Kekkonen [![Build Status](https://travis-ci.org/metosin/kekkonen.svg?branch=master)](https://travis-ci.org/metosin/kekkonen) [![Dependencies Status](https://jarkeeper.com/metosin/kekkonen/status.svg)](https://jarkeeper.com/metosin/kekkonen)
+# Kekkonen [![Build Status](https://travis-ci.org/metosin/kekkonen.svg?branch=master)](https://travis-ci.org/metosin/kekkonen)
 
 <img src="https://raw.githubusercontent.com/wiki/metosin/kekkonen/kekkonen.png" align="right"/>
 
-A&nbsp;lightweight, data-driven library for creating and consuming remote APIs with Clojure(Script). Key features:
+A&nbsp;lightweight, data-driven library for creating and consuming remote service with Clojure(Script). Key features:
 * not dependent on Ring/HTTP/REST, just your domain functions & data
 * enables apis over HTTP, Web Sockets, Message Queues or whatever
 * supports multiple api styles: Messaging, CQRS & HTTP
@@ -16,8 +16,9 @@ A&nbsp;lightweight, data-driven library for creating and consuming remote APIs w
   * ships with sensible defaults
 
 Bubblin' Under:
+* all interceptors, fully async
 * support for speculative transactions
-* client-side bundled transactional contexts (both reads & writes)
+* client-side bundled reads & writes
 
 <sub>Picture of [UKK](https://en.wikipedia.org/wiki/Urho_Kekkonen) © Pressfoton Etyk 1975 -team, Museovirasto</sub>
 
@@ -27,9 +28,20 @@ See [Live demo](https://kekkonen.herokuapp.com/) & [Wiki](https://github.com/met
 
 [![Clojars Project](http://clojars.org/metosin/kekkonen/latest-version.svg)](http://clojars.org/metosin/kekkonen)
 
-Currently in **Alpha**.
-
 Quickstart: `lein new kekkonen kakkonen`
+
+## Example handler
+
+```clj
+{:name "plus"
+ :type :handler
+ :interceptors []
+ :input {:data {:y s/Int
+                :x s/Int}}
+ :output s/Int
+ :handle (fn [{{:keys [x y]} :data}]
+           (+ x y))}
+```
 
 ## Hello World (local dispatch)
 
@@ -38,7 +50,9 @@ Quickstart: `lein new kekkonen kakkonen`
 
 (def dispatcher
   (k/dispatcher
-    {:handlers {:api (k/handler {:name :hello, :handle (constantly "hello world"))}}}))
+    {:handlers
+     {:api (k/handler {:name :hello
+                       :handle (constantly "hello world"))}}}))
 
 (k/invoke dispatcher :api/hello)
 ; => "hello world"
@@ -145,8 +159,8 @@ Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest 
 
 # Presentations
 
-* CLojuTRE 2015: http://www.slideshare.net/metosin/clojutre2015-kekkonen-making-your-clojure-web-apis-more-awesome
 * ClojureD 2016: http://www.slideshare.net/metosin/wieldy-remote-apis-with-kekkonen-clojured-2016
+* CLojuTRE 2015: http://www.slideshare.net/metosin/clojutre2015-kekkonen-making-your-clojure-web-apis-more-awesome
 
 # Thinking aloud
 
