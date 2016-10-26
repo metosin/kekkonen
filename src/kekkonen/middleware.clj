@@ -153,7 +153,9 @@
 
    - :not-found         a function request=>response to handle nil responses
 
-   - :formats           a compiled Muuntaja, ::defaults or muuntaja options"
+   - :formats           value should be :muuntaja.middleware/defaults (default), Muuntaja options
+                        map or a created Muuntaja. See Muuntaja wiki for details:
+                        https://github.com/metosin/muuntaja/wiki/Configuration"
   ([handler]
    (wrap-api handler {}))
   ([handler options]
