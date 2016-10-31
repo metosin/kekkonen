@@ -10,7 +10,7 @@
                  [frankiesardo/linked "1.2.9"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.11"]
+                 [metosin/ring-swagger "0.22.12"]
                  [metosin/ring-swagger-ui "2.2.5-0"]
                  [metosin/ring-http-response "0.8.0"]
                  [ring-middleware-format "0.7.0"]
@@ -18,7 +18,7 @@
                  [ring/ring-defaults "0.2.1"]
 
                  ;; client stuff, separate module?
-                 [clj-http "2.2.0"]]
+                 [clj-http "2.3.0"]]
   :profiles {:dev {:plugins [[lein-midje "3.2.1"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.8.0"]

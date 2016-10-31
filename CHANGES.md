@@ -11,6 +11,8 @@
 
 ```clj
 [metosin/muuntaja "0.1.0"]
+[clj-http "2.3.0"] is available but we use "2.2.0"
+[metosin/ring-swagger "0.22.12"] is available but we use "0.22.11"
 ```
 
 * Removed deps:
