@@ -11,17 +11,17 @@
 (defrecord IOResult [io acc])
 
 (defn run-io! [dispatcher {:keys [io]}]
-  (map->IOResult
-    (reduce
-      (fn [{:keys [io acc]} [action data]]
-        (let [io-result (k/invoke dispatcher action {:data data, :acc acc})]
-          (when-not (or (map? io-result) (nil? io-result))
-            (throw (ex-info "IO must return a map or nil" {:result io-result})))
-          {:io (conj io [action data io-result])
-           :acc (merge acc io-result)}))
+  (reduce
+    (fn [{:keys [io acc]} [action data]]
+      (let [io-result (k/invoke dispatcher action {:data data, :acc acc})]
+        (when-not (or (map? io-result) (nil? io-result))
+          (throw (ex-info "IO must return a map or nil" {:result io-result})))
+        {:io (conj io [action data io-result])
+         :acc (merge acc io-result)}))
+    (map->IOResult
       {:io []
-       :acc {}}
-      io)))
+       :acc {}})
+    io))
 
 (defn log! [fmt & args]
   (apply printf (str "\u001B[35m" fmt "\u001B[0m\n") args))
