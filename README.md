@@ -30,10 +30,12 @@ See [Live demo](https://kekkonen.herokuapp.com/) & [Wiki](https://github.com/met
 
 Quickstart: `lein new kekkonen kakkonen`
 
-## Example handler
+## Basic building blocks
+
+### Handler
 
 ```clj
-{:name "plus"
+{:name ::plus
  :type :handler
  :interceptors []
  :input {:data {:y s/Int
@@ -41,6 +43,16 @@ Quickstart: `lein new kekkonen kakkonen`
  :output s/Int
  :handle (fn [{{:keys [x y]} :data}]
            (+ x y))}
+```
+
+### Interceptor
+
+```clj
+{:name ::require-roles
+ :enter (fn [context]
+          (let [roles (-> context :user :roles)]
+            (if (seq (clojure.set/intersection roles required))
+              context)))}
 ```
 
 ## Hello World (local dispatch)
