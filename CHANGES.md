@@ -1,3 +1,13 @@
+## Unreleased
+
+* Updated dependencies:
+
+```clj
+[metosin/ring-swagger "0.22.14"] is available but we use "0.22.12"
+[metosin/ring-swagger-ui "2.2.8"] is available but we use "2.2.5-0"
+[metosin/ring-http-response "0.8.1"] is available but we use "0.8.0"
+```
+
 ## 0.4.0-SNAPSHOT
 
 * **BREAKING**: Drops Java 1.6 Compatability (due to Muuntaja)
@@ -19,6 +29,17 @@
 
 ```clj
 [ring-middleware-format "0.7.0"]
+```
+
+## 0.3.4 (11.1.2017)
+
+* Updated dependencies to [avoid a path traversal vulnerability](https://groups.google.com/forum/#!topic/clojure/YDrKBV26rnA) in Ring.
+
+```clj
+[frankiesardo/linked "1.2.9"] is available but we use "1.2.8"
+[metosin/ring-swagger "0.22.14"] is available but we use "0.22.10"
+[metosin/ring-swagger-ui "2.2.8"] is available but we use "2.2.2-0"
+[metosin/ring-http-response "0.8.1"] is available but we use "0.8.0"
 ```
 
 ## 0.3.3 (29.8.2016)

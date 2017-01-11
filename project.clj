@@ -10,9 +10,9 @@
                  [frankiesardo/linked "1.2.9"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.22.12"]
-                 [metosin/ring-swagger-ui "2.2.5-0"]
-                 [metosin/ring-http-response "0.8.0"]
+                 [metosin/ring-swagger "0.22.14"]
+                 [metosin/ring-swagger-ui "2.2.8"]
+                 [metosin/ring-http-response "0.8.1"]
                  [ring-middleware-format "0.7.0"]
                  [metosin/muuntaja "0.1.0"]
                  [ring/ring-defaults "0.2.1"]
@@ -31,6 +31,7 @@
                                   [midje "1.8.3"]]}
              :perf {:jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true"]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
+  :deploy-repositories [["releases" :clojars]]
   :aliases {"all" ["with-profile" "dev:dev,1.7"]
             "perf" ["with-profile" "default,dev,perf"]
             "test-ancient" ["midje"]})
