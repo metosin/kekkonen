@@ -3,7 +3,7 @@
 * Updated dependencies:
 
 ```clj
-[metosin/ring-swagger "0.22.14"] is available but we use "0.22.12"
+[metosin/ring-swagger "0.23.0"] is available but we use "0.22.12"
 [metosin/ring-swagger-ui "2.2.8"] is available but we use "2.2.5-0"
 [metosin/ring-http-response "0.8.1"] is available but we use "0.8.0"
 ```
