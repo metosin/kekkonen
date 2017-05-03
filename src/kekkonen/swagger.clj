@@ -2,7 +2,7 @@
   (:require [schema.core :as s]
             [ring.swagger.swagger2 :as rs2]
             [ring.util.http-response :refer [ok]]
-            [ring.swagger.ui :as ui]
+            [ring.swagger.swagger-ui :as ui]
             [kekkonen.core :as k]
             [kekkonen.common :as kc]
             [plumbing.core :as p]
@@ -56,9 +56,9 @@
   "Ring handler for the Swagger UI"
   [{:keys [ui spec] :as options}]
   (when ui
-    (apply ui/swagger-ui (into [ui] (apply concat (merge
-                                                    {:swagger-docs spec}
-                                                    (-> options :options :ui)))))))
+    (ui/swagger-ui (merge {:path ui
+                           :swagger-docs spec}
+                          (-> options :options :ui)))))
 
 (defn- add-base-path
   "Extracts the base path from the context and adds it to the swagger map as basePath"
