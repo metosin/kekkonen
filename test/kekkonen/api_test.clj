@@ -219,17 +219,13 @@
                             :version "0.0.1"}
                      :consumes (just
                                  ["application/json"
-                                  "application/x-yaml"
                                   "application/edn"
-                                  "application/msgpack"
                                   "application/transit+json"
                                   "application/transit+msgpack"]
                                  :in-any-order)
                      :produces (just
                                  ["application/json"
-                                  "application/x-yaml"
                                   "application/edn"
-                                  "application/msgpack"
                                   "application/transit+json"
                                   "application/transit+msgpack"]
                                  :in-any-order)
