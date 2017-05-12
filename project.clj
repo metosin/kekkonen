@@ -24,8 +24,6 @@
                    :dependencies [[org.clojure/clojure "1.8.0"]
                                   [criterium "0.4.4"]
                                   [http-kit "2.2.0"]
-                                  ; required when working with Java 1.6
-                                  [org.codehaus.jsr166-mirror/jsr166y "1.7.0"]
                                   ; uploads
                                   [javax.servlet/servlet-api "2.5"]
                                   [midje "1.8.3"]]}
