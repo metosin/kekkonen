@@ -14,7 +14,7 @@
                  [metosin/ring-swagger-ui "2.2.8"]
                  [metosin/ring-http-response "0.8.1"]
                  [ring-middleware-format "0.7.0"]
-                 [metosin/muuntaja "0.1.0"]
+                 [metosin/muuntaja "0.3.0-SNAPSHOT"]
                  [ring/ring-defaults "0.2.1"]
 
                  ;; client stuff, separate module?

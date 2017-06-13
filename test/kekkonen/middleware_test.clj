@@ -9,8 +9,7 @@
             [ring.util.http-predicates :as hp]
             [plumbing.core :as p]
             [kekkonen.common :as kc]
-            [muuntaja.core :as muuntaja]
-            [muuntaja.options :as options]))
+            [muuntaja.core :as muuntaja]))
 
 (p/defnk ^:handler plus
   [[:request [:query-params x :- s/Int, y :- s/Int]]]
@@ -54,7 +53,7 @@
 
 (facts "api-info"
   (let [options {:formats (muuntaja/create
-                            (options/formats
+                            (muuntaja/select-formats
                               muuntaja/default-options
                               ["application/json"
                                "application/transit+json"
