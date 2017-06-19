@@ -5,17 +5,17 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo
             :comments "same as Clojure"}
-  :dependencies [[prismatic/plumbing "0.5.3"]
-                 [prismatic/schema "1.1.3"]
+  :dependencies [[prismatic/plumbing "0.5.4"]
+                 [prismatic/schema "1.1.6"]
                  [frankiesardo/linked "1.2.9"]
 
                  ;; http-stuff, separate module?
-                 [metosin/ring-swagger "0.23.0"]
-                 [metosin/ring-swagger-ui "2.2.8"]
-                 [metosin/ring-http-response "0.8.1"]
-                 [ring-middleware-format "0.7.0"]
-                 [metosin/muuntaja "0.3.0-SNAPSHOT"]
-                 [ring/ring-defaults "0.2.1"]
+                 [metosin/ring-swagger "0.24.0"]
+                 [metosin/ring-swagger-ui "2.2.10"]
+                 [metosin/ring-http-response "0.9.0"]
+                 [ring-middleware-format "0.7.2"]
+                 [metosin/muuntaja "0.3.1"]
+                 [ring/ring-defaults "0.3.0"]
 
                  ;; client stuff, separate module?
                  [clj-http "2.3.0"]]

@@ -1,13 +1,3 @@
-## Unreleased
-
-* Updated dependencies:
-
-```clj
-[metosin/ring-swagger "0.23.0"] is available but we use "0.22.12"
-[metosin/ring-swagger-ui "2.2.8"] is available but we use "2.2.5-0"
-[metosin/ring-http-response "0.8.1"] is available but we use "0.8.0"
-```
-
 ## 0.4.0-SNAPSHOT
 
 * **BREAKING**: Drops Java 1.6 Compatability (due to Muuntaja)
@@ -20,9 +10,15 @@
 * Updated deps:
 
 ```clj
-[metosin/muuntaja "0.1.0"]
 [clj-http "2.3.0"] is available but we use "2.2.0"
-[metosin/ring-swagger "0.22.12"] is available but we use "0.22.11"
+[metosin/muuntaja "0.3.1"] is available but we use "0.3.0"
+[metosin/ring-http-response "0.9.0"] is available but we use "0.8.1"
+[metosin/ring-swagger "0.24.0"] is available but we use "0.23.0"
+[metosin/ring-swagger-ui "2.2.10"] is available but we use "2.2.8"
+[prismatic/plumbing "0.5.4"] is available but we use "0.5.3"
+[prismatic/schema "1.1.6"] is available but we use "1.1.3"
+[ring-middleware-format "0.7.2"] is available but we use "0.7.0"
+[ring/ring-defaults "0.3.0"] is available but we use "0.2.1"
 ```
 
 * Removed deps:
