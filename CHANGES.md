@@ -1,4 +1,4 @@
-## 0.4.0-SNAPSHOT
+## 0.4.0 (21.6.2017)
 
 * **BREAKING**: Drops Java 1.6 Compatability (due to Muuntaja)
 * **BREAKING**: use [Muuntaja](https://github.com/metosin/muuntaja) instead of [ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format), [#255](https://github.com/metosin/compojure-api/pull/255)
