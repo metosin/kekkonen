@@ -19,7 +19,8 @@
 
                  ;; client stuff, separate module?
                  [clj-http "2.3.0"]]
-  :profiles {:dev {:plugins [[lein-midje "3.2.1"]]
+  :profiles {:dev {:plugins [[lein-cloverage "1.0.10"]
+                             [lein-midje "3.2.1"]]
                    :source-paths ["dev-src" "src"]
                    :dependencies [[org.clojure/clojure "1.8.0"]
                                   [criterium "0.4.4"]
@@ -32,4 +33,5 @@
   :deploy-repositories [["releases" :clojars]]
   :aliases {"all" ["with-profile" "dev:dev,1.7"]
             "perf" ["with-profile" "default,dev,perf"]
-            "test-ancient" ["midje"]})
+            "test-ancient" ["midje"]
+            "coverage" ["cloverage" "--runner" ":midje"]})
