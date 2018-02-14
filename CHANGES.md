@@ -1,3 +1,7 @@
+## Unreleased
+
+* Make Kekkonen compatible with Cloverage.
+
 ## 0.4.0 (21.6.2017)
 
 * **BREAKING**: Drops Java 1.6 Compatability (due to Muuntaja)

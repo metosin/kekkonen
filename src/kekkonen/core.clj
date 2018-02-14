@@ -134,6 +134,8 @@
     :type :input :output :description
     ; clojure var meta
     :line :column :file :name :ns :doc
+    ; cloverage meta
+    :end-line :end-column :idx
     ; plumbing details
     :schema :plumbing.fnk.impl/positional-info
     ; arglist
