@@ -1,8 +1,10 @@
 sudo: false
 language: clojure
-lein: 2.7.1
-script:
+lein: 2.8.1
+install:
   - ./scripts/lein-modules install
+  - lein deps
+script:
   - lein with-profile $PROFILE do clean, midje, check
 jdk:
   - openjdk7
