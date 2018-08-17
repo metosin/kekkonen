@@ -217,6 +217,6 @@ No. But we might integrate into [Pulsar](https://github.com/puniverse/pulsar).
 
 ## License
 
-Copyright © 2015-2017 [Metosin Oy](http://www.metosin.fi)
+Copyright © 2015-2018 [Metosin Oy](http://www.metosin.fi)
 
-Distributed under the Eclipse Public License, the same as Clojure.
+Distributed under the Eclipse Public License 2.0.

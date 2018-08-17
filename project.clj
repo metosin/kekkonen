@@ -2,7 +2,7 @@
   :description "A lightweight, remote api library for Clojure."
   :url "https://github.com/metosin/kekkonen"
   :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+            :url "http://www.eclipse.org/legal/epl-v20.html"}
 
   :managed-dependencies [[metosin/kekkonen "0.5.0-SNAPSHOT"]
                          [metosin/kekkonen-core "0.5.0-SNAPSHOT"]
