@@ -7,7 +7,7 @@ install:
 script:
   - lein with-profile $PROFILE do clean, midje, check
 jdk:
-  - oraclejdk8
+  - openjdk8
 env:
   - PROFILE=dev
   - PROFILE=dev,1.8
