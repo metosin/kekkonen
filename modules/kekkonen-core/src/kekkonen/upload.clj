@@ -49,7 +49,7 @@
   ([content content-type]
    (response content content-type nil))
   ([content content-type filename]
-   (let [body (if (instance? File content) content (ByteArrayInputStream. bytes))]
+   (let [body (if (instance? File content) content (ByteArrayInputStream. content))]
      {:status 200
       :headers (merge
                  {"Content-Type" content-type}
