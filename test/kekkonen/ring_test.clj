@@ -8,11 +8,6 @@
             [plumbing.core :as p]
             [kekkonen.common :as kc]))
 
-(facts "uri->action"
-  (#'r/uri->action "/api/ipa/user/add-user!") => :api.ipa.user/add-user!
-  (#'r/uri->action "/api") => :api
-  (#'r/uri->action "/") => nil)
-
 (fact "handler-uri"
   (#'r/handler-uri {:ns :api.user, :name :add-user!}) => "/api/user/add-user!"
   (#'r/handler-uri {:ns :api.user, :name :swagger.json}) => "/api/user/swagger.json"

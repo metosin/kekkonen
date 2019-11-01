@@ -5,8 +5,7 @@
             [ring.util.http-response :as hr]
             [ring.util.http-status :as hs]
             [ring.util.http-predicates :as hp]
-            [schema.core :as s]
-            [kekkonen.ring :as r]))
+            [schema.core :as s]))
 
 ;;
 ;; response wrappers

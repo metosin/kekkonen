@@ -49,11 +49,6 @@
 ;; Internals
 ;;
 
-(defn- uri->action [^String path]
-  (let [i (.lastIndexOf path "/")]
-    (if-not (= (count path) 1)
-      (keyword (subs (str (str/replace (subs path 0 i) #"/" ".") (subs path i)) 1)))))
-
 (defn- handler-uri [handler]
   (str
     (if-let [ns (some-> handler :ns name)]
