@@ -12,6 +12,7 @@
                          [frankiesardo/linked "1.2.9"]
 
                          ;; http-stuff, separate module?
+                         [clj-commons/clj-yaml "0.7.0"]
                          [metosin/ring-swagger "0.24.0"]
                          [metosin/ring-swagger-ui "2.2.10"]
                          [metosin/ring-http-response "0.9.0"]
@@ -22,18 +23,27 @@
                          [clj-http "2.3.0"]]
   :profiles {:dev {:plugins [[lein-cloverage "1.0.10"]
                              [lein-midje "3.2.1"]]
-                   :source-paths ["dev-src" "modules/kekkonen-core/src"]
-                   :dependencies [[metosin/kekkonen]
-
-                                  [clj-kondo "RELEASE"]
-
-                                  [org.clojure/clojure "1.10.1"]
+                   :source-paths ["dev-src"
+                                  "modules/kekkonen-core/src"]
+                   :dependencies [[org.clojure/clojure "1.10.1"]
                                   [criterium "0.4.4"]
                                   [http-kit "2.2.0"]
+                                  [midje "1.9.9"]
+
+                                  [prismatic/plumbing]
+                                  [prismatic/schema]
+                                  [frankiesardo/linked]
+
+                                  [clj-commons/clj-yaml]
+                                  [metosin/muuntaja]
+                                  [metosin/ring-http-response]
+                                  [metosin/ring-swagger]
+                                  [metosin/ring-swagger-ui]
+
+                                  [clj-http] 
 
                                   ; uploads
-                                  [javax.servlet/servlet-api "2.5"]
-                                  [midje "1.9.9"]]}
+                                  [javax.servlet/servlet-api "2.5"]]}
              :perf {:jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true"]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}}
