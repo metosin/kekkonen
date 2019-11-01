@@ -10,9 +10,9 @@ script:
 jdk:
   - openjdk8
   - openjdk13
+# Clojure: 1.8 for legacy and 1.10 as the latest release
 env:
   - PROFILE=dev
-  - PROFILE=dev,1.9
   - PROFILE=dev,1.8
 cache:
   directories:
