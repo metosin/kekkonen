@@ -15,7 +15,7 @@
                          [metosin/ring-swagger "0.24.0"]
                          [metosin/ring-swagger-ui "2.2.10"]
                          [metosin/ring-http-response "0.9.0"]
-                         [ring-middleware-format "0.7.2"]
+                         [ring-middleware-format "0.7.4"]
                          [metosin/muuntaja "0.3.1"]
                          [ring/ring-defaults "0.3.0"]
 
@@ -31,7 +31,7 @@
                                   [http-kit "2.2.0"]
                                   ; uploads
                                   [javax.servlet/servlet-api "2.5"]
-                                  [midje "1.9.1"]]}
+                                  [midje "1.9.9"]]}
              :perf {:jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true"]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
   :deploy-repositories [["releases" :clojars]]
