@@ -1,4 +1,4 @@
-(defproject metosin/kekkonen-core "0.5.2-SNAPSHOT"
+(defproject metosin/kekkonen-core "0.5.2"
   :description "A lightweight, remote api library for Clojure."
   :url "https://github.com/metosin/kekkonen"
   :license {:name "Eclipse Public License" :url "http://www.eclipse.org/legal/epl-v10.html"}
@@ -13,6 +13,7 @@
                  [frankiesardo/linked]
 
                  ;; http-stuff, separate module?
+                 [clj-commons/clj-yaml]
                  [metosin/ring-swagger]
                  [metosin/ring-swagger-ui]
                  [metosin/ring-http-response]

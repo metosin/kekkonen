@@ -1,5 +1,9 @@
 ## Unreleased
 
+## 0.5.2 (2019-11-01)
+
+* Add the missing clj-yaml dependency.
+
 ## 0.5.1 (2019-11-01)
 
 * Remove the dependency on `ring-middleware-format`, for real this time.
