@@ -172,7 +172,7 @@ Mostly written as [issues](https://github.com/metosin/kekkonen/issues). Biggest 
 # Presentations
 
 * ClojureD 2016: http://www.slideshare.net/metosin/wieldy-remote-apis-with-kekkonen-clojured-2016
-* CLojuTRE 2015: http://www.slideshare.net/metosin/clojutre2015-kekkonen-making-your-clojure-web-apis-more-awesome
+* ClojuTRE 2015: http://www.slideshare.net/metosin/clojutre2015-kekkonen-making-your-clojure-web-apis-more-awesome
 
 # Thinking aloud
 
