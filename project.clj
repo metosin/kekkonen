@@ -3,6 +3,8 @@
   :url "https://github.com/metosin/kekkonen"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v20.html"}
+  :scm {:name "git"
+        :url "https://github.com/metosin/kekkonen"}
 
   :managed-dependencies [[metosin/kekkonen "0.5.1-SNAPSHOT"]
                          [metosin/kekkonen-core "0.5.1-SNAPSHOT"]
