@@ -2,8 +2,7 @@
   (:require [kekkonen.core :as k]
             [kekkonen.api :as ka]
             [kekkonen.common :as kc]
-            [schema.core :as s]
-            [kekkonen.ring :as r]))
+            [schema.core :as s]))
 
 (s/defn http-api [options]
   (ka/api
