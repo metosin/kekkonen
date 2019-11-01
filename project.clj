@@ -27,7 +27,7 @@
                                   "modules/kekkonen-core/src"]
                    :dependencies [[org.clojure/clojure "1.10.1"]
                                   [criterium "0.4.4"]
-                                  [http-kit "2.2.0"]
+                                  [http-kit "2.3.0"]
                                   [midje "1.9.9"]
 
                                   [prismatic/plumbing]
