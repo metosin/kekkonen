@@ -1,7 +1,5 @@
 (ns kekkonen.middleware
-  (:require [ring.middleware.format-params :refer [wrap-restful-params]]
-            [ring.middleware.format-response :refer [wrap-restful-response]]
-            ring.middleware.http-response
+  (:require ring.middleware.http-response
             [ring.util.http-response :as r]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.nested-params :refer [wrap-nested-params]]
@@ -79,16 +77,8 @@
           (default-handler (:throwable &throw-context) nil request))))))
 
 ;;
-;; ring-middleware-format stuff
+;; Muuntaja stuff
 ;;
-
-(defn- handle-req-error [^Throwable e _ _]
-  ;; Ring-middleware-format catches all exceptions in req handling,
-  ;; i.e. (handler req) is inside try-catch. If r-m-f was changed to catch only
-  ;; exceptions from parsing the request, we wouldn't need to check the exception class.
-  (if (or (instance? JsonParseException e) (instance? ParserException e))
-    (slingshot/throw+ {:type :kekkonen.ring/parsing} e)
-    (slingshot/throw+ e)))
 
 (defn create-muuntaja [options]
   (if options

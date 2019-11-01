@@ -212,7 +212,7 @@ No. But we might integrate into [Pulsar](https://github.com/puniverse/pulsar).
 - [Plumbing](https://github.com/Prismatic/plumbing) for the `fnk`y syntax
 - [Fnhouse](https://github.com/Prismatic/fnhouse) for inspiration and reused ideas
 - [Ring-swagger](https://github.com/metosin/ring-swagger) for the Schema2Swagger -bindings
-- [Ring-middleware-format](https://github.com/ngrunwald/ring-middleware-format) for all the data formats
+- [Muuntaja](https://github.com/metosin/muuntaja) for all the data formats
 - [Compojure-api](https://github.com/metosin/compojure-api) for some middleware goodies
 
 ## License
