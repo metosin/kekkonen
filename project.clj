@@ -26,16 +26,18 @@
                    :source-paths ["dev-src" "modules/kekkonen-core/src"]
                    :dependencies [[metosin/kekkonen]
 
-                                  [org.clojure/clojure "1.9.0"]
+                                  [org.clojure/clojure "1.10.1"]
                                   [criterium "0.4.4"]
                                   [http-kit "2.2.0"]
+
                                   ; uploads
                                   [javax.servlet/servlet-api "2.5"]
                                   [midje "1.9.9"]]}
              :perf {:jvm-opts ^:replace ["-Dclojure.compiler.direct-linking=true"]}
-             :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}}
+             :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
+             :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}}
   :deploy-repositories [["releases" :clojars]]
-  :aliases {"all" ["with-profile" "dev:dev,1.7"]
+  :aliases {"all" ["with-profile" "dev:dev,1.8:dev,1.9"]
             "perf" ["with-profile" "default,dev,perf"]
             "test-ancient" ["midje"]
             "coverage" ["cloverage" "--runner" ":midje"]})

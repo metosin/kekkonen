@@ -6,10 +6,14 @@ install:
   - lein deps
 script:
   - lein with-profile $PROFILE do clean, midje, check
+# JDKs to use: long-term releases 8 and 11 and the latest release
 jdk:
   - openjdk8
+  - openjdk11
+  - openjdk13
 env:
   - PROFILE=dev
+  - PROFILE=dev,1.9
   - PROFILE=dev,1.8
 cache:
   directories:
