@@ -13,7 +13,6 @@
                  [metosin/ring-swagger]
                  [metosin/ring-swagger-ui]
                  [metosin/ring-http-response]
-                 [ring-middleware-format]
                  [metosin/muuntaja]
                  [ring/ring-defaults]
 

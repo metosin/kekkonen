@@ -1,5 +1,7 @@
 ## Unreleased
 
+* Remove the dependency on `ring-middleware-format`, for real this time.
+
 ## 0.5.0 (2019-11-01)
 
 * Make Kekkonen compatible with Cloverage.

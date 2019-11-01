@@ -15,7 +15,6 @@
                          [metosin/ring-swagger "0.24.0"]
                          [metosin/ring-swagger-ui "2.2.10"]
                          [metosin/ring-http-response "0.9.0"]
-                         [ring-middleware-format "0.7.4"]
                          [metosin/muuntaja "0.3.1"]
                          [ring/ring-defaults "0.3.0"]
 
@@ -25,6 +24,8 @@
                              [lein-midje "3.2.1"]]
                    :source-paths ["dev-src" "modules/kekkonen-core/src"]
                    :dependencies [[metosin/kekkonen]
+
+                                  [clj-kondo "RELEASE"]
 
                                   [org.clojure/clojure "1.10.1"]
                                   [criterium "0.4.4"]
