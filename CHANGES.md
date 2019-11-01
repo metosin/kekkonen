@@ -2,6 +2,7 @@
 
 * Make Kekkonen compatible with Cloverage.
 * Update dependencies to support Java 13.
+* Fix returning byte arrays with `kekkonen.upload/response`
 
 ## 0.4.0 (21.6.2017)
 
