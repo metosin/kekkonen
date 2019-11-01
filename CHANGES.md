@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.0 (2019-11-01)
 
 * Make Kekkonen compatible with Cloverage.
 * Update dependencies to support Java 13.

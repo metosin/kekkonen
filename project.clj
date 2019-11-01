@@ -1,11 +1,11 @@
-(defproject metosin/kekkonen-parent "0.5.0-SNAPSHOT"
+(defproject metosin/kekkonen-parent "0.5.0"
   :description "A lightweight, remote api library for Clojure."
   :url "https://github.com/metosin/kekkonen"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v20.html"}
 
-  :managed-dependencies [[metosin/kekkonen "0.5.0-SNAPSHOT"]
-                         [metosin/kekkonen-core "0.5.0-SNAPSHOT"]
+  :managed-dependencies [[metosin/kekkonen "0.5.0"]
+                         [metosin/kekkonen-core "0.5.0"]
 
                          [prismatic/plumbing "0.5.4"]
                          [prismatic/schema "1.1.6"]
